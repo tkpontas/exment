@@ -80,7 +80,7 @@ class CCustomViewTest extends ExmentKitTestCase
             ->assertEquals($pre_cnt + 1, CustomView::count())
         ;
 
-        $raw = CustomView::orderBy('created_at', 'desc')->first();
+        $raw = CustomView::orderBy('id', 'desc')->first();
         $id = array_get($raw, 'id');
 
         Model\System::clearRequestSession();
@@ -173,7 +173,7 @@ class CCustomViewTest extends ExmentKitTestCase
             ->assertEquals($pre_cnt + 1, CustomView::count())
         ;
 
-        $raw = CustomView::orderBy('created_at', 'desc')->first();
+        $raw = CustomView::orderBy('id', 'desc')->first();
         $id = array_get($raw, 'id');
 
 
@@ -214,7 +214,7 @@ class CCustomViewTest extends ExmentKitTestCase
                     $callback($query, $v);
                 }
 
-                $this->assertTrue($query->exists(), "custom view items not contains items.　custom_view_id:${id}, k:${k}, key:${key}, view_target:{$v['view_column_target']}, view_column_type:${column_type}, view_column_target_id:{$column_type_target}, view_column_table_id:${column_table_id}");
+                $this->assertTrue($query->exists(), "custom view items not contains items.　custom_view_id:{$id}, k:{$k}, key:{$key}, view_target:{$v['view_column_target']}, view_column_type:{$column_type}, view_column_target_id:{$column_type_target}, view_column_table_id:{$column_table_id}");
             }
         }
     }
