@@ -121,7 +121,7 @@ class DefaultGrid extends GridBase
                 ]);
             //$name = $item->indexEnabled() ? $item->index() : $item->uniqueName();
             $className = 'column-' . $item->name();
-            $grid->column($item->uniqueName(), $item->label())
+            $column = $grid->column($item->uniqueName(), $item->label())
                 ->sort($item->sortable())
                 ->sortName($item->getSortName())
                 //->cast($item->getCastName())
@@ -142,6 +142,8 @@ class DefaultGrid extends GridBase
                     }
                     return $item->setCustomValue($this)->html();
                 })->escape(false);
+            
+            $this->setGridColumn($column, $custom_view_column);
         }
 
         // set parpage
@@ -160,6 +162,13 @@ class DefaultGrid extends GridBase
         $custom_table->setQueryWith($grid->model(), $this->custom_view);
     }
 
+
+    /**
+     * set laravel-admin grid column specific setting for grid type
+     */
+    protected function setGridColumn($column, $custom_view_column)
+    {
+    }
 
     /**
      * execute filter for modal
