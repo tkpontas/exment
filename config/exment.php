@@ -653,6 +653,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Show copy button on customvalue grid page
+    |--------------------------------------------------------------------------
+    |
+    | Show copy button on customvalue grid page
+    |
+    */
+    'gridrow_show_copy_button' => env('EXMENT_GRIDROW_SHOW_COPY_BUTTON', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Disabled ip filter
     |--------------------------------------------------------------------------
     |
@@ -1102,4 +1112,40 @@ return [
     |
     */
     'max_child_expand_count' => env('EXMENT_MAX_CHILD_EXPAND_COUNT', 10),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Specify custom view sorting options
+    |--------------------------------------------------------------------------
+    |
+    | 0(default):view_type > view_kind_type > id.
+    | 1:view_type > view_kind_type > order.
+    | 2:view_type > order.
+    |
+    */
+    'sort_custom_view_options' => env('EXMENT_SORT_CUSTOM_VIEW_OPTIONS', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Maintain default view with freeword search for each table
+    |--------------------------------------------------------------------------
+    |
+    */
+    'search_keep_default_view' => env('EXMENT_SEARCH_KEEP_DEFAULT_VIEW', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default english text for qr code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_qr_button_en' => env('EXMENT_TEXT_QR_BUTTON_EN', '2D barcode'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default japanese text for qr code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_qr_button_ja' => env('EXMENT_TEXT_QR_BUTTON_JA', '二次元バーコード'),
 ];
