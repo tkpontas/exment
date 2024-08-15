@@ -83,6 +83,11 @@ return [
         'no_selected' => '未選択',
         'no_use' => '使用しない',
         'default_export' => 'エクスポート',
+        'condition_reverse' => '<反転> ',
+        'save' => '保存',
+        'no_file_download' => 'ダウンロード対象のファイルがありません',
+        'english' => '英語',
+        'japanese' => '日本語',
 
         'message' => [
             'confirm_execute' => '%sを実行します。\r\nよろしいですか？',
@@ -579,6 +584,7 @@ return [
             'editor' => 'エディター',
             'html' => 'HTML',
             'notify_navbar' => '通知一覧',
+            'qr_code' => '二次元バーコード',
         ],
 
         'dashboard_menulist' => [
@@ -643,9 +649,11 @@ return [
             'event_trigger_options' => [
                 'saving' => '保存直前',
                 'saved' => '保存後',
+                'deleted' => '削除後',
                 'loading' => '画面読み込み前',
                 'loaded' => '画面読み込み後',
                 'grid_menubutton' => '一覧画面のメニューボタン',
+                'calendar_menubutton' => 'カレンダービューのメニューボタン',
                 'form_menubutton_show' => 'データ詳細のメニューボタン',
                 'form_menubutton_create' => 'フォームのメニューボタン（新規作成時）',
                 'form_menubutton_edit' => 'フォームのメニューボタン（更新時）',
@@ -1042,6 +1050,7 @@ return [
         'notify' => '通知設定',
         'custom_value' => 'データ一覧',
         'error_select' => '行を1行のみ選択してください',
+        'qrcode' => '二次元バーコード設定',
     ],
 
     'workflow' => [
@@ -1180,6 +1189,55 @@ return [
         'add_parent_menu' => '追加先の親メニュー',
         'default_setting' => '通常設定',
         'expand_setting' => '拡張設定',
+        'copy_from_table' => 'コピー元テーブル',
+        'copy_custom_table' => 'カスタムテーブルをコピーする',
+        'no_selected' => '対象データが選択されていません',
+        'qr_code' => [
+            'setting' => '二次元バーコード設定',
+            'content' => '二次元バーコードの補足情報',
+            'text' => 'タイトル',
+            'image_size' => '二次元バーコードのレイアウトサイズ',
+            'cell_width' => 'Cell width',
+            'cell_height' => 'Cell height',
+            'margin_left' => 'Margin left',
+            'margin_top' => 'Margin top',
+            'column_per_page' => 'Column per page',
+            'row_per_page' => 'Row per page',
+            'column_spacing' => 'Columnn spacing',
+            'row_spacing' => 'Row spacing',
+            'form_after_read' => '二次元バーコード読込後のフォーム',
+            'action_after_read' => 'データ登録後のアクション',
+            'download' => '%sダウンロード',
+            'create' => '%s新規作成',
+            'form_title' => '二次元バーコード新規作成',
+            'reading' => '%s読込',
+            'description' => '二次元バーコードのレイアウトサイズ設定は<a href="%s" target="_blank">こちら</a>をご参照ください。',
+            'number_qr' => '二次元バーコードの件数',
+            'advance_setting' => '二次元バーコード読込',
+            'text_button' => 'ボタン表示名',
+            'text_button_description' => '二次元バーコード新規作成、二次元バーコードダウンロードボタンの「二次元バーコード」の表示名を設定します。',
+            'created' => '作成しました。',
+            'download_complete' => '二次元バーコードのダウンロードを完了しました',
+            'table_not_found' => 'この二次元バーコードコードの表が見つかりません',
+            'validate_qr_number' => '二次元バーコードコードの数は 0 より大きくなければなりません',
+            'refer_column' => '表示列',
+            'refer_column_description' => '二次元バーコードの右側にカスタムデータの指定列の情報を表示します。<br/>※ID列または自動採番列（ユニーク（一意）かつ必須であること）を選択できます。',
+            'text_qr_description' => '二次元バーコードの右側に表示される固定文言です。',
+        ],
+        'data_submit_redirect_options' => [
+            "inherit"               => "システム設定に合わせる",
+            'list'                  => '一覧',
+            'view'                  => '表示',
+            'continue_editing'      => '編集を続ける',
+            'continue_creating'     => '新規作成する',
+        ],
+        'data_qr_redirect_options' => [
+            'top'                   => 'TOP画面表示',
+            'list'                  => '一覧表示',
+            'view'                  => '詳細画面表示',
+            'continue_editing'      => '編集画面表示',
+            'camera'                => 'カメラ起動',
+        ],
         'help' => [
             'color' => '検索などで使用する、テーブルの色を設定します。',
             'icon' => 'メニューなどに表示するアイコンを選択してください。',
@@ -1200,6 +1258,9 @@ return [
             'saved_redirect_column' => '保存しました！次はカスタム列を設定してください。',
             'delete_confirm_message' => '削除する場合は「%s」を入力してください。',
             'delete_confirm_error' => 'キーワードが正しくありません。',
+            'copy_custom_table' => '通常設定、拡張設定、カスタム列をコピーします。<br />その他の設定は対象外になります。手動で設定を行ってください。',
+            'qrcode_activate' => 'このテーブルの二次元バーコード機能を有効化にします。有効化しますか？',
+            'qrcode_deactivate' => 'このテーブルの二次元バーコード機能を無効化にします。無効化しますか？',
         ],
 
         'custom_column_multi' => [
@@ -1313,6 +1374,7 @@ return [
             'number_min' => '最小値',
             'number_max' => '最大値',
             'number_format' => '数値 カンマ文字列',
+            'force_caculate' => '値がなくても計算式を実施する',
             'decimal_digit' => '小数点以下の桁数',
             'percent_format' => 'パーセント表示',
             'updown_button' => '+-ボタン表示',
@@ -1396,6 +1458,7 @@ return [
             'min_max_width' => '一覧表示する時の、列の幅の最小値と最大値を、整数(px)で入力してください。',
             'text_align' => '一覧表示する時の配置を選択してください。',
             'number_format' => 'YESにすることで、テキストフィールドがカンマ値で表示されます。',
+            'force_caculate' => 'YESにすることで、値がなくても計算が走るようにします。',
             'percent_format' => 'YESにすることで、一覧画面や表示画面でパーセント表示になります。',
             'rows' => '入力フォームの高さを設定してください。',
             'updown_button' => 'YESにすることで、フォームに+-ボタンを表示します。',
@@ -1736,6 +1799,7 @@ return [
         'update_value_text' => '更新値',
         'input_column_description' => 'データ更新のタイミングがボタンの場合に、更新値を設定するフォーム(ダイアログ)を表示することができます。<br/>入力を行う列を設定してください。',
         'dialog_description' => "%sのデータを更新する値を記入してください。",
+        'active_flg' => '有効フラグ',
 
         'operation_type_options' => [
             'bulk_update' => '一覧画面のチェックボタン選択時',
@@ -1793,6 +1857,7 @@ return [
         'view_column_target' => '対象列',
         'view_column_start_date' => '開始日',
         'view_column_end_date' => '終了日',
+        'child_table_id' => '子テーブル',
         'color' => '表示色',
         'font_color' => '文字色',
         'order' => '表示順',
@@ -1827,6 +1892,8 @@ return [
             'use_view_infobox' => 'YESにすることで、ビューの上部に、業務内容や、ユーザーへのメッセージなどを記入できる、情報ボックスを設定することができます。',
             'view_infobox_title' => '情報ボックスに表示するタイトルを記入してください。',
             'view_infobox' => '情報ボックスに表示するHTMLを記入してください。※画像、スクリプトは入力できません。',
+            'child_table_id' => '子テーブルを設定した列を一覧画面でクリックすると子テーブルの情報がアコーディオン表示されます。',
+            'order' => 'カスタムビューのメニューボタンの表示順です。',
         ],
 
         'column_sort_options' => [
@@ -1898,6 +1965,7 @@ return [
             'create_sum' => '集計ビュー新規作成',
             'create_calendar' => 'カレンダービュー新規作成',
             'create_filter' => '条件ビュー新規作成',
+            'create_expansion' => '親子ビュー新規作成',
 
             'help' => [
                 'current_view_edit' => '現在表示しているビューの設定を変更します。',
@@ -1906,6 +1974,7 @@ return [
                 'create_sum' => 'データの項目をグループ化し、合計値や最大値を集計し表示する、集計ビューを新規作成します。',
                 'create_calendar' => 'データの日付をカレンダー形式で表示する、カレンダービューを新規作成します。',
                 'create_filter' => '通知を実施する条件や、フォームの選択肢に表示するための条件を設定する、条件ビューを新規作成します。',
+                'create_expansion' => '親子データを合わせて一覧表示する、親子ビューを新規作成します。',
             ],
         ],
         'message' => [
@@ -1924,6 +1993,7 @@ return [
             'default' => '通常ビュー',
             'aggregate' => '集計ビュー',
             'calendar' => 'カレンダービュー',
+            'expansion' => '親子ビュー',
             'filter' => '条件ビュー',
             'plugin' => '独自ビュー',
             'alldata' => '全件ビュー',
@@ -2169,6 +2239,10 @@ return [
         ]
     ],
 
+    'qrcode' => [
+        'description' => 'このテーブルの二次元バーコード設定を行います。',
+    ],
+
     'custom_value' => [
         'description' => 'このテーブルのデータ一覧を表示します。',
         'template' => 'テンプレート出力',
@@ -2181,6 +2255,7 @@ return [
         'soft_deleted_data' => '削除済データ',
         'restore' => '復元',
         'hard_delete' => '完全に削除する',
+        'custom_valule_button_label' => 'データ',
         'import' => [
             'manual_id' => 'データインポート',
             'import_file' => 'インポートファイル',
@@ -2240,7 +2315,7 @@ return [
             'reference_error' => 'このデータは別のテーブルから参照されているため、削除できません。',
             'relation_error' => 'このテーブルは親子関係が設定されているため、削除できません。',
             'multiple_uniques' => 'その%sは、すでに登録されています。',
-            'lock_error' => '対象のデータは別のユーザーによって更新されました。画面の更新後、再度入力を行ってください。',
+            'lock_error' => '対象のデータは更新されました。画面の更新後、再度入力を行ってください。',
             'lock_error_api' => '対象のデータは別のユーザーによって更新されました。',
             'init_flg' => '保存後、変更はできません。',
             'export_all' => 'すべてのデータを、すべてのシステム列・カスタム列を対象にエクスポートします。',
@@ -2546,6 +2621,7 @@ return [
         'condition_key' => '条件',
         'condition_value' => '条件値',
         'condition_join' => '条件の結合',
+        'condition_reverse' => '条件の反転',
         'condition_type_options' => [
             'user' => 'ログインユーザー',
             'organization' => 'ログインユーザーの所属組織',
@@ -2574,6 +2650,10 @@ return [
         'condition_join_options' => [
             'and' => 'すべての条件に一致',
             'or' => 'いずれかの条件に一致',
+        ],
+
+        'condition_reverse_options' => [
+            '1' => '条件を反転する',
         ],
     ],
 ];
