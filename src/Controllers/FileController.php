@@ -152,7 +152,7 @@ class FileController extends AdminControllerBase
         $record = System::where('system_name', $key)->first();
 
         if (!isset($record)) {
-            abort(404);
+            return response('', 404);
         }
 
         return static::downloadFile($record->system_value);
@@ -179,7 +179,7 @@ class FileController extends AdminControllerBase
             if ($options['asApi']) {
                 return abortJson(404, ErrorCode::DATA_NOT_FOUND());
             }
-            abort(404);
+            return response('', 404);
         }
 
         $path = $data->path;
@@ -189,7 +189,7 @@ class FileController extends AdminControllerBase
             if ($options['asApi']) {
                 return abortJson(404, ErrorCode::DATA_NOT_FOUND());
             }
-            abort(404);
+            return response('', 404);
         }
 
         // if has parent_id, check permission
@@ -199,8 +199,7 @@ class FileController extends AdminControllerBase
                 if ($options['asApi']) {
                     return abortJson(403, ErrorCode::PERMISSION_DENY());
                 }
-
-                abort(403);
+                return response('', 403);
             }
         }
 
