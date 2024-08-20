@@ -1033,8 +1033,6 @@ return [
     |
     */
     'disable_show_field_viewonly' => env('EXMENT_DISABLE_SHOW_FIELD_VIEWONLY', false),
-
-
   
     /*
     |--------------------------------------------------------------------------
@@ -1118,6 +1116,16 @@ return [
     */
     'grid_mat_length' => env('EXMENT_GRID_MAX_LENGTH', 50),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Restrict creation of user views
+    |--------------------------------------------------------------------------
+    |
+    | If true, restrict creation of user views to table managers only.
+    |
+    */
+    'restrict_user_view_create' => env('EXMENT_RESTRICT_USER_VIEW_CREATE', false),
+  
     /*
     |--------------------------------------------------------------------------
     | Maximum count of children data show in parent & children view
