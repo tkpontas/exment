@@ -1033,8 +1033,6 @@ return [
     |
     */
     'disable_show_field_viewonly' => env('EXMENT_DISABLE_SHOW_FIELD_VIEWONLY', false),
-
-
   
     /*
     |--------------------------------------------------------------------------
@@ -1099,11 +1097,42 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | class type of default show page 
+    |--------------------------------------------------------------------------
+    |
+    | set class for container of default show page.
+    | 1. only option boxes(default).
+    | 2. only show form.
+    | 3. both option boxes and show form.
+    |
+    */
+    'show_page_class_type' => env('EXMENT_SHOW_PAGE_CLASS_TYPE', 1),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maximum length of strings to display in the grid
     |--------------------------------------------------------------------------
     |
     */
     'grid_mat_length' => env('EXMENT_GRID_MAX_LENGTH', 50),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Restrict creation of user views
+    |--------------------------------------------------------------------------
+    |
+    | If true, restrict creation of user views to table managers only.
+    |
+    */
+    'restrict_user_view_create' => env('EXMENT_RESTRICT_USER_VIEW_CREATE', false),
+  
+    /*
+    |--------------------------------------------------------------------------
+    | Maximum count of children data show in parent & children view
+    |--------------------------------------------------------------------------
+    |
+    */
+    'max_child_expand_count' => env('EXMENT_MAX_CHILD_EXPAND_COUNT', 10),
 
     /*
     |--------------------------------------------------------------------------
@@ -1124,6 +1153,16 @@ return [
     |
     */
     'search_keep_default_view' => env('EXMENT_SEARCH_KEEP_DEFAULT_VIEW', false),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | keep grid parameter
+    |--------------------------------------------------------------------------
+    |
+    | If true, keep grid filter, sort, page.
+    |
+    */
+    'keep_grid_parameters' => env('EXMENT_KEEP_GRID_PARAMETERS', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -1140,4 +1179,20 @@ return [
     |
     */
     'text_qr_button_ja' => env('EXMENT_TEXT_QR_BUTTON_JA', '二次元バーコード'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default english text for SCAN code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_scan_button_en' => env('EXMENT_TEXT_SCAN_BUTTON_EN', '2D barcode／JANcode'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default japanese text for SCAN code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_scan_button_ja' => env('EXMENT_TEXT_SCAN_BUTTON_JA', '二次元／JANバーコード'),
 ];

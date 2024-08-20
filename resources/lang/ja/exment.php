@@ -3,14 +3,14 @@
 return [
     'label' => '日本語',
     'common' => [
-        'home' => 'HOME',
+        'home' => 'ホーム',
         'success' => '成功',
-        'error' => 'エラー',
+        'error' => '失敗',
         'warning' => '警告',
-        'import' => 'インポート',
+        'import' => '取込',
         'plugin' => 'プラグイン',
-        'copy' => 'コピー',
-        'shared' => '共有',
+        'copy' => '複製',
+        'shared' => '権限付与',
         'change' => '変更',
         'required' => '必須',
         'default' => '既定',
@@ -38,19 +38,19 @@ return [
         'deleted_at' => '削除日時',
         'published_at' => '公開日時',
         'published_date' => '公開日',
-        'all_user' => '全ユーザー',
-        'created_user' => '作成ユーザー',
-        'updated_user' => '更新ユーザー',
-        'deleted_user' => '削除ユーザー',
-        'executed_user' => '実行ユーザー',
-        'workflow_status' => '現在のステータス',
-        'workflow_work_users' => '現在の作業ユーザー',
-        'workflow_history' => 'ワークフロー履歴',
-        'trashed_user' => '(削除済ユーザー)',
+        'all_user' => '全利用者',
+        'created_user' => '作成者',
+        'updated_user' => '更新者',
+        'deleted_user' => '削除者',
+        'executed_user' => '実行者',
+        'workflow_status' => '現在の状態',
+        'workflow_work_users' => '現在の作業者',
+        'workflow_history' => '進捗履歴',
+        'trashed_user' => '---',
         'attachment' => '添付ファイル',
         'max_file_size' => 'アップロード上限サイズ',
         'comment' => 'コメント',
-        'separate_word' => '、',
+        'separate_word' => ',',
         'format_keyvalue' => '%s ： %s',
         'yes' => 'はい',
         'no' => 'いいえ',
@@ -82,12 +82,13 @@ return [
         'preview' => 'プレビュー',
         'no_selected' => '未選択',
         'no_use' => '使用しない',
-        'default_export' => 'エクスポート',
+        'default_export' => '出力',
         'condition_reverse' => '<反転> ',
         'save' => '保存',
         'no_file_download' => 'ダウンロード対象のファイルがありません',
         'english' => '英語',
         'japanese' => '日本語',
+        'back_button' => '戻る',
 
         'message' => [
             'confirm_execute' => '%sを実行します。\r\nよろしいですか？',
@@ -105,7 +106,7 @@ return [
             'exists_row' => '%sは必ず1行以上入力してください。',
             'sendmail_succeeded' => 'メールを送信しました。',
             'input_keyword' => '「%s」と入力してください。',
-            'no_permission' => '(権限がありません)',
+            'no_permission' => '********',
             'file_drag_drop' => 'ファイルをドラッグ＆ドロップしてください',
             'modal_confirm' => '実施する場合は、「%s」を入力してください。',
             'label_link' => ':labelは、<a href=":link" target="_blank">こちら<i class="fa fa-external-link"></i></a>をご確認ください。',
@@ -359,9 +360,9 @@ return [
         ],
         
         'date_format_options' => [
-            'format_default' => '標準（Y-m-d H:i:s）',
-            'format_slash' => 'カスタム（Y/m/d H:i:s）',
-            'format_local' => 'ローカル（Y年m月d日 H時i分s秒）',
+            'format_default' => '標準（Y-m-d H:i）',
+            'format_slash' => 'カスタム（Y/m/d H:i）',
+            'format_local' => 'ローカル（Y年m月d日 H時i分）',
         ],
         
         'filter_search_type_options' => [
@@ -377,9 +378,9 @@ return [
         ],
         
         'date_format_list' => [
-            'format_default' => ['Y-m-d', 'Y-m-d H:i:s', 'H:i:s'],
-            'format_slash' => ['Y/m/d', 'Y/m/d H:i:s', 'H:i:s'],
-            'format_local' => ['Y年m月d日', 'Y年m月d日 H時i分s秒', 'H時i分s秒'],
+            'format_default' => ['Y-m-d', 'Y-m-d H:i', 'H:i'],
+            'format_slash' => ['Y/m/d', 'Y/m/d H:i', 'H:i'],
+            'format_local' => ['Y年m月d日', 'Y年m月d日 H時i分', 'H時i分'],
         ],
 
         'joined_org_filter_role_group_options' => [
@@ -529,19 +530,19 @@ return [
     ],
 
     'dashboard' => [
-        'header' => 'ダッシュボード',
-        'dashboard_name' => 'ダッシュボード名(英数字)',
-        'dashboard_view_name' => 'ダッシュボード表示名',
-        'dashboard_type' => 'ダッシュボード種類',
-        'row' => 'ダッシュボード%s行目',
-        'description_row' => 'ダッシュボードの%s行目に表示する列数です。',
-        'description_row2' => 'ダッシュボードの%s行目に表示する列数です。※「なし」を選択すると、%s行目は表示されません。',
+        'header' => 'ホーム',
+        'dashboard_name' => 'ホーム名(英数字)',
+        'dashboard_view_name' => 'ホーム表示名',
+        'dashboard_type' => 'ホーム種類',
+        'row' => 'ホーム%s行目',
+        'description_row' => 'ホームの%s行目に表示する列数です。',
+        'description_row2' => 'ホームの%s行目に表示する列数です。※「なし」を選択すると、%s行目は表示されません。',
         'description_chart' => '※チャートの表示には、集計ビューと集計項目が必要です。<br />集計ビューを作成していない場合、まずはビュー設定画面より、集計ビューを作成してください。',
-        'default_dashboard_name' => '既定のダッシュボード',
+        'default_dashboard_name' => '既定のホーム',
         'not_registered' => '未登録',
         'dashboard_type_options' => [
-            'system' => 'システムダッシュボード',
-            'user' => 'ユーザーダッシュボード',
+            'system' => 'パブリック',
+            'user' => 'プライベート',
         ],
         'row_options0' => 'なし',
         'row_optionsX' => '列',
@@ -588,8 +589,8 @@ return [
         ],
 
         'dashboard_menulist' => [
-            'current_dashboard_edit' => '現在のダッシュボード設定変更',
-            'create' => 'ダッシュボード新規作成',
+            'current_dashboard_edit' => '現在のホーム画面の設定変更',
+            'create' => 'ホーム画面の新規作成',
         ],
 
         'message' => [
@@ -793,11 +794,11 @@ return [
     ],
 
     'user' => [
-        'header' => 'ログインユーザー設定',
-        'description' => 'ユーザーの中から、このシステムにログインを行うユーザーを選択し、パスワード設定や、パスワード初期化などを行うこともできます。',
-        'user_code' => 'ユーザーコード',
-        'user_name' => 'ユーザー名',
-        'email' => 'メールアドレス',
+        'header' => 'ログイン許可設定',
+        'description' => '登録済利用者の中から、このシステムにログインを行う利用者を選択し、パスワード設定や、パスワード初期化などを行うこともできます。',
+        'user_code' => '利用者コード',
+        'user_name' => '利用者名',
+        'email' => '通知メールアドレス',
         'password' => 'パスワード',
         'id' => 'ID',
         'password_confirmation' => 'パスワード(再入力)',
@@ -805,13 +806,13 @@ return [
         'new_password' => '新しいパスワード',
         'new_password_confirmation' => '新しいパスワード(再入力)',
         'send_password' => 'ユーザー情報をメール送信する',
-        'login_user' => 'ログインユーザー設定',
+        'login_user' => 'ログイン許可',
         'login' => 'ログイン設定',
         'use_loginuser' => 'ログイン権限付与',
         'reset_password' => 'パスワードをリセットする',
         'create_password_auto' => 'パスワードを自動生成する',
         'password_reset_flg' => '初回ログイン時にパスワードを変更させる',
-        'avatar' => 'アバター',
+        'avatar' => 'アイコン',
         'default_table_name' => 'ユーザー',
         'belong_organizations' => '所属組織設定',
         'password_change' => 'パスワード変更',
@@ -846,8 +847,8 @@ return [
         'password_reset' => 'パスワードリセット',
         'back_login_page' => 'ログインページに戻る',
         'sso_provider_error' => 'プロバイダからのログイン情報取得に失敗しました。何度も失敗する場合、管理者にお問い合わせください。',
-        'noexists_user' => 'Exmentにユーザーが存在しませんでした。先にユーザーを追加するよう、管理者にお問い合わせください。',
-        'throttle' => 'ログイン試行回数が多すぎます。%s分経過後、再度お試しください。',
+        'noexists_user' => 'このアカウントの利用は許可されていません。認証しようとしているアカウントをもう一度ご確認ください。',
+        'throttle' => 'ログイン試行回数が多すぎます。認証を制限し、該当のアカウントをロックしました。管理者にお問い合わせください。',
         'not_accept_domain' => 'ドメイン :domain でのログインは、許可されていません。',
         'login_button_format' => ':display_nameでログイン',
         'sso_provider_error_validate' => 'プロバイダから取得したログイン情報に問題がありました。以下の内容をご確認いただき、管理者にお問い合わせください。:errors',
@@ -1051,6 +1052,7 @@ return [
         'custom_value' => 'データ一覧',
         'error_select' => '行を1行のみ選択してください',
         'qrcode' => '二次元バーコード設定',
+        'jancode' => 'JANバーコード設定',
     ],
 
     'workflow' => [
@@ -1224,6 +1226,17 @@ return [
             'refer_column_description' => '二次元バーコードの右側にカスタムデータの指定列の情報を表示します。<br/>※ID列または自動採番列（ユニーク（一意）かつ必須であること）を選択できます。',
             'text_qr_description' => '二次元バーコードの右側に表示される固定文言です。',
         ],
+        'jan_code' => [
+            'setting' => 'JANバーコード設定',
+            'advance_setting' => 'JANバーコード読込',
+            'form_after_edit' => '編集フォーム',
+            'form_after_create' => '登録フォーム',
+            'table_not_found' => 'この Jancode のテーブルが見つかりません',
+            'action_after_edit' => 'データ編集後のアクション',
+            'action_after_create' => 'データ登録後のアクション',
+            'header' => 'JANバーコード利用のテーブル一覧',
+            'description' => 'JANバーコード登録したいテーブルを選択してください。',
+        ],
         'data_submit_redirect_options' => [
             "inherit"               => "システム設定に合わせる",
             'list'                  => '一覧',
@@ -1261,6 +1274,8 @@ return [
             'copy_custom_table' => '通常設定、拡張設定、カスタム列をコピーします。<br />その他の設定は対象外になります。手動で設定を行ってください。',
             'qrcode_activate' => 'このテーブルの二次元バーコード機能を有効化にします。有効化しますか？',
             'qrcode_deactivate' => 'このテーブルの二次元バーコード機能を無効化にします。無効化しますか？',
+            'jancode_activate' => 'このテーブルのJANバーコード機能を有効にします。有効にしますか?',
+            'jancode_deactivate' => 'このテーブルのJANバーコード機能は無効になります。無効にしますか?',
         ],
 
         'custom_column_multi' => [
@@ -1857,6 +1872,7 @@ return [
         'view_column_target' => '対象列',
         'view_column_start_date' => '開始日',
         'view_column_end_date' => '終了日',
+        'child_table_id' => '子テーブル',
         'color' => '表示色',
         'font_color' => '文字色',
         'order' => '表示順',
@@ -1891,6 +1907,7 @@ return [
             'use_view_infobox' => 'YESにすることで、ビューの上部に、業務内容や、ユーザーへのメッセージなどを記入できる、情報ボックスを設定することができます。',
             'view_infobox_title' => '情報ボックスに表示するタイトルを記入してください。',
             'view_infobox' => '情報ボックスに表示するHTMLを記入してください。※画像、スクリプトは入力できません。',
+            'child_table_id' => '子テーブルを設定した列を一覧画面でクリックすると子テーブルの情報がアコーディオン表示されます。',
             'order' => 'カスタムビューのメニューボタンの表示順です。',
         ],
 
@@ -1963,6 +1980,7 @@ return [
             'create_sum' => '集計ビュー新規作成',
             'create_calendar' => 'カレンダービュー新規作成',
             'create_filter' => '条件ビュー新規作成',
+            'create_expansion' => '親子ビュー新規作成',
 
             'help' => [
                 'current_view_edit' => '現在表示しているビューの設定を変更します。',
@@ -1971,6 +1989,7 @@ return [
                 'create_sum' => 'データの項目をグループ化し、合計値や最大値を集計し表示する、集計ビューを新規作成します。',
                 'create_calendar' => 'データの日付をカレンダー形式で表示する、カレンダービューを新規作成します。',
                 'create_filter' => '通知を実施する条件や、フォームの選択肢に表示するための条件を設定する、条件ビューを新規作成します。',
+                'create_expansion' => '親子データを合わせて一覧表示する、親子ビューを新規作成します。',
             ],
         ],
         'message' => [
@@ -1980,15 +1999,16 @@ return [
             'used_column_error' => 'カスタム列設定の絞り込み条件ビューで使用しています。事前に削除を行ってください。',
         ],
 
-        'custom_view_button_label' => 'ビュー',
+        'custom_view_button_label' => '表示切替',
         'custom_view_type_options' => [
-            'system' => 'システムビュー',
-            'user' => 'ユーザービュー',
+            'system' => 'パブリック',
+            'user' => 'プライベート',
         ],
         'custom_view_kind_type_options' => [
             'default' => '通常ビュー',
             'aggregate' => '集計ビュー',
             'calendar' => 'カレンダービュー',
+            'expansion' => '親子ビュー',
             'filter' => '条件ビュー',
             'plugin' => '独自ビュー',
             'alldata' => '全件ビュー',
@@ -2158,7 +2178,7 @@ return [
         'no_result' => '検索結果がありませんでした',
         'result_label' => '「%s」 の検索結果' ,
         'view_list' => '一覧表示',
-        'freeword' => 'フリーワード',
+        'freeword' => 'キーワード',
     ],
 
     'menu' => [
@@ -2236,6 +2256,9 @@ return [
 
     'qrcode' => [
         'description' => 'このテーブルの二次元バーコード設定を行います。',
+    ],
+    'jancode' => [
+        'description' => 'このテーブルのJANバーコード設定を行います。',
     ],
 
     'custom_value' => [
