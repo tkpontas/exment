@@ -27,6 +27,7 @@ use Illuminate\Http\Request;
 use Encore\Admin\Form;
 // todo 一覧ソートバグ対応用の追加です
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DefaultGrid extends GridBase
 {
@@ -43,6 +44,8 @@ class DefaultGrid extends GridBase
      */
     public function grid()
     {
+        $this->loadGridParameters();
+
         $classname = getModelName($this->custom_table);
         $grid = new Grid(new $classname());
 
@@ -120,7 +123,7 @@ class DefaultGrid extends GridBase
                 ]);
             //$name = $item->indexEnabled() ? $item->index() : $item->uniqueName();
             $className = 'column-' . $item->name();
-            $grid->column($item->uniqueName(), $item->label())
+            $column = $grid->column($item->uniqueName(), $item->label())
                 ->sort($item->sortable())
                 ->sortName($item->getSortName())
                 //->cast($item->getCastName())
@@ -135,11 +138,14 @@ class DefaultGrid extends GridBase
                 ->setClasses($className)
                 ->setHeaderStyle($item->gridHeaderStyle())
                 ->display(function ($v) use ($item) {
+                    /** @phpstan-ignore-next-line Call to function is_null() with $this(Exceedone\Exment\DataItems\Grid\DefaultGrid) will always evaluate to false. */
                     if (is_null($this)) {
                         return '';
                     }
                     return $item->setCustomValue($this)->html();
                 })->escape(false);
+            
+            $this->setGridColumn($column, $custom_view_column);
         }
 
         // set parpage
@@ -158,6 +164,13 @@ class DefaultGrid extends GridBase
         $custom_table->setQueryWith($grid->model(), $this->custom_view);
     }
 
+
+    /**
+     * set laravel-admin grid column specific setting for grid type
+     */
+    protected function setGridColumn($column, $custom_view_column)
+    {
+    }
 
     /**
      * execute filter for modal
@@ -315,7 +328,9 @@ class DefaultGrid extends GridBase
                 $filterItems[] = $custom_view_grid_filter->column_item;
             }
 
-            return collect($filterItems);
+            /** @var Collection $collection */
+            $collection =  collect($filterItems);
+            return $collection;
         }
 
         foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => true]) as $filterKey => $filterType) {
@@ -800,5 +815,52 @@ class DefaultGrid extends GridBase
         })->setTableColumnWidth(8, 4)
         ->rowUpDown('order', 10)
         ->descriptionHtml(exmtrans("custom_view.description_custom_view_grid_filters", $manualUrl));
+    }
+
+    /**
+     * Set filter fileds form
+     *
+     * @param Form $form
+     * @param CustomTable $custom_table
+     * @param boolean $is_aggregate
+     * @return void
+     */
+    public static function setFilterFields(&$form, $custom_table, $is_aggregate = false)
+    {
+        parent::setFilterFields($form, $custom_table, $is_aggregate);
+
+        $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
+            ->option(exmtrans("condition.condition_reverse_options"));
+    }
+
+    /**
+     * Get the previous filter, sort order, page, etc. of the list from the session
+     */
+    protected function loadGridParameters()
+    {
+        if (!boolval(config('exment.keep_grid_parameters', false))) {
+            return;
+        }
+
+        $previous_url = parse_url(url()->previous());
+        $current_url = parse_url(url()->current());
+        $previous_path = $previous_url? array_get($previous_url, 'path'): null;
+        $current_path = $current_url? array_get($current_url, 'path'): null;
+        $session_array = session(Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS);
+
+        $execute_filter = request()->get('execute_filter');
+        $_sort = request()->get('_sort');
+
+        if ($previous_path == $current_path) {
+            $session_array[$current_path] = request()->all();
+            session([Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS => $session_array]);
+        } elseif (boolval($execute_filter) || is_array($_sort)) {
+            $session_array[$current_path] = request()->all();
+            session([Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS => $session_array]);
+        } else {
+            if ($session_array && array_key_exists($current_path, $session_array)) {
+                request()->merge($session_array[$current_path]);
+            }
+        }
     }
 }
