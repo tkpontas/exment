@@ -88,6 +88,7 @@ return [
         'no_file_download' => 'There are no files to download',
         'english' => 'English',
         'japanese' => 'Japanese',
+        'back_button' => 'BACK',
 
         'message' => [
             'confirm_execute' => 'Are you sure to %s ?',
@@ -1051,6 +1052,7 @@ return [
         'custom_value' => 'Data List',
         'error_select' => 'Please select only one record.',
         'qrcode' => '2D Barcode Setting',
+        'jancode' => 'Jancode Setting',
     ],
 
     'workflow' => [
@@ -1223,6 +1225,17 @@ return [
             'refer_column_description' => 'The information of the specified column of custom data will be displayed to the right of the 2D barcode.<br/>*You can select the ID column or the auto-number column (must be unique and required).',
             'text_qr_description' => 'Fixed text displayed on the right side of the 2D barcode.',
         ],
+        'jan_code' => [
+            'setting' => 'Jancode Setting',
+            'advance_setting' => 'Jancode reading',
+            'form_after_edit' => 'Form edit data',
+            'form_after_create' => 'Form create data',
+            'table_not_found' => 'Table of this Jancode not found',
+            'action_after_edit' => 'Action after data edit',
+            'action_after_create' => 'Action after data registration',
+            'header' => 'Jan code table',
+            'description' => 'Choose table for this jancode',
+        ],
         'data_submit_redirect_options' => [
             'inherit'               => 'Match system settings',
             'list'                  => 'List',
@@ -1260,6 +1273,8 @@ return [
             'copy_custom_table' => 'Copy normal settings, advanced settings and custom columns. <br />Other settings are out of scope. Please set manually.',
             'qrcode_activate' => 'Enable the 2D barcode function for this table. Do you want to enable it?',
             'qrcode_deactivate' => 'The 2D barcode function for this table will be disabled. Do you want to disable it?',
+            'jancode_activate' => 'Enable the Jancode function for this table. Do you want to enable it?',
+            'jancode_deactivate' => 'The Jancode function for this table will be disabled. Do you want to disable it?',
         ],
 
         'custom_column_multi' => [
@@ -1856,6 +1871,7 @@ return [
         'view_column_target' => 'View target column',
         'view_column_start_date' => 'Start date',
         'view_column_end_date' => 'End date',
+        'child_table_id' => 'Child table id',
         'color' => 'Display color',
         'font_color' => 'Letter color',
         'order' => 'Order',
@@ -1890,6 +1906,7 @@ return [
             'use_view_infobox' => 'By setting YES, you can set an information box at the top of the view where you can enter business details and messages to users.',
             'view_infobox_title' => 'Enter the title to be displayed in the information box.',
             'view_infobox' => 'Please fill in the HTML to be displayed in the information box. *Images and scripts cannot be entered.',
+            'child_table_id' => 'When you click a column for which a child table has been set on the list screen, the child table data will be displayed in accordion style.',
             'order' => 'Display order of custom view menu buttons.',
         ],
 
@@ -2235,6 +2252,10 @@ return [
 
     'qrcode' => [
         'description' => 'Set the two-dimensional barcode for this table.',
+    ],
+
+    'jancode' => [
+        'description' => 'Set the jancode for this table.',
     ],
 
     'custom_value' => [

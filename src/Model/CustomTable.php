@@ -2890,7 +2890,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         if ( !is_nullorempty($userview_unavailable_table) && in_array($this->table_name, explode(',', $userview_unavailable_table)) ){
             return $this->hasSystemViewPermission();
         }
-        return System::userview_available() || $this->hasSystemViewPermission();
+        return (System::userview_available() && !boolval(config('exment.restrict_user_view_create', false))) || $this->hasSystemViewPermission();
     }
 
     /**
