@@ -441,7 +441,7 @@ return [
             'system_values_pos' => 'データ編集画面及びデータ詳細画面でシステム項目を表示する位置を設定します。',
             'data_submit_redirect' => 'カスタムデータの保存後にリダイレクトする画面の既定値を設定することができます。この項目を設定すると、データ入力画面で、保存後のデータ遷移先チェックボックスにチェックが入ります。',
             'header_user_info' => 'ヘッダーのユーザー情報に表示する内容を設定することができます。空欄にした場合は非表示になります。',
-            'api_available' => 'YESにした場合、APIを使用することができます。',
+            'api_available' => 'YESにする前に、Laravelキーを作成ください。作成方法は<a href="%sapiを使用する" target="_blank">こちら</a>です。YESにした場合、APIを使用することができます。',
             'outside_api' => 'YESにした場合、Exmentの最新バージョンの通知など、外部サーバー通信を行う処理を実行できます。データの受信のみ行います。※外部ネットワークに接続できない環境で使用する場合など、通信を行わない場合には、NOに設定してください。',
             'grid_pager_count' => '一覧ページで表示されるデータの、既定の表示件数です。システム全体に反映されます。',
             'datalist_pager_count' => 'キーワード検索や、ダッシュボードのデータ一覧で表示されるデータの、既定の表示件数です。システム全体に反映されます。',
@@ -1304,6 +1304,7 @@ return [
             'table_label_format' => '見出しフォーマット設定',
             'table_label_format_string' => 'フォーマット文字列',
             'form_action_disable_flg' => '画面からの変更不可',
+            'gridrow_select_transition' => '行クリック時の画面遷移',
 
             'help' => [
                 'table_labels' => 'データを選択時、画面に表示する文言の列を設定します。上から順に、見出しの項目として表示します。<br/>詳細は<a href="%s" target="_blank">こちら<i class="fa fa-external-link"></i></a>をご参照ください。',
@@ -1320,6 +1321,12 @@ return [
                 'delete' => '削除',
                 'import' => '取込',
                 'export' => '出力',
+            ],
+            'gridrow_select_options' => [
+                'default' => '既定値に合わせる',
+                'edit' => 'データ編集画面',
+                'show' => 'データ詳細画面',
+                'none' => '遷移しない',
             ],
             'share_trigger_type_options' => [
                 'create' => '新規作成時',
