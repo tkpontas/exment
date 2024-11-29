@@ -587,7 +587,7 @@ return [
             'editor' => 'Editor',
             'html' => 'HTML',
             'notify_navbar' => 'Notify list',
-            'qr_code' => '2D Barcode',
+            'barcode' => '2D/JAN Barcode',
         ],
 
         'dashboard_menulist' => [

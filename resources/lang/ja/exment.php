@@ -587,7 +587,7 @@ return [
             'editor' => 'エディター',
             'html' => 'HTML',
             'notify_navbar' => '通知一覧',
-            'qr_code' => '二次元バーコード',
+            'barcode' => '二次元／JANバーコード',
         ],
 
         'dashboard_menulist' => [
