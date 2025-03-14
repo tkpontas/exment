@@ -1120,6 +1120,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Maximum count of children data show in parent & children view
+    |--------------------------------------------------------------------------
+    |
+    */
+    'max_child_expand_count' => env('EXMENT_MAX_CHILD_EXPAND_COUNT', 10),
+
+    /*
+    |--------------------------------------------------------------------------
     | Specify custom view sorting options
     |--------------------------------------------------------------------------
     |
@@ -1137,6 +1145,16 @@ return [
     |
     */
     'search_keep_default_view' => env('EXMENT_SEARCH_KEEP_DEFAULT_VIEW', false),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | keep grid parameter
+    |--------------------------------------------------------------------------
+    |
+    | If true, keep grid filter, sort, page.
+    |
+    */
+    'keep_grid_parameters' => env('EXMENT_KEEP_GRID_PARAMETERS', false),
 
     /*
     |--------------------------------------------------------------------------

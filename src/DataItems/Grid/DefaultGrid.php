@@ -44,6 +44,8 @@ class DefaultGrid extends GridBase
      */
     public function grid()
     {
+        $this->loadGridParameters();
+
         $classname = getModelName($this->custom_table);
         $grid = new Grid(new $classname());
 
@@ -121,7 +123,7 @@ class DefaultGrid extends GridBase
                 ]);
             //$name = $item->indexEnabled() ? $item->index() : $item->uniqueName();
             $className = 'column-' . $item->name();
-            $grid->column($item->uniqueName(), $item->label())
+            $column = $grid->column($item->uniqueName(), $item->label())
                 ->sort($item->sortable())
                 ->sortName($item->getSortName())
                 //->cast($item->getCastName())
@@ -142,6 +144,8 @@ class DefaultGrid extends GridBase
                     }
                     return $item->setCustomValue($this)->html();
                 })->escape(false);
+            
+            $this->setGridColumn($column, $custom_view_column);
         }
 
         // set parpage
@@ -160,6 +164,13 @@ class DefaultGrid extends GridBase
         $custom_table->setQueryWith($grid->model(), $this->custom_view);
     }
 
+
+    /**
+     * set laravel-admin grid column specific setting for grid type
+     */
+    protected function setGridColumn($column, $custom_view_column)
+    {
+    }
 
     /**
      * execute filter for modal
@@ -823,5 +834,36 @@ class DefaultGrid extends GridBase
 
         $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
             ->option(exmtrans("condition.condition_reverse_options"));
+    }
+
+    /**
+     * Get the previous filter, sort order, page, etc. of the list from the session
+     */
+    protected function loadGridParameters()
+    {
+        if (!boolval(config('exment.keep_grid_parameters', false))) {
+            return;
+        }
+
+        $previous_url = parse_url(url()->previous());
+        $current_url = parse_url(url()->current());
+        $previous_path = $previous_url? array_get($previous_url, 'path'): null;
+        $current_path = $current_url? array_get($current_url, 'path'): null;
+        $session_array = session(Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS);
+
+        $execute_filter = request()->get('execute_filter');
+        $_sort = request()->get('_sort');
+
+        if ($previous_path == $current_path) {
+            $session_array[$current_path] = request()->all();
+            session([Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS => $session_array]);
+        } elseif (boolval($execute_filter) || is_array($_sort)) {
+            $session_array[$current_path] = request()->all();
+            session([Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS => $session_array]);
+        } else {
+            if ($session_array && array_key_exists($current_path, $session_array)) {
+                request()->merge($session_array[$current_path]);
+            }
+        }
     }
 }
