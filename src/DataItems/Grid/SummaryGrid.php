@@ -50,9 +50,10 @@ class SummaryGrid extends GridBase
         if (!$isShowViewSummaryDetail) {
             $grid->disableActions();
         }
+        $alldata_view = CustomView::getAllData($table_name);
 
         $_this = $this;
-        $grid->actions(function (Grid\Displayers\Actions $actions) use ($_this, $isShowViewSummaryDetail, $custom_view, $table_name) {
+        $grid->actions(function (Grid\Displayers\Actions $actions) use ($_this, $isShowViewSummaryDetail, $custom_view, $table_name, $alldata_view) {
             $actions->disableDelete();
             $actions->disableEdit();
             $actions->disableView();
@@ -61,7 +62,7 @@ class SummaryGrid extends GridBase
                 $params = $_this->getCallbackGroupKeys($actions->row);
 
                 $linker = (new Grid\Linker())
-                    ->url(admin_urls_query('data', $table_name, ['view' => CustomView::getAllData($table_name)->suuid, 'group_view' => $custom_view->suuid, 'group_key' => json_encode($params)]))
+                    ->url(admin_urls_query('data', $table_name, ['view' => $alldata_view->suuid, 'group_view' => $custom_view->suuid, 'group_key' => json_encode($params)]))
                     ->icon('fa-list')
                     ->tooltip(exmtrans('custom_value.view_summary_detail'));
                 $actions->prepend($linker);
@@ -84,6 +85,7 @@ class SummaryGrid extends GridBase
             $edit_flg = $this->custom_table->enableEdit(true) === true;
             if ($edit_flg && $this->custom_table->enableExport() === true) {
                 $button = new Tools\ExportImportButton(admin_urls('data', $this->custom_table->table_name), $grid, false, true, false);
+                /** @phpstan-ignore-next-line append expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\ExportImportButton given */
                 $tools->append($button->setCustomTable($this->custom_table));
             }
 
@@ -93,9 +95,11 @@ class SummaryGrid extends GridBase
             }
 
             if ($this->custom_table->enableTableMenuButton()) {
+                /** @phpstan-ignore-next-line expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
                 $tools->append(new Tools\CustomTableMenuButton('data', $this->custom_table));
             }
             if ($this->custom_table->enableViewMenuButton()) {
+                /** @phpstan-ignore-next-line expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomViewMenuButton given */
                 $tools->append(new Tools\CustomViewMenuButton($this->custom_table, $this->custom_view));
             }
         });
