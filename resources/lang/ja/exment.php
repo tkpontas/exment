@@ -1333,12 +1333,6 @@ return [
                 'show' => 'データ詳細画面',
                 'none' => '遷移しない',
             ],
-            'gridrow_select_options' => [
-                'default' => '既定値に合わせる',
-                'edit' => 'データ編集画面',
-                'show' => 'データ詳細画面',
-                'none' => '遷移しない',
-            ],
             'share_trigger_type_options' => [
                 'create' => '新規作成時',
                 'update' => '更新時',
