@@ -1892,7 +1892,6 @@ return [
         'view_column_target' => '対象列',
         'view_column_start_date' => '開始日',
         'view_column_end_date' => '終了日',
-        'child_table_id' => '子テーブル',
         'color' => '表示色',
         'font_color' => '文字色',
         'order' => '表示順',
