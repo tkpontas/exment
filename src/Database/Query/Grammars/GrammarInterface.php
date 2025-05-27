@@ -75,7 +75,7 @@ interface GrammarInterface
      * @param string $column column name
      * @param bool $groupBy if group by query, return true
      *
-     * @return void
+     * @return string|null
      */
     public function getDateFormatString($groupCondition, $column, $groupBy = false, $wrap = true);
 
@@ -97,4 +97,13 @@ interface GrammarInterface
      * @return string
      */
     public function wrapJsonUnquote($value, $prefixAlias = false);
+
+    /**
+     * Wrap and add json_extract if needs
+     *
+     * @param mixed $column
+     * @param string $path
+     * @return string
+     */
+    public function wrapJsonExtract($column, $path = '$');
 }

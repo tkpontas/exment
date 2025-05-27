@@ -27,6 +27,10 @@ class PluginTest extends FeatureTestBase
     use PluginTestTrait;
     use DatabaseTransactions;
 
+    /**
+     * @param bool $fake
+     * @return void
+     */
     protected function init(bool $fake)
     {
         $this->initAllTest();
@@ -194,6 +198,7 @@ class PluginTest extends FeatureTestBase
         \File::copyDirectory($source_path, $import_path);
         $files = \File::files($import_path);
 
+        /** @var Plugin $plugin */
         $plugin = Plugin::where('plugin_name', 'TestPluginImport')->first();
 
         $service = (new DataImportExport\DataImportExportService());
@@ -300,6 +305,7 @@ class PluginTest extends FeatureTestBase
     public function testDocument()
     {
         $custom_table = CustomTable::getEloquent(SystemTableName::USER);
+        /** @var mixed $custom_value */
         $custom_value = $custom_table->getValueModel()->latest()->first();
 
         list($plugin, $pluginClass) = $this->getPluginInfo('TestPluginDocument', PluginType::DOCUMENT, [

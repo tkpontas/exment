@@ -64,6 +64,7 @@ class Csv extends PhpSpreadSheet
 
     protected function createWriter($spreadsheet)
     {
+        /** @var \PhpOffice\PhpSpreadsheet\Writer\Csv $writer */
         $writer = IOFactory::createWriter($spreadsheet, 'Csv');
         // append bom if config
         if (boolval(config('exment.export_append_csv_bom', false))) {
@@ -105,6 +106,7 @@ class Csv extends PhpSpreadSheet
 
     protected function getCsvArray($file, array $options = [])
     {
+        /** @phpstan-ignore-next-line setlocale expects array|string|null, int given */
         $original_locale = setlocale(LC_CTYPE, 0);
 
         // set C locale

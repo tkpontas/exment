@@ -3,6 +3,7 @@
 namespace Exceedone\Exment\Tests\Browser;
 
 use Exceedone\Exment\Model\CustomColumn;
+use Exceedone\Exment\Model\CustomForm;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Plugin;
 use Carbon\Carbon;
@@ -19,6 +20,10 @@ class CPublicFormTest extends ExmentKitTestCase
 
     /**
      * pre-excecute process before test.
+     *
+     * @param bool $fake
+     *
+     * @return void
      */
     protected function setUp(bool $fake = false): void
     {
@@ -33,6 +38,8 @@ class CPublicFormTest extends ExmentKitTestCase
 
     /**
      * Check public form display.
+     *
+     * @return void
      */
     public function testDisplayPublicForm()
     {
@@ -114,14 +121,21 @@ class CPublicFormTest extends ExmentKitTestCase
         \DB::rollback();
     }
     // Create public form
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
     public function testAddPublicFormSuccess()
     {
         \DB::beginTransaction();
         $pre_cnt = PublicForm::count();
 
+        /** @var CustomTable $table */
         $table = CustomTable::where('table_name', 'custom_value_edit_all')->first();
         $target_form = $table->custom_forms->first();
 
+        /** @var CustomColumn $email */
         $email = CustomColumn::where('custom_table_id', $table->id)->where('column_type', 'email')->first();
 
         $today = Carbon::today();
@@ -201,7 +215,7 @@ class CPublicFormTest extends ExmentKitTestCase
         // Create public form with maxmum parameter
         $this->post(admin_url('formpublic/custom_value_edit_all'), $form);
 
-        $response = $this->visit(admin_url('form/custom_value_edit_all'))
+        $this->visit(admin_url('form/custom_value_edit_all'))
             ->seePageIs(admin_url('form/custom_value_edit_all'))
             ->matchStatusCode(200)
             ->seeInElement('td', 'Public Form Unit Test')
@@ -327,7 +341,7 @@ class CPublicFormTest extends ExmentKitTestCase
 
         // Get new data row
         $table_name = \getDBTableName($table);
-        $row = \DB::table($table_name)->whereNull('deleted_at')->orderBy('created_at', 'desc')->first();
+        $row = \DB::table($table_name)->whereNull('deleted_at')->orderBy('id', 'desc')->first();
 
         $this->visit(admin_url('data/custom_value_edit_all/'. $row->id . '/edit'))
             ->seeInField('value[text]', 'unit test text')
@@ -358,12 +372,19 @@ class CPublicFormTest extends ExmentKitTestCase
     }
 
     // Update public form
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
     public function testUpdatePublicFormSuccess()
     {
         \DB::beginTransaction();
         $pre_cnt = PublicForm::count();
 
+        /** @var CustomTable $table */
         $table = CustomTable::where('table_name', 'custom_value_edit_all')->first();
+        /** @var CustomForm $target_form */
         $target_form = $table->custom_forms->first();
 
         // Create public form with minimum parameter
@@ -372,7 +393,7 @@ class CPublicFormTest extends ExmentKitTestCase
             'public_form_view_name' => 'Public Form Unit Test',
         ]);
 
-        $response = $this->visit(admin_url('form/custom_value_edit_all'))
+        $this->visit(admin_url('form/custom_value_edit_all'))
             ->seePageIs(admin_url('form/custom_value_edit_all'))
             ->matchStatusCode(200)
             ->seeInElement('td', 'Public Form Unit Test')
@@ -409,6 +430,7 @@ class CPublicFormTest extends ExmentKitTestCase
             ->seeInField('option_setting[use_default_query]', '0')
         ;
 
+        /** @var CustomColumn $email */
         $email = CustomColumn::where('custom_table_id', $table->id)->where('column_type', 'email')->first();
 
         $today = Carbon::today();
@@ -556,7 +578,7 @@ class CPublicFormTest extends ExmentKitTestCase
 
         // Get new data row
         $table_name = \getDBTableName($table);
-        $row = \DB::table($table_name)->whereNull('deleted_at')->orderBy('created_at', 'desc')->first();
+        $row = \DB::table($table_name)->whereNull('deleted_at')->orderBy('id', 'desc')->first();
 
         $this->visit(admin_url('data/custom_value_edit_all/'. $row->id . '/edit'))
             ->seeInField('value[text]', 'unit test text')
@@ -565,6 +587,10 @@ class CPublicFormTest extends ExmentKitTestCase
     }
 
     // Create Public Form Fail --Nothing Input--
+
+    /**
+     * @return void
+     */
     public function testAddFailWithMissingInfo()
     {
         $this->visit(admin_url('formpublic/custom_value_edit_all/create'))
@@ -576,10 +602,15 @@ class CPublicFormTest extends ExmentKitTestCase
     }
 
     // View Public Form Fail --Out of term--
+    /**
+     * @return void
+     */
     public function testAddFailOutOfTerm()
     {
         \DB::beginTransaction();
+        /** @var CustomTable $table */
         $table = CustomTable::where('table_name', 'custom_value_edit_all')->first();
+        /** @var CustomForm $target_form */
         $target_form = $table->custom_forms->first();
 
         // Create public form with minimum parameter
@@ -610,11 +641,16 @@ class CPublicFormTest extends ExmentKitTestCase
     }
 
     // View Public Form Fail --Out of term--
+
+    /**
+     * @return void
+     */
     public function testAddFailDeactivate1()
     {
         // Not call database transaction and rollback.
-
+        /** @var CustomTable  $table */
         $table = CustomTable::where('table_name', 'custom_value_edit_all')->first();
+        /** @var CustomForm $target_form */
         $target_form = $table->custom_forms->first();
 
         // Create public form with minimum parameter
@@ -642,6 +678,10 @@ class CPublicFormTest extends ExmentKitTestCase
     }
 
     // View Public Form Fail --Out of term--
+
+    /**
+     * @return void
+     */
     public function testAddFailDeactivate2()
     {
         // Not call database transaction and rollback.
@@ -656,18 +696,31 @@ class CPublicFormTest extends ExmentKitTestCase
         ;
     }
 
+    /**
+     * @return mixed
+     */
     protected function getNewestForm()
     {
-        return PublicForm::orderBy('created_at', 'desc')->orderBy('id', 'desc')->first();
+        return PublicForm::orderBy('id', 'desc')->first();
     }
 
-
+    /**
+     * @return mixed
+     */
     protected function getStylePluginId()
     {
-        return Plugin::where('plugin_name', 'TestPluginStyle')->first()->id;
+        /** @var Plugin $plugin */
+        $plugin = Plugin::where('plugin_name', 'TestPluginStyle')->first();
+        return $plugin->id;
     }
+
+    /**
+     * @return mixed
+     */
     protected function getScriptPluginId()
     {
-        return Plugin::where('plugin_name', 'TestPluginScript')->first()->id;
+        /** @var Plugin $plugin */
+        $plugin = Plugin::where('plugin_name', 'TestPluginScript')->first();
+        return $plugin->id;
     }
 }

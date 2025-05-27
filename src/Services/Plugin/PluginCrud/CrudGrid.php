@@ -15,8 +15,7 @@ class CrudGrid extends CrudBase
     /**
      * Index. for grid.
      *
-     * @param Request $request
-     * @return void
+     * @return mixed
      */
     public function index()
     {
@@ -124,6 +123,7 @@ class CrudGrid extends CrudBase
         $grid->disableCreateButton();
 
         if ($this->pluginClass->enableFreewordSearch()) {
+            Grid::setSearchKey('query');
             $grid->quickSearch(function ($model, $input) {
             }, 'left');
         }
