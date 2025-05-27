@@ -129,6 +129,12 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             ->where('active_flg', 1);
     }
 
+    public function notify_all()
+    {
+        return $this->hasMany(Notify::class, 'target_id')
+            ->whereIn('notify_trigger', NotifyTrigger::CUSTOM_TABLES());
+}
+
     public function operations(): HasMany
     {
         return $this->hasMany(CustomOperation::class, 'custom_table_id');
@@ -393,9 +399,15 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param bool $skipSelf if true, skip column for relation target is self.
      * @return Collection
      */
-    public function getSelectedTableColumns(bool $skipSelf = true)
+    public function getSelectedTableColumns(bool $skipSelf = true, bool $index_enabled_only = false)
     {
-        return CustomColumn::allRecords(function ($custom_column) use ($skipSelf) {
+        return CustomColumn::allRecords(function ($custom_column) use ($skipSelf, $index_enabled_only) {
+            if (!ColumnType::isSelectTable($custom_column->column_type)) {
+                return false;
+            }
+            if ($index_enabled_only && !$custom_column->index_enabled) {
+                return false;
+            }
             // skip if $this->custom_table_id and $this->id (Self relation), return false.
             if ($skipSelf && isMatchString($custom_column->custom_table_id, $this->id)) {
                 return false;
@@ -442,7 +454,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         }, false)->each(function ($custom_column_multi) use ($results) {
             $i = [];
             foreach ([1,2,3] as $key) {
-                $value = $custom_column_multi->{"unique${key}"};
+                $value = $custom_column_multi->{"unique{$key}"};
                 if (is_nullorempty($value)) {
                     continue;
                 }
@@ -450,7 +462,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 if (boolval(array_get($custom_column->options, 'multiple_enabled'))) {
                     return;
                 }
-                $i["unique${key}"] = $custom_column;
+                $i["unique{$key}"] = $custom_column;
             }
 
             if (is_nullorempty($i)) {
@@ -539,7 +551,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             $model->from_custom_copies()->delete();
             $model->to_custom_copies()->delete();
             $model->operations()->delete();
-            $model->notifies()->delete();
+            $model->notify_all()->delete();
 
             // delete items
             Menu::where('menu_type', MenuType::TABLE)->where('menu_target', $model->id)->delete();
@@ -780,6 +792,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         }
 
         $errors = [];
+        if( isset($input['value']) ) $input = $input['value'];
 
         $custom_column_names = $this->custom_columns_cache->map(function ($custom_column) {
             return $custom_column->column_name;
@@ -1547,7 +1560,9 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
 
             if ($relations->count() > 0) {
                 $relations->each(function ($r) use ($query) {
-                    $query->with($r->getRelationName());
+                    if ($r->relation_type == RelationType::MANY_TO_MANY) {
+                        $query->with($r->getRelationName());
+                    }
                 });
             }
         }
@@ -1587,10 +1602,10 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Set selectTable value's. for after calling from select_table object
      *
-     * @param \Illuminate\Support\Collection|null $customValueCollection
+     * @param \Illuminate\Support\Collection|\Tightenco\Collect\Support\Collection|null $customValueCollection
      * @return void
      */
-    public function setSelectTableValues(?\Illuminate\Support\Collection $customValueCollection)
+    public function setSelectTableValues(\Illuminate\Support\Collection|\Tightenco\Collect\Support\Collection|null $customValueCollection)
     {
         if (empty($customValueCollection)) {
             return;
@@ -1965,7 +1980,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         $field->attribute(['data-target_table_name' => array_get($this, 'table_name')]);
         /** @phpstan-ignore-next-line */
         $field->buttons($options['buttons']);
-
+        /** @phpstan-ignore-next-line options() expects array, Closure given */
         $field->options(function ($value, $field) use ($thisObj, $selectOption) {
             $selectOption['selected_value'] = (!empty($field) ? $field->getOld() : null) ?? $value;
             return $thisObj->getSelectOptions($selectOption);
@@ -2271,6 +2286,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 'include_system' => true,
                 'include_workflow' => false,
                 'include_workflow_work_users' => false,
+                'include_comment' => false,
                 'include_condition' => false,
                 'include_form_type' => false,
                 'ignore_attachment' => false,
@@ -2291,6 +2307,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         $include_system = $selectOptions['include_system'];
         $include_workflow = $selectOptions['include_workflow'];
         $include_workflow_work_users = $selectOptions['include_workflow_work_users'];
+        $include_comment = $selectOptions['include_comment'];
         $include_condition = $selectOptions['include_condition'];
         $include_form_type = $selectOptions['include_form_type'];
         $ignore_attachment = $selectOptions['ignore_attachment'];
@@ -2338,6 +2355,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                     'include_system' => $include_system,
                     'include_workflow' => $include_workflow,
                     'include_workflow_work_users' => $include_workflow_work_users,
+                    'include_comment' => $include_comment,
                     'ignore_attachment' => $ignore_attachment,
                     'ignore_autonumber' => $ignore_autonumber,
                     'ignore_multiple' => $ignore_multiple,
@@ -2440,7 +2458,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 );
             }
             ///// get selected table columns
-            $selected_table_columns = $this->getSelectedTableColumns();
+            $selected_table_columns = $this->getSelectedTableColumns(true, true);
             foreach ($selected_table_columns as $selected_table_column) {
                 $custom_table = $selected_table_column->custom_table;
                 $tablename = array_get($selected_table_column, 'column_view_name');
@@ -2481,6 +2499,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 'include_system' => true,
                 'include_workflow' => false,
                 'include_workflow_work_users' => false,
+                'include_comment' => false,
                 'include_condition' => false,
                 'include_form_type' => false,
                 'table_view_name' => null,
@@ -2502,6 +2521,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         $include_system = $selectOptions['include_system'];
         $include_workflow = $selectOptions['include_workflow'];
         $include_workflow_work_users = $selectOptions['include_workflow_work_users'];
+        $include_comment = $selectOptions['include_comment'];
         $include_condition = $selectOptions['include_condition'];
         $include_form_type = $selectOptions['include_form_type'];
         $table_view_name = $selectOptions['table_view_name'];
@@ -2601,6 +2621,11 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             // check contains workflow in table
             $setSystemColumn(['name' => 'workflow_work_users']);
         }
+
+        if ($include_comment && boolval($this->getOption('comment_flg')?? true)) {
+            // check contains comment in table
+            $setSystemColumn(['name' => 'comment']);
+        }
     }
 
     /**
@@ -2647,7 +2672,7 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         }
 
         ///// get selected table columns
-        $selected_table_columns = $this->getSelectedTableColumns();
+        $selected_table_columns = $this->getSelectedTableColumns(true, true);
         foreach ($selected_table_columns as $selected_table_column) {
             $custom_table = $selected_table_column->custom_table;
             $optionKeyParams = [
@@ -2886,6 +2911,10 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      */
     public function hasViewPermission()
     {
+        $userview_unavailable_table = config('exment.userview_unavailable_table', '');
+        if ( !is_nullorempty($userview_unavailable_table) && in_array($this->table_name, explode(',', $userview_unavailable_table)) ){
+            return $this->hasSystemViewPermission();
+        }
         return System::userview_available() || $this->hasSystemViewPermission();
     }
 

@@ -338,11 +338,28 @@ class DefaultGrid extends GridBase
         // filter workflow
         if (!is_null($workflow = Workflow::getWorkflowByTable($this->custom_table))) {
             foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => false]) as $filterKey => $filterType) {
+                if (!SystemColumn::isWorkflow($filterKey)) {
+                    continue;
+                }
                 if ($this->custom_table->gridFilterDisable($filterKey)) {
                     continue;
                 }
 
                 $filterItems[] = ColumnItems\WorkflowItem::getItem($this->custom_table, $filterKey);
+            }
+        }
+
+        // filter comment
+        if (boolval($this->custom_table->getOption('comment_flg')?? true)) {
+            foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => false]) as $filterKey => $filterType) {
+                if (!SystemColumn::isComment($filterKey)) {
+                    continue;
+                }
+                if ($this->custom_table->gridFilterDisable($filterKey)) {
+                    continue;
+                }
+
+                $filterItems[] = ColumnItems\CommentItem::getItem($this->custom_table);
             }
         }
 
@@ -445,6 +462,7 @@ class DefaultGrid extends GridBase
             if ($import === true || $export === true) {
                 // todo 通常ビューの場合のみプラグインエクスポートを有効にするための修正です
                 $button = new Tools\ExportImportButton(admin_urls('data', $this->custom_table->table_name), $grid, $export === true, $export === true, $import === true, $export === true);
+                /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\ExportImportButton given */
                 $tools->append($button->setCustomTable($this->custom_table));
             }
 
@@ -454,9 +472,11 @@ class DefaultGrid extends GridBase
 
             // add page change button(contains view seting)
             if ($this->custom_table->enableTableMenuButton()) {
+                /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
                 $tools->append(new Tools\CustomTableMenuButton('data', $this->custom_table));
             }
             if ($this->custom_table->enableViewMenuButton()) {
+                /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomViewMenuButton given */
                 $tools->append(new Tools\CustomViewMenuButton($this->custom_table, $this->custom_view));
             }
 
@@ -783,6 +803,7 @@ class DefaultGrid extends GridBase
             'append_table' => true,
             'include_parent' => true,
             'include_workflow' => true,
+            'include_comment' => true,
             'index_enabled_only' => true,
             'only_system_grid_filter' => true,
             'ignore_many_to_many' => true,

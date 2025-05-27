@@ -122,6 +122,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      */
     public function getCastColumn($type, $column, $options = [])
     {
+        /** @phpstan-ignore-next-line getCastString() expects bool, string given */
         $cast = $this->getCastString($type, $column, $options);
 
         $column = $this->wrap($column);
@@ -365,5 +366,17 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
     public function wrapJsonUnquote($value, $prefixAlias = false)
     {
         return $this->wrap($value, $prefixAlias);
+    }
+
+    /**
+     * Wrap and add json_extract if needs
+     *
+     * @param mixed $column
+     * @param string $path
+     * @return string
+     */
+    public function wrapJsonExtract($column, $path = '$')
+    {
+        return $this->wrap($column);
     }
 }
