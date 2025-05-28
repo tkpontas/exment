@@ -1137,6 +1137,16 @@ return [
     |
     */
     'search_keep_default_view' => env('EXMENT_SEARCH_KEEP_DEFAULT_VIEW', false),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | keep grid parameter
+    |--------------------------------------------------------------------------
+    |
+    | If true, keep grid filter, sort, page.
+    |
+    */
+    'keep_grid_parameters' => env('EXMENT_KEEP_GRID_PARAMETERS', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -1193,4 +1203,12 @@ return [
     |
     */
     'allow_delete_attachment' => env('EXMENT_ALLOW_DELETE_ATTACHMENT', false),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | API rate limit per minute
+    |--------------------------------------------------------------------------
+    |
+    */
+    'api_max_rate_limit' => env('EXMENT_API_MAX_RATE_LIMIT', 60),
 ];

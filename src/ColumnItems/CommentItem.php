@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\ColumnItems;
 
+
 use Exceedone\Exment\Enums\SystemColumn;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Model\CustomColumn;
