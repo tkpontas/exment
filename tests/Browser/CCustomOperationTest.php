@@ -5,6 +5,7 @@ namespace Exceedone\Exment\Tests\Browser;
 use Exceedone\Exment\Tests\DatabaseTransactions;
 use Exceedone\Exment\Enums\ConditionTypeDetail;
 use Exceedone\Exment\Enums\CustomOperationType;
+use Exceedone\Exment\Enums\ColumnType;
 use Exceedone\Exment\Enums\FilterOption;
 use Exceedone\Exment\Enums\FilterType;
 use Exceedone\Exment\Enums\OperationUpdateType;
@@ -27,6 +28,8 @@ class CCustomOperationTest extends ExmentKitTestCase
 
     /**
      * pre-excecute process before test.
+     *
+     * @return void
      */
     protected function setUp(): void
     {
@@ -36,6 +39,8 @@ class CCustomOperationTest extends ExmentKitTestCase
 
     /**
      * Check custom value operation setting display.
+     *
+     * @return void
      */
     public function testDisplayOperationSetting()
     {
@@ -72,9 +77,11 @@ class CCustomOperationTest extends ExmentKitTestCase
     }
 
     /**
-     * operation type: buttoln.
+     * operation type: button.
      * operation target: single custom value.
      * filter: no
+     *
+     * @return void
      */
     public function testOperationOneNoFilter()
     {
@@ -123,6 +130,7 @@ class CCustomOperationTest extends ExmentKitTestCase
             'ignore_attachment' => true,
         ]));
 
+        /** @var Model\CustomValue $custom_value */
         $custom_value = $target_table->getValueModel()->where('value->user', '<>', \Exment::user()->base_user->id)->first();
         $target_id = $custom_value->id;
         $this->post(admin_url("data/$target_table_name/$target_id/operationClick"), [
@@ -130,6 +138,7 @@ class CCustomOperationTest extends ExmentKitTestCase
         ]);
         $this->assertPostResponse($this->response, admin_url("data/$target_table_name/$target_id/operationClick"));
 
+        /** @var Model\CustomValue $custom_value */
         $custom_value = $target_table->getValueModel()->find($target_id);
         $this->assertEquals($custom_value->getValue('user')->id, \Exment::user()->base_user->id);
         $this->assertEquals($custom_value->getValue('date'), '2021-01-01');
@@ -139,6 +148,8 @@ class CCustomOperationTest extends ExmentKitTestCase
      * operation type: bulk update.
      * operation target: multiple custom value.
      * filter: yes
+     *
+     * @return void
      */
     public function testOperationMultiWithFilter()
     {
@@ -216,6 +227,7 @@ class CCustomOperationTest extends ExmentKitTestCase
                     "custom_operation_conditions[$row_id][condition_target]",
                     $custom_operation_condition->target_column_id
                 );
+                /** @phpstan-ignore-next-line  */
                 $this->seeOuterElement("input.condition_value.rowno-$row_id", 30000);
                 $this->exactSelectOptions("select[name='custom_operation_conditions[$row_id][condition_key]']", $this->getFilterSelectOptions(FilterType::NUMBER));
             }
@@ -268,6 +280,7 @@ class CCustomOperationTest extends ExmentKitTestCase
             'suuid' => array_get($operation, 'suuid'),
             'id' => implode(',', $err_ids)
         ]);
+        /** @phpstan-ignore-next-line  */
         $this->assertFalse($this->response->getData()->result);
 
         $this->login(TestDefine::TESTDATA_USER_LOGINID_USER1);
@@ -277,12 +290,15 @@ class CCustomOperationTest extends ExmentKitTestCase
             'suuid' => array_get($operation, 'suuid'),
             'id' => implode(',', $ids)
         ]);
+        /** @phpstan-ignore-next-line  */
         $this->assertFalse($this->response->getData()->result);
     }
 
     /**
      * operation type: create.
      * filter: yes
+     *
+     * @return void
      */
     public function testOperationCreate()
     {
@@ -350,7 +366,7 @@ class CCustomOperationTest extends ExmentKitTestCase
                 ->seePageIs(admin_url("/data/$target_table_name"));
 
         // Get new data row
-        $custom_value = $target_table->getValueModel()->orderBy('created_at', 'desc')->first();
+        $custom_value = $target_table->getValueModel()->orderBy('id', 'desc')->first();
         $this->assertEquals($custom_value->getValue('text'), 'operation create test');
         $this->assertEquals($custom_value->getValue('odd_even'), 'odd');
         $this->assertEquals($custom_value->getValue('decimal'), 0.01);
@@ -358,6 +374,7 @@ class CCustomOperationTest extends ExmentKitTestCase
         $this->visit(admin_url("data/$target_table_name/" . $custom_value->id . '/edit'))
                 ->type('operation create test update', 'value[text]')
                 ->type('even', 'value[odd_even]')
+            /** @phpstan-ignore-next-line  */
                 ->type(123.45, 'value[decimal]')
                 ->press('admin-submit')
                 ->seePageIs(admin_url("/data/$target_table_name"));
@@ -378,7 +395,7 @@ class CCustomOperationTest extends ExmentKitTestCase
                 ->seePageIs(admin_url("/data/$target_table_name"));
 
         // Get new data row
-        $custom_value = $target_table->getValueModel()->orderBy('created_at', 'desc')->first();
+        $custom_value = $target_table->getValueModel()->orderBy('id', 'desc')->first();
         $this->assertEquals($custom_value->getValue('text'), 'operation create test by admin');
         $this->assertNull($custom_value->getValue('odd_even'));
         $this->assertNull($custom_value->getValue('decimal'));
@@ -387,6 +404,8 @@ class CCustomOperationTest extends ExmentKitTestCase
     /**
      * operation type: update.
      * filter: yes
+     *
+     * @return void
      */
     public function testOperationUpdate()
     {
@@ -456,7 +475,7 @@ class CCustomOperationTest extends ExmentKitTestCase
                 ->seePageIs(admin_url("/data/$target_table_name"));
 
         // Get new data row
-        $custom_value = $target_table->getValueModel()->orderBy('created_at', 'desc')->first();
+        $custom_value = $target_table->getValueModel()->orderBy('id', 'desc')->first();
         $this->assertEquals($custom_value->getValue('text'), 'operation update test');
         $this->assertEquals($custom_value->getValue('multiples_of_3'), '1');
         $this->assertNull($custom_value->getValue('date'));
@@ -490,6 +509,8 @@ class CCustomOperationTest extends ExmentKitTestCase
     /**
      * operation type: create, update.
      * filter: yes
+     *
+     * @return void
      */
     public function testOperationMultiType()
     {
@@ -541,7 +562,7 @@ class CCustomOperationTest extends ExmentKitTestCase
 
         // get last year's date
         $today = Carbon::today();
-        $lastYearDate = Carbon::createFromDate($today->year, 1, 1)->addDay(-1)->format('Y-m-d');
+        $lastYearDate = Carbon::createFromDate($today->year, 1, 1)->addDays(-1)->format('Y-m-d');
         $this->visit(admin_url("data/$target_table_name/create"))
                 ->type('operation multiple type', 'value[text]')
                 ->type($lastYearDate, 'value[date]')
@@ -549,7 +570,7 @@ class CCustomOperationTest extends ExmentKitTestCase
                 ->seePageIs(admin_url("/data/$target_table_name"));
 
         // Get new data row
-        $custom_value = $target_table->getValueModel()->orderBy('created_at', 'desc')->first();
+        $custom_value = $target_table->getValueModel()->orderBy('id', 'desc')->first();
         $this->assertEquals($custom_value->getValue('text'), 'operation multiple type');
         $this->assertEquals($custom_value->getValue('date'), $lastYearDate);
         $this->assertEquals($custom_value->getValue('user')->id, \Exment::user()->base_user->id);
@@ -561,7 +582,7 @@ class CCustomOperationTest extends ExmentKitTestCase
                 ->seePageIs(admin_url("/data/$target_table_name"));
 
         // Get updated data row
-        $thisYearDate = Carbon::createFromDate($today->year, 1, 31)->addDay(-1)->format('Y-m-d');
+        $thisYearDate = Carbon::createFromDate($today->year, 1, 31)->addDays(-1)->format('Y-m-d');
         $custom_value = $target_table->getValueModel()->orderBy('updated_at', 'desc')->first();
         $this->assertEquals($custom_value->getValue('text'), 'operation multiple type update');
         $this->assertEquals($custom_value->getValue('user')->id, \Exment::user()->base_user->id);
@@ -581,7 +602,140 @@ class CCustomOperationTest extends ExmentKitTestCase
     }
 
     /**
+     * operation type: button.
+     * operation update value: blank
+     * filter: no
+     *
+     * @return void
+     */
+    public function testOperationUpdateBlank()
+    {
+        $target_table_name = TestDefine::TESTDATA_TABLE_NAME_ALL_COLUMNS_FORTEST;
+        $target_table = CustomTable::getEloquent($target_table_name);
+
+        $column_user = CustomColumn::getEloquent('user', $target_table_name);
+        $column_date = CustomColumn::getEloquent('date', $target_table_name);
+        $column_text = CustomColumn::getEloquent('text', $target_table_name);
+        $column_integer = CustomColumn::getEloquent('integer', $target_table_name);
+        $column_select = CustomColumn::getEloquent('select', $target_table_name);
+        $column_yesno = CustomColumn::getEloquent('yesno', $target_table_name);
+        $column_boolean = CustomColumn::getEloquent('boolean', $target_table_name);
+        $column_select_multi = CustomColumn::getEloquent('select_valtext_multiple', $target_table_name);
+
+        $operation = $this->_addOperationData($target_table, [
+            'operation_type' => [CustomOperationType::BUTTON],
+            'custom_operation_columns' => [[
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_user->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_date->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_text->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_integer->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_select->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_yesno->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_boolean->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ], [
+                'operation_update_type' => OperationUpdateType::DEFAULT,
+                'view_column_target' => $column_select_multi->id . '?table_id=' . $target_table->id,
+                'update_value_text' => '',
+                '_remove_' => 0,
+            ]]
+        ]);
+
+        $this->seeIsSelected('operation_type[]', CustomOperationType::BUTTON);
+
+        foreach ($operation->custom_operation_columns as $index => $custom_operation_column) {
+            $row_id = $custom_operation_column->id;
+            $custom_column = $custom_operation_column->custom_column;
+            $this->seeIsSelected(
+                "custom_operation_columns[$row_id][view_column_target]",
+                $custom_operation_column->view_column_target_id . '?table_id=' . $target_table->id
+            );
+            $this->seeIsSelected(
+                "custom_operation_columns[$row_id][operation_update_type]",
+                $custom_operation_column->getOption('operation_update_type')
+            );
+            if ($index == 0) {
+                $user_ids = CustomTable::getEloquent(SystemTableName::USER)->getValueModel()->pluck('id');
+                foreach($user_ids as $user_id) {
+                    $this->dontSeeIsSelected("custom_operation_columns[$row_id][update_value_text]", $user_id);
+                }
+            } elseif ($index == 4 || $index == 7) {
+                $select_name = "custom_operation_columns[$row_id][update_value_text]";
+                if ($index == 7) {
+                    $select_name .= '[]';
+                }
+                $this->dontSeeIsSelected($select_name, 'foo');
+                $this->dontSeeIsSelected($select_name, 'bar');
+                $this->dontSeeIsSelected($select_name, 'baz');
+            } else {
+                $this->seeOuterElement("input.update_value_text.rowno-$row_id", '');
+            }
+            if (ColumnType::isOperationEnableSystem($custom_column->column_type))
+            {
+                $this->exactSelectOptions("select[name='custom_operation_columns[$row_id][operation_update_type]']", OperationUpdateType::transKeyArray('custom_operation.operation_update_type_options'));
+            } else {
+                $this->exactSelectOptions("select[name='custom_operation_columns[$row_id][operation_update_type]']", [OperationUpdateType::DEFAULT => exmtrans('custom_operation.operation_update_type_options.' . OperationUpdateType::DEFAULT)]);
+            }
+        }
+
+        $this->exactSelectOptions('select.view_column_target', $target_table->getColumnsSelectOptions([
+            'append_table' => true,
+            'include_system' => false,
+            'ignore_attachment' => true,
+            'ignore_autonumber' => true,
+        ]));
+
+        /** @var Model\CustomValue $custom_value */
+        $custom_value = $target_table->getValueModel()->where('value->user', '<>', \Exment::user()->base_user->id)->first();
+        $target_id = $custom_value->id;
+        $this->post(admin_url("data/$target_table_name/$target_id/operationClick"), [
+            'suuid' => array_get($operation, 'suuid')
+        ]);
+        $this->assertPostResponse($this->response, admin_url("data/$target_table_name/$target_id/operationClick"));
+
+        /** @var Model\CustomValue $custom_value */
+        $custom_value = $target_table->getValueModel()->find($target_id);
+        $this->assertNull($custom_value->getValue('user'));
+        $this->assertNull($custom_value->getValue('date'));
+        $this->assertNull($custom_value->getValue('text'));
+        $this->assertNull($custom_value->getValue('integer'));
+        $this->assertNull($custom_value->getValue('select'));
+        $this->assertEquals($custom_value->getValue('yesno'), 0);
+        $this->assertEquals($custom_value->getValue('boolean'), 'ng');
+        $this->assertNull($custom_value->getValue('select_valtext_multiple'));
+    }
+
+    /**
      * Create custom value operation setting.
+     * @param mixed $target_table
+     * @param array<mixed> $params
+     * @return mixed
      */
     protected function _addOperationData($target_table, $params = [])
     {
@@ -618,7 +772,7 @@ class CCustomOperationTest extends ExmentKitTestCase
         )
         ;
 
-        $raw = CustomOperation::orderBy('created_at', 'desc')->first();
+        $raw = CustomOperation::orderBy('id', 'desc')->first();
         $id = array_get($raw, 'id');
 
         $this->visit(admin_url("operation/$target_table_name/$id/edit"))
@@ -634,7 +788,8 @@ class CCustomOperationTest extends ExmentKitTestCase
     /**
      * Get filter condition options
      *
-     * @return array
+     * @param mixed $filter_type
+     * @return array<mixed>
      */
     protected function getFilterSelectOptions($filter_type): array
     {
@@ -647,7 +802,7 @@ class CCustomOperationTest extends ExmentKitTestCase
     /**
      * Get user column's options
      *
-     * @return array
+     * @return array<mixed>
      */
     protected function getUserSelectOptions(): array
     {
@@ -660,7 +815,7 @@ class CCustomOperationTest extends ExmentKitTestCase
     /**
      * Get role group column's options
      *
-     * @return array
+     * @return array<mixed>
      */
     protected function getRoleSelectOptions(): array
     {

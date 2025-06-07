@@ -39,6 +39,7 @@ trait HasResourceActions
             }
         }
 
+        /** @phpstan-ignore-next-line explode expects string, int given*/
         $rows = collect(explode(',', $id))->filter();
 
         // check row's disabled_delete
@@ -73,13 +74,14 @@ trait HasResourceActions
                     return;
                 }
             } else {
+                /** @var \Illuminate\Http\Response|bool $response */
                 $response = $this->form($id)->setIsForceDelete($this->isDeleteForce)->destroy($id);
                 if ($response === false) {
                     $result = false;
                     return;
                 }
 
-                // if response instanceof Reponse, and status is false, result is false
+                // if response instanceof Response, and status is false, result is false
                 elseif ($response instanceof Response) {
                     $content = jsonToArray($response->content());
                     if (is_array($content) && !boolval(array_get($content, 'status', true))) {

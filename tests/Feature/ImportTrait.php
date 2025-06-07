@@ -3,18 +3,24 @@
 namespace Exceedone\Exment\Tests\Feature;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
 
 trait ImportTrait
 {
+    /**
+     * @param mixed $file
+     * @return mixed
+     */
     protected function _getCsvArray($file)
     {
-        $original_locale = setlocale(LC_CTYPE, 0);
+        $original_locale = setlocale(LC_CTYPE, "0");
 
         // set C locale
         if (0 === strpos(PHP_OS, 'WIN')) {
             setlocale(LC_CTYPE, 'C');
         }
 
+        /** @var Csv $reader */
         $reader = IOFactory::createReader('Csv');
         $reader->setInputEncoding('UTF-8');
         $reader->setDelimiter(",");
@@ -27,6 +33,10 @@ trait ImportTrait
         return $array;
     }
 
+    /**
+     * @param string $file_path
+     * @return array<mixed>
+     */
     protected function _getXlsxArray($file_path)
     {
         $reader = IOFactory::createReader('Xlsx');

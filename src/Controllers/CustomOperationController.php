@@ -17,6 +17,7 @@ use Exceedone\Exment\Enums\CustomOperationType;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Form\Field\ChangeField;
 use Exceedone\Exment\ConditionItems\ConditionItemBase;
+use Exceedone\Exment\Enums\OperationUpdateType;
 
 class CustomOperationController extends AdminControllerTableBase
 {
@@ -40,15 +41,14 @@ class CustomOperationController extends AdminControllerTableBase
         return parent::index($request, $content);
     }
 
-
     /**
      * Edit
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return Response|null
+     * @param $tableKey
+     * @param $id
+     * @return Content|false|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -76,7 +76,9 @@ class CustomOperationController extends AdminControllerTableBase
     /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -102,6 +104,9 @@ class CustomOperationController extends AdminControllerTableBase
                 return array_get(CustomOperationType::transArray("custom_operation.operation_type_options_short"), $v);
             })->implode(exmtrans('common.separate_word'));
         });
+        $grid->column('active_flg', exmtrans("custom_operation.active_flg"))->display(function ($active_flg) {
+            return \Exment::getTrueMark($active_flg);
+        })->escape(false);
 
         $grid->model()->where('custom_table_id', $this->custom_table->id);
 
@@ -114,6 +119,7 @@ class CustomOperationController extends AdminControllerTableBase
         });
 
         $grid->tools(function (Grid\Tools $tools) {
+            /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('operation', $this->custom_table));
         });
 
@@ -177,6 +183,9 @@ class CustomOperationController extends AdminControllerTableBase
                 ->help(exmtrans("custom_operation.help.button_class"));
         })->disableHeader();
 
+        $form->switchbool('active_flg', exmtrans("custom_operation.active_flg"))
+            ->default(true);
+
         $custom_table = $this->custom_table;
 
         // update column setting
@@ -218,6 +227,10 @@ class CustomOperationController extends AdminControllerTableBase
                     ->removeRules(\Encore\Admin\Validator\HasOptionRule::class);
             },
             'valueCallback' => function ($data, $field) use ($custom_table) {
+                $operation_update_type = array_get($data, 'operation_update_type');
+                if ($operation_update_type == OperationUpdateType::DEFAULT && $field instanceof ChangeField) {
+                    $field->allowNull();
+                }
                 $item = ConditionItemBase::getItemByRequest($custom_table, array_get($data, 'view_column_target'));
                 if (is_null($item)) {
                     return null;
@@ -271,6 +284,9 @@ class CustomOperationController extends AdminControllerTableBase
             ->options(exmtrans("condition.condition_join_options"))
             ->default('and');
 
+        $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
+            ->option(exmtrans("condition.condition_reverse_options"));
+
         // check inputs and operation_type before save
         $form->saving(function (Form $form) {
             if (!is_null($form->custom_operation_input_columns)) {
@@ -286,6 +302,7 @@ class CustomOperationController extends AdminControllerTableBase
         });
 
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            /** @phpstan-ignore-next-line add() expects string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->add(new Tools\CustomTableMenuButton('operation', $custom_table));
         });
         $form->disableEditingCheck(false);

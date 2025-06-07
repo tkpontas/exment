@@ -10,6 +10,7 @@ use Exceedone\Exment\Enums\LoginType;
 use Exceedone\Exment\Enums\LoginProviderType;
 use Exceedone\Exment\Enums\SsoLoginErrorType;
 use Exceedone\Exment\Services\Login\LoginServiceInterface;
+use Exceedone\Exment\Validator\ExmentCustomValidator;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 
@@ -55,7 +56,7 @@ class OAuthService implements LoginServiceInterface
      *
      * @param Authenticatable $login_user
      * @param array $credentials
-     * @return void
+     * @return boolean
      */
     public static function validateCredential(Authenticatable $login_user, array $credentials)
     {
@@ -64,7 +65,10 @@ class OAuthService implements LoginServiceInterface
     }
 
 
-
+    /**
+     * @param LoginSetting $login_setting
+     * @return \Exceedone\Exment\Form\Widgets\ModalForm
+     */
     public static function getTestForm(LoginSetting $login_setting)
     {
         return LoginService::getTestFormSso($login_setting);
@@ -148,14 +152,22 @@ class OAuthService implements LoginServiceInterface
                 $form->display('oauth_redirect_url', exmtrans('login.redirect_url'))->default($login_setting->exment_callback_url);
             }
         }
-    }
 
+        $form->exmheader(exmtrans('login.oauth_option'))->hr()
+        ->attribute(['data-filter' => json_encode(['key' => 'options_oauth_provider_type', 'value' => [LoginProviderType::OTHER]])]);
+
+        $form->switchbool('oauth_option_single_logout', exmtrans("login.oauth_option_single_logout"))
+        ->help(exmtrans("login.help.oauth_option_single_logout"))
+        ->default("0")
+        ->attribute(['data-filter' => json_encode(['key' => 'options_oauth_provider_type', 'value' => [LoginProviderType::OTHER]])]);
+    }
 
     /**
      * Execute login test
      *
      * @param Request $request
-     * @return void
+     * @param mixed $login_setting
+     * @return mixed
      */
     public static function loginTest(Request $request, $login_setting)
     {
@@ -194,11 +206,14 @@ class OAuthService implements LoginServiceInterface
 
             $custom_login_user = OAuthUser::with($login_setting->provider_name, $socialiteProvider->user(), true);
 
+            /** @var ExmentCustomValidator $validator */
             $validator = LoginService::validateCustomLoginSync($custom_login_user);
             if ($validator->fails()) {
                 return LoginService::getLoginResult(
+                    /** @phpstan-ignore-next-line getLoginResult() expects bool, string given */
                     SsoLoginErrorType::SYNC_VALIDATION_ERROR,
                     exmtrans('login.sso_provider_error_validate', ['errors' => implode(' ', $validator->getMessageStrings())]),
+                    /** @phpstan-ignore-next-line  getLoginResult() expects array|null, Illuminate\Support\MessageBag given */
                     $validator->errors(),
                     $custom_login_user
                 );
@@ -206,6 +221,7 @@ class OAuthService implements LoginServiceInterface
                 $errors = LoginService::validateUniques($custom_login_user);
                 if (count($errors) > 0) {
                     return LoginService::getLoginResult(
+                        /** @phpstan-ignore-next-line getLoginResult() expects bool, string given */
                         SsoLoginErrorType::SYNC_VALIDATION_ERROR,
                         exmtrans('login.sso_provider_error_validate', ['errors' => implode(' ', $errors)]),
                         $errors,
@@ -216,11 +232,12 @@ class OAuthService implements LoginServiceInterface
             }
         } catch (\Exception $ex) {
             \Log::error($ex);
-
+            /** @phpstan-ignore-next-line getLoginResult() expects bool, string given */
             return LoginService::getLoginResult(SsoLoginErrorType::UNDEFINED_ERROR, exmtrans('login.sso_provider_error'), [$ex]);
         } catch (\Throwable $ex) {
             \Log::error($ex);
 
+            /** @phpstan-ignore-next-line getLoginResult() expects bool, string given */
             return LoginService::getLoginResult(SsoLoginErrorType::UNDEFINED_ERROR, exmtrans('login.sso_provider_error'), [$ex]);
         }
     }
@@ -244,18 +261,19 @@ class OAuthService implements LoginServiceInterface
 
         // Check whether ex
         $expiresAt = \Carbon\Carbon::parse($expires_at);
-        if ($expiresAt <= \Carbon\Carbon::now()->addMinute(-1)) {
+        if ($expiresAt <= \Carbon\Carbon::now()->addMinutes(-1)) {
             return null;
         }
 
         return $access_token;
     }
 
-
     /**
      * Set database and callback auth for oauth.
      *
-     * @return self
+     * @param LoginSetting $login_setting
+     * @param string|null $callbackUrl
+     * @return string|null
      */
     public static function callbackAccessTokenToDB(LoginSetting $login_setting, ?string $callbackUrl): ?string
     {
@@ -268,7 +286,7 @@ class OAuthService implements LoginServiceInterface
 
             // get Expired at
             $now = \Carbon\Carbon::now();
-            $expiresAt = $now->addSecond($expiresIn);
+            $expiresAt = $now->addSeconds($expiresIn);
 
             // get access token by user setting
             $key = ("plugin_crud_oauth_access_token_{$login_setting->id}");
@@ -302,12 +320,11 @@ class OAuthService implements LoginServiceInterface
         return LoginService::appendActivateSwalButtonSso($tools, $login_setting);
     }
 
-
-
     /**
      * Set custom config for login setting controller.
      *
-     * @param Form $form
+     * @param $provider_name
+     * @param \Encore\Admin\Form|\Encore\Admin\Form\EmbeddedForm $form
      * @return void
      */
     public static function setLoginSettingForm($provider_name, $form)
@@ -328,6 +345,7 @@ class OAuthService implements LoginServiceInterface
 
             // has instance of
             if (!is_nullorempty($socialiteProvider) && is_subclass_of($socialiteProvider, \Exceedone\Exment\Auth\ProviderLoginConfig::class)) {
+                /** @phpstan-ignore-next-line */
                 $form->exmheader(exmtrans('login.custom_setting'))->hr();
 
                 $socialiteProvider->setLoginSettingForm($form);

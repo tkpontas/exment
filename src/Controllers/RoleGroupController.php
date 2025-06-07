@@ -25,6 +25,7 @@ use Encore\Admin\Grid\Linker;
 use Encore\Admin\Widgets\Box;
 use Encore\Admin\Auth\Permission as Checker;
 use Encore\Admin\Form as AdminForm;
+use Exceedone\Exment\Services\DataImportExport;
 
 class RoleGroupController extends AdminControllerBase
 {
@@ -62,11 +63,20 @@ class RoleGroupController extends AdminControllerBase
             $grid->disableCreateButton();
         }
 
-        $grid->tools(function (Grid\Tools $tools) use ($hasCreatePermission) {
+        // create exporter
+        $service = $this->getImportExportService($grid);
+        $grid->exporter($service);
+
+        $grid->tools(function (Grid\Tools $tools) use ($grid, $hasCreatePermission) {
             if (!$hasCreatePermission) {
                 $tools->disableBatchActions();
             }
             $tools->prepend(new Tools\SystemChangePageMenu());
+            if (boolval(config('exment.role_group_import_export', false)) && $hasCreatePermission) {
+                $button = new Tools\ExportImportButton(admin_url('role_group'), $grid, false, true);
+                $button->setBaseKey('common');
+                $tools->prepend($button->render());
+            }
         });
 
         $grid->disableExport();
@@ -100,6 +110,21 @@ class RoleGroupController extends AdminControllerBase
         return $grid;
     }
 
+    protected function getImportExportService($grid = null)
+    {
+        // create exporter
+        return (new DataImportExport\DataImportExportService())
+            ->exportAction(new DataImportExport\Actions\Export\RoleGroupAction(
+                [
+                    'grid' => $grid,
+                ]
+            ))->importAction(new DataImportExport\Actions\Import\RoleGroupAction(
+                [
+                    'primary_key' => app('request')->input('select_primary_key') ?? null,
+                ]
+            ));
+    }
+
     /**
      * Create interface.
      *
@@ -110,6 +135,7 @@ class RoleGroupController extends AdminControllerBase
     {
         $isRolePermissionPage = $request->get('form_type') != 2;
         $form = $isRolePermissionPage ? $this->form() : $this->formUserOrganization();
+        /** @phpstan-ignore-next-line Encore\Admin\Widgets\Box constructor expects string, Encore\Admin\Widgets\Form given */
         $box = new Box(trans('admin.create'), $form);
         $this->appendTools($box, null, $isRolePermissionPage);
         return $this->AdminContent($content)->body($box);
@@ -118,15 +144,18 @@ class RoleGroupController extends AdminControllerBase
     /**
      * Edit interface.
      *
-     * @param mixed   $id
+     * @param Request $request
      * @param Content $content
+     * @param $id
      * @return Content
      */
     public function edit(Request $request, Content $content, $id)
     {
         $isRolePermissionPage = $request->get('form_type') != 2;
+        /** @var Form $form */
         $form = $isRolePermissionPage ? $this->form($id) : $this->formUserOrganization($id);
-        $box = new Box(trans('admin.edit'), $form->edit($id));
+        $edit = $form->edit($id);
+        $box = new Box(trans('admin.edit'), $edit);
         $this->appendTools($box, $id, $isRolePermissionPage);
         return $this->AdminContent($content)->body($box);
     }
@@ -347,7 +376,7 @@ class RoleGroupController extends AdminControllerBase
     /**
      * Make a form builder for User Organization.
      *
-     * @return Form
+     * @return Form|false
      */
     protected function formUserOrganization($id = null)
     {
@@ -754,5 +783,34 @@ class RoleGroupController extends AdminControllerBase
     protected function hasPermission_UserOrganization()
     {
         return \Exment::user()->hasPermission([Permission::ROLE_GROUP_ALL, Permission::ROLE_GROUP_USER_ORGANIZATION]);
+    }
+
+    /**
+     * get import modal
+     */
+    public function importModal(Request $request)
+    {
+        $service = $this->getImportExportService();
+        return $service->getImportModal();
+    }
+
+    /**
+     * @param Request $request
+     */
+    public function import(Request $request)
+    {
+        // create exporter
+        $service = $this->getImportExportService()
+            ->format($request->file('custom_table_file'));
+        
+        if ($service->format() == 'csv') {
+            $file = $request->file('custom_table_file');
+            $file_name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $service->filebasename($file_name);
+        }
+
+        $result = $service->import($request);
+
+        return getAjaxResponse($result);
     }
 }

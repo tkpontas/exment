@@ -53,7 +53,7 @@ class Auth2factorService
      * @param string $verify_type
      * @param string $verify_code
      * @param bool $matchDelete if true, remove match records
-     * @return bool
+     * @return mixed|bool
      */
     public static function verifyCode($verify_type, $verify_code, $matchDelete = false)
     {
@@ -88,7 +88,7 @@ class Auth2factorService
      * Add database and Send verify
      *
      * @param string $verify_type
-     * @param string $verify_code
+     * @param string|int $verify_code
      * @param \Carbon\Carbon $valid_period_datetime
      * @param string|CustomValue $mail_template
      * @param array $mail_prms

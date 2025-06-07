@@ -18,8 +18,7 @@ class CrudForm extends CrudBase
     /**
      * Create
      *
-     * @param Request $request
-     * @return void
+     * @return mixed
      */
     public function create()
     {
@@ -33,8 +32,8 @@ class CrudForm extends CrudBase
     /**
      * Edit
      *
-     * @param mixed $id
-     * @return void
+     * @param $id
+     * @return mixed
      */
     public function edit($id)
     {
@@ -46,9 +45,9 @@ class CrudForm extends CrudBase
     }
 
     /**
-     * Store
+     * Stor
      *
-     * @return void
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function store()
     {
@@ -60,7 +59,8 @@ class CrudForm extends CrudBase
     /**
      * Update
      *
-     * @return void
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function update($id)
     {
@@ -72,7 +72,8 @@ class CrudForm extends CrudBase
     /**
      * delete
      *
-     * @return void
+     * @param $id
+     * @return string
      */
     public function delete($id)
     {
@@ -82,16 +83,17 @@ class CrudForm extends CrudBase
         return $this->getFullUrl();
     }
 
-
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param bool $isCreate
+     * @param $id
+     * @return Box
      */
     protected function form(bool $isCreate, $id = null)
     {
         $form = $this->getForm($isCreate, $id);
-
+        /** @phpstan-ignore-next-line constructor expects string, Encore\Admin\Widgets\Form given */
         $box = new Box(trans($isCreate ? 'admin.create' : 'admin.edit'), $form);
         $box->style('info');
         $this->setFormTools($id, $box);
@@ -109,7 +111,9 @@ class CrudForm extends CrudBase
     /**
      * Save value.
      *
-     * @return Form
+     * @param bool $isCreate
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     protected function save(bool $isCreate, $id = null)
     {
@@ -190,11 +194,11 @@ class CrudForm extends CrudBase
         return $form;
     }
 
-
     /**
      * Set form definitions.
      *
-     * @param Form $form
+     * @param bool $isCreate
+     * @param WidgetForm $form
      * @return void
      */
     protected function setFormColumn(bool $isCreate, Form $form)
@@ -228,7 +232,8 @@ class CrudForm extends CrudBase
     /**
      * Set form tools.
      *
-     * @param Box $Box
+     * @param $id
+     * @param Box $box
      * @return void
      */
     protected function setFormTools($id, Box $box)

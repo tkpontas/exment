@@ -14,10 +14,12 @@ use Exceedone\Exment\Model\WorkflowConditionHeader;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\CustomValueAuthoritable;
+use Exceedone\Exment\Model\Condition;
 use Exceedone\Exment\Enums;
 use Exceedone\Exment\Enums\WorkflowWorkTargetType;
 use Exceedone\Exment\Enums\WorkflowGetAuthorityType;
 use Exceedone\Exment\Enums\ConditionTypeDetail;
+use Exceedone\Exment\Enums\FilterOption;
 
 class WorkflowTestDataSeeder extends Seeder
 {
@@ -38,7 +40,7 @@ class WorkflowTestDataSeeder extends Seeder
 
     /**
      * Create Workflow
-     *
+     * @param mixed $users
      * @return void
      */
     protected function createWorkflow($users)
@@ -273,6 +275,15 @@ class WorkflowTestDataSeeder extends Seeder
                             [
                                 'status_to' => 0,
                                 'enabled_flg' => true,
+                                'options' => [
+                                    'condition_reverse' => '1',
+                                ],
+                                'conditions' => [
+                                    'condition_type' => 0,
+                                    'condition_key' => FilterOption::EQ,
+                                    'target_column_id' => 'multiples_of_3',
+                                    'condition_value' => 1,
+                                ]
                             ],
                             [
                                 'status_to' => 1,
@@ -492,6 +503,7 @@ class WorkflowTestDataSeeder extends Seeder
                     $workflowaction->status_from = $action['status_from'];
                     $actionStatusFromTo['status_from'] = null;
                 } else {
+                    /** @phpstan-ignore-next-line  Because an error occurs in SQLServer's UT when the 'id' is set */
                     $workflowaction->status_from = $workflow['statuses'][$action['status_from']]['id'];
                     $actionStatusFromTo['status_from'] = $workflowaction->status_from;
                 }
@@ -520,11 +532,29 @@ class WorkflowTestDataSeeder extends Seeder
                         $header->status_to = $item['status_to'];
                         $actionStatusFromTo['status_to'] = null;
                     } else {
+                        /** @phpstan-ignore-next-line  Because an error occurs in SQLServer's UT when the 'id' is set */
                         $header->status_to = $workflow['statuses'][$item['status_to']]['id'];
                         $actionStatusFromTo['status_to'] = $header->status_to;
                     }
 
+                    if (isset($item['options'])) {
+                        $header->options = $item['options'];
+                    }
+
                     $header->save();
+
+                    if (isset($item['conditions'])) {
+                        $conditions = $item['conditions'];
+                        $conditions['morph_type'] = 'workflow_condition_header';
+                        $conditions['morph_id'] = $header->id;
+                        // @phpstan-ignore-next-line
+                        if (isset($conditions['target_column_id'])) {
+                            \Log::debug($workflow['tables'][0]['custom_table']);
+                            $target_column = CustomColumn::getEloquent($conditions['target_column_id'], $workflow['tables'][0]['custom_table']);
+                            $conditions['target_column_id'] = $target_column->id;
+                        }
+                        Condition::create($conditions);
+                    }
                 }
 
                 $actionStatusFromTo['workflow_action_id'] = $workflowaction->id;
@@ -645,6 +675,12 @@ class WorkflowTestDataSeeder extends Seeder
         $this->saveWorkflowValue($wfValue, $workflowObj);
     }
 
+    /**
+     * @param mixed $wfValue
+     * @param mixed $workflowObj
+     * @param mixed|null $custom_value
+     * @return void
+     */
     protected function saveWorkflowValue($wfValue, $workflowObj, $custom_value = null)
     {
         $wfValue->save();
@@ -662,8 +698,11 @@ class WorkflowTestDataSeeder extends Seeder
 
     /**
      * get next action Authorities
-     *
-     * @return \Illuminate\Support\Collection
+     * @param mixed $workflow
+     * @param mixed $custom_value
+     * @param mixed $statusTo
+     * @param mixed|null $nextActions
+     * @return mixed
      */
     protected function getNextActionAuthorities($workflow, $custom_value, $statusTo, $nextActions = null)
     {
@@ -689,7 +728,8 @@ class WorkflowTestDataSeeder extends Seeder
      * Create workflow notify
      *
      * @param Workflow $workflow
-     * @return void
+     * @return false|void
+     * @throws \Exceedone\Exment\Exceptions\NoMailTemplateException
      */
     protected function createNotify(Workflow $workflow)
     {

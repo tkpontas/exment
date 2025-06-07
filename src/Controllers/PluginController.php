@@ -55,8 +55,8 @@ class PluginController extends AdminControllerBase
      * execute batch
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param $id
+     * @return false|\Illuminate\Http\RedirectResponse
      */
     public function executeBatch(Request $request, $id)
     {
@@ -183,6 +183,7 @@ class PluginController extends AdminControllerBase
         if (isset($request->get('options')['event_triggers']) === true) {
             $event_triggers = $request->get('options')['event_triggers'];
             $options = $request->get('options');
+            /** @phpstan-ignore-next-line array_filter expects (callable(mixed): bool)|null, 'strlen' given */
             $event_triggers = array_filter($event_triggers, 'strlen');
             $options['event_triggers'] = $event_triggers;
             $request->merge(['options' => $options]);
@@ -193,7 +194,9 @@ class PluginController extends AdminControllerBase
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param $id
+     * @param $isDelete
+     * @return Form|false
      */
     protected function form($id = null, $isDelete = false)
     {
