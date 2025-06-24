@@ -2347,7 +2347,7 @@ return [
             ],
         ],
         'data_detail' => 'データ確認',
-        'auto_number_create' => '[保存時取得]',
+        'auto_number_create' => '[保存時に自動採番]',
 
         'help' => [
             'no_columns_admin' => 'カスタム列が登録されていません。先にカスタム列を登録してください。',
