@@ -4,9 +4,9 @@ namespace Exceedone\Exment\Controllers;
 
 use App\Http\Controllers\Controller;
 use Encore\Admin\Facades\Admin;
-use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Grid\Linker;
+use Encore\Admin\Form;
 use Encore\Admin\Widgets\Form as WidgetForm;
 use Encore\Admin\Widgets\Box;
 use Encore\Admin\Layout\Content;
@@ -50,7 +50,9 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -201,15 +203,14 @@ class CustomFormController extends AdminControllerTableBase
         }
     }
 
-
     /**
      * Edit
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|Response
+     * @param $tableKey
+     * @param $id
+     * @return Content|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -225,12 +226,11 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
     /**
      * Showing preview
      *
      * @param Request $request
-     * @return void
+     * @return Content
      */
     public function preview(Request $request)
     {
@@ -254,13 +254,11 @@ class CustomFormController extends AdminControllerTableBase
         return $this->getPreviewContent($request, $custom_form);
     }
 
-
-
     /**
      * Preview error. (If called as GET request)
      *
      * @param Request $request
-     * @return void
+     * @return Content
      */
     public function previewError(Request $request)
     {
@@ -269,13 +267,13 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
     /**
      * Showing preview by id
      *
      * @param Request $request
+     * @param string $tableKey
      * @param string $suuid
-     * @return void
+     * @return Content
      */
     public function previewBySuuid(Request $request, string $tableKey, string $suuid)
     {
@@ -284,6 +282,11 @@ class CustomFormController extends AdminControllerTableBase
     }
 
 
+    /**
+     * @param Request $request
+     * @param CustomForm $custom_form
+     * @return Content
+     */
     protected function getPreviewContent(Request $request, CustomForm $custom_form)
     {
         $form_item = $custom_form->form_item;
@@ -299,12 +302,12 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
-
     /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -323,9 +326,11 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Update the specified resource in storage.
      *
-     * @param int $id
-     *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @param $tableKey
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|null
+     * @throws \Exception
      */
     public function update(Request $request, $tableKey, $id)
     {
@@ -348,7 +353,9 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|null
+     * @throws \Exception
      */
     public function store(Request $request)
     {
@@ -392,6 +399,7 @@ class CustomFormController extends AdminControllerTableBase
 
         $custom_table = $this->custom_table;
         $grid->tools(function (Grid\Tools $tools) {
+            /**@phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('form', $this->custom_table));
             $tools->batch(function (Grid\Tools\BatchActions $actions) {
                 $actions->disableDelete();
@@ -401,8 +409,7 @@ class CustomFormController extends AdminControllerTableBase
         $grid->disableExport();
         $grid->disableRowSelector();
 
-        if ($custom_table->hasPermission(Permission::EDIT_CUSTOM_FORM)) {
-        } else {
+        if (!$custom_table->hasPermission(Permission::EDIT_CUSTOM_FORM)) {
             $grid->disableCreateButton();
         }
 
@@ -445,10 +452,14 @@ class CustomFormController extends AdminControllerTableBase
     }
 
     /**
-     *
      * Make a form
      *
-     * @return Form|void
+     * @param $content
+     * @param $id
+     * @param $copy_id
+     * @return void
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     protected function createForm($content, $id = null, $copy_id = null)
     {
@@ -485,16 +496,17 @@ class CustomFormController extends AdminControllerTableBase
         ]));
     }
 
-
     /**
      * Get header box ex. view name, label, default flg....
      *
      * @param CustomForm|null $custom_form
+     * @param string $formroot
      * @return Box
      */
     protected function getHeaderBox(?CustomForm $custom_form, string $formroot)
     {
         ///// set default setting
+        /** @phpstan-ignore-next-line constructor expects array, Exceedone\Exment\Model\CustomForm|null given */
         $form = new WidgetForm($custom_form);
         $form->disableSubmit()->disableReset()->onlyRenderFields();
 
@@ -517,7 +529,7 @@ class CustomFormController extends AdminControllerTableBase
             ->help(exmtrans('custom_form.help.form_label_type'))
             ->default(FormLabelType::HORIZONTAL)
             ->options(FormLabelType::transArrayFilter('custom_form.form_label_type_options', FormLabelType::getFormLabelTypes()));
-
+        /** @phpstan-ignore-next-line  constructor expects string, Encore\Admin\Widgets\Form given */
         $box = new Box(exmtrans('custom_form.header_basic_setting'), $form);
         $box->tools(view('exment::tools.button', [
             'href' => 'javascript:void(0);',
@@ -592,7 +604,9 @@ class CustomFormController extends AdminControllerTableBase
         $req_custom_form_blocks = old('custom_form_blocks');
         if (!isset($req_custom_form_blocks)
         ) {
-            return $form->custom_form_blocks;
+            return $form->custom_form_blocks->sortBy(function ($item, $key) {
+                return $item->getOption('form_block_order')?? 0;
+            });
         }
 
         return collect($req_custom_form_blocks)->map(function ($req_custom_form_block, $key) {
@@ -843,12 +857,11 @@ class CustomFormController extends AdminControllerTableBase
         });
     }
 
-
     /**
      * Get setting modal
      *
      * @param Request $request
-     * @return void
+     * @return Response
      */
     public function settingModal(Request $request)
     {
@@ -871,6 +884,7 @@ class CustomFormController extends AdminControllerTableBase
 
         return getAjaxResponse([
             'body'  => $form->render(),
+            /** @phpstan-ignore-next-line Result of method Encore\Admin\Widgets\Form::getScript() (void) is used. need to fix laravel-admin */
             'script' => $form->getScript(),
             'title' => trans('admin.setting'),
             'modalSize' => 'modal-xl',
@@ -880,7 +894,6 @@ class CustomFormController extends AdminControllerTableBase
             'showReset' => true,
         ]);
     }
-
 
     /**
      * Save attachment and get column name

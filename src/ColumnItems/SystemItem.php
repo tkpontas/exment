@@ -405,11 +405,10 @@ class SystemItem implements ItemInterface
         return FilterType::DEFAULT;
     }
 
-
     /**
      * Get grid filter option. Use grid filter, Ex. LIKE search.
      *
-     * @return string
+     * @return string|null
      */
     protected function getGridFilterOption(): ?string
     {
@@ -417,15 +416,20 @@ class SystemItem implements ItemInterface
             case SystemColumn::ID:
             case SystemColumn::SUUID:
             case SystemColumn::PARENT_ID:
-                return FilterOption::EQ;
+                return (string)FilterOption::EQ;
             case SystemColumn::CREATED_AT:
             case SystemColumn::UPDATED_AT:
                 // Use custom query. So return null.
                 return null;
+            case SystemColumn::CREATED_USER:
+            case SystemColumn::UPDATED_USER:
+                return (string)FilterOption::USER_EQ;
             case SystemColumn::WORKFLOW_STATUS:
-                return FilterOption::WORKFLOW_EQ_STATUS;
+                return (string)FilterOption::WORKFLOW_EQ_STATUS;
             case SystemColumn::WORKFLOW_WORK_USERS:
-                return FilterOption::WORKFLOW_EQ_WORK_USER;
+                return (string)FilterOption::WORKFLOW_EQ_WORK_USER;
+            case SystemColumn::COMMENT:
+                return (string)FilterOption::LIKE;
         }
 
         return null;
@@ -437,7 +441,7 @@ class SystemItem implements ItemInterface
             case SystemColumn::CREATED_AT:
             case SystemColumn::UPDATED_AT:
                 return ExmFilter\BetweenDatetime::class;
-        }
+            }
 
         return ExmWhere::class;
     }
@@ -462,11 +466,10 @@ class SystemItem implements ItemInterface
         $this->getAdminFilterWhereQueryTrait($query, $input);
     }
 
-
     /**
      * Set admin filter options
      *
-     * @param [type] $filter
+     * @param $filter
      * @return void
      */
     protected function setAdminFilterOptions(&$filter)
@@ -474,6 +477,18 @@ class SystemItem implements ItemInterface
         $option = $this->getSystemColumnOption();
         if (array_get($option, 'type') == 'datetime') {
             $filter->date();
+        } elseif (array_get($option, 'type') == 'user') {
+            $target_table = CustomTable::getEloquent(SystemTableName::USER);
+            $selectOption = [
+                'display_table' => $target_table
+            ];
+            $ajax = $target_table->getOptionAjaxUrl($selectOption);
+    
+            $filter->multipleSelect(function ($value) use ($target_table, $selectOption) {
+                $selectOption['selected_value'] = $value;
+                // get DB option value
+                return $target_table->getSelectOptions($selectOption);
+            })->ajax($ajax);
         }
     }
 

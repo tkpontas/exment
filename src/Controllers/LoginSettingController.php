@@ -6,6 +6,7 @@ use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Widgets\Box;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Encore\Admin\Widgets\Form as WidgetForm;
 use Exceedone\Exment\Form\Tools;
@@ -234,6 +235,7 @@ class LoginSettingController extends AdminControllerBase
                 $provider_name = array_get($request->old(), 'options.oauth_provider_type') == 'other' ? array_get($request->old(), 'options.oauth_provider_name') : array_get($request->old(), 'options.oauth_provider_type');
             }
             if (!is_nullorempty($provider_name)) {
+
                 LoginServiceBase\OAuth\OAuthService::setLoginSettingForm($provider_name, $form);
             }
             // Form options area -- End
@@ -295,21 +297,26 @@ class LoginSettingController extends AdminControllerBase
             $errors[] = LoginType::LDAP();
         }
 
-        return collect($errors)->mapWithKeys(function ($error) {
+        /** @var Collection $collection */
+        $collection =  collect($errors)->mapWithKeys(function ($error) {
             return [$error->getValue() => '<span class="red">' . exmtrans('login.message.not_install_library', [
                 'name' => $error->transKey('login.login_type_options'),
                 'url' => getManualUrl('login_'.$error->getValue()),
             ]) . '</span>'];
         });
+        return $collection;
     }
 
     /**
      * Send data for global setting
+     *
      * @param Request $request
+     * @return Box
      */
     protected function globalSettingBox(Request $request)
     {
         $form = $this->globalSettingForm($request);
+        /** @phpstan-ignore-next-line constructor expects string, Encore\Admin\Widgets\Form given */
         $box = new Box(exmtrans('common.detail_setting'), $form);
         return $box;
     }
@@ -401,7 +408,10 @@ class LoginSettingController extends AdminControllerBase
 
     /**
      * Send data for global setting
+     *
      * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|true
+     * @throws \Throwable
      */
     public function postGlobal(Request $request)
     {
@@ -434,8 +444,8 @@ class LoginSettingController extends AdminControllerBase
      * Showing login test modal
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param mixed $id
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function loginTestModal(Request $request, $id)
     {
@@ -455,8 +465,8 @@ class LoginSettingController extends AdminControllerBase
      * execute login test for form
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param mixed $id
+     * @return mixed
      */
     public function loginTestForm(Request $request, $id)
     {
@@ -469,8 +479,8 @@ class LoginSettingController extends AdminControllerBase
      * execute login test for SSO
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param mixed $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function loginTestSso(Request $request, $id)
     {
@@ -502,8 +512,9 @@ class LoginSettingController extends AdminControllerBase
      * execute login test for callback
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param Content $content
+     * @param mixed $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function loginTestCallback(Request $request, Content $content, $id)
     {
@@ -579,12 +590,10 @@ class LoginSettingController extends AdminControllerBase
         ]);
     }
 
-
-
     /**
      * get 2factor setting box.
      *
-     * @return Content
+     * @return WidgetForm
      */
     protected function get2factorSettingForm(): WidgetForm
     {
@@ -673,7 +682,8 @@ class LoginSettingController extends AdminControllerBase
     /**
      * 2factor verify
      *
-     * @return void
+     * @return \Symfony\Component\HttpFoundation\Response
+     * @throws \Exception
      */
     public function auth_2factor_verify()
     {
@@ -681,7 +691,7 @@ class LoginSettingController extends AdminControllerBase
 
         // set 2factor params
         $verify_code = random_int(100000, 999999);
-        $valid_period_datetime = Carbon::now()->addMinute(60);
+        $valid_period_datetime = Carbon::now()->addMinutes(60);
 
         // send verify
         try {

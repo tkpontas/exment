@@ -214,7 +214,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      * @param string $column column name
      * @param bool $groupBy if group by query, return true
      *
-     * @return void
+     * @return string|null
      */
     public function getDateFormatString($groupCondition, $column, $groupBy = false, $wrap = true)
     {
@@ -251,7 +251,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      * @param GroupCondition $groupCondition Y, YM, YMD, ...
      * @param \Carbon\Carbon $carbon
      *
-     * @return string
+     * @return string|null
      */
     public function convertCarbonDateFormat($groupCondition, $carbon)
     {
@@ -285,5 +285,17 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
     public function wrapJsonUnquote($value, $prefixAlias = false)
     {
         return "json_unquote(" . $this->wrap($value, $prefixAlias) . ")";
+    }
+
+    /**
+     * Wrap and add json_extract if needs
+     *
+     * @param mixed $column
+     * @param string $path
+     * @return string
+     */
+    public function wrapJsonExtract($column, $path = '$')
+    {
+        return "json_extract({$this->wrap($column)}, '{$path}')";
     }
 }

@@ -17,6 +17,9 @@ use Carbon\Carbon;
 
 class Api2Test extends ApiTestBase
 {
+    /**
+     * @return void
+     */
     public function testOkAuthorize()
     {
         $response = $this->getPasswordToken('admin', 'adminadmin');
@@ -31,6 +34,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testOkAuthorizeApiKey()
     {
         $response = $this->getApiKey();
@@ -45,6 +51,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testErrorAuthorize()
     {
         $response = $this->getPasswordToken('adjfjke', 'adjfjkeadjfjkeadjfjkeadjfjke');
@@ -53,12 +62,18 @@ class Api2Test extends ApiTestBase
             ->assertStatus(401);
     }
 
+    /**
+     * @return void
+     */
     public function testErrorNoToken()
     {
         $this->get(admin_urls('api', 'version'))
             ->assertStatus(401);
     }
 
+    /**
+     * @return void
+     */
     public function testGetVersion()
     {
         $token = $this->getAdminAccessToken();
@@ -72,6 +87,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetVersionApiKey()
     {
         $token = $this->getAdminAccessTokenAsApiKey();
@@ -85,6 +103,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesAdmin()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -99,6 +120,9 @@ class Api2Test extends ApiTestBase
         ;
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesWithCount()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -110,6 +134,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(3, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesById()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -124,6 +151,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesByMultiId()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -135,6 +165,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(3, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesExpand()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -163,6 +196,9 @@ class Api2Test extends ApiTestBase
                 ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesUser()
     {
         $token = $this->getUser2AccessToken([ApiScope::TABLE_READ]);
@@ -188,6 +224,9 @@ class Api2Test extends ApiTestBase
         );
     }
 
+    /**
+     * @return void
+     */
     public function testGetTablesNotFound()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -199,6 +238,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(0, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetTables()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -212,6 +254,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTable()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -222,6 +267,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(200);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTableById()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -232,6 +280,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(200);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTableUser()
     {
         $token = $this->getUser2AccessToken([ApiScope::TABLE_READ]);
@@ -242,6 +293,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(200);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyGetTableUser()
     {
         $token = $this->getUser2AccessToken([ApiScope::TABLE_READ]);
@@ -255,6 +309,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNotFoundGetTable()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -268,6 +325,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetTable()
     {
         $token = $this->getAdminAccessToken([ApiScope::ME]);
@@ -281,6 +341,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetTableColumns()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -306,6 +369,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetWrongTableColumns()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -316,6 +382,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(404);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyGetTableColumns()
     {
         $token = $this->getUser2AccessToken([ApiScope::TABLE_READ]);
@@ -326,6 +395,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(403);
     }
 
+    /**
+     * @return void
+     */
     public function testGetColumn()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -348,6 +420,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNotFoundGetColumn()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -361,6 +436,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetColumn()
     {
         $token = $this->getAdminAccessToken([ApiScope::WORKFLOW_READ]);
@@ -374,6 +452,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyGetColumn()
     {
         $token = $this->getUser2AccessToken([ApiScope::TABLE_READ]);
@@ -388,6 +469,9 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testGetColumnByName()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -403,6 +487,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNotFoundGetColumnByName()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -416,6 +503,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetColumnByName()
     {
         $token = $this->getAdminAccessToken([ApiScope::WORKFLOW_READ]);
@@ -429,6 +519,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyGetColumnByName()
     {
         $token = $this->getUser2AccessToken([ApiScope::TABLE_READ]);
@@ -446,6 +539,9 @@ class Api2Test extends ApiTestBase
     // get custom value -------------------------------------
 
 
+    /**
+     * @return void
+     */
     public function testGetValues()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -456,6 +552,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(200);
     }
 
+    /**
+     * @return void
+     */
     public function testGetValuesWithPage()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -467,6 +566,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(20, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetValuesWithCount()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -478,6 +580,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(3, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetValuesWithOrder()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -493,6 +598,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($value, 'user'), '9');
     }
 
+    /**
+     * @return void
+     */
     public function testGetValuesByMultiId()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -506,6 +614,9 @@ class Api2Test extends ApiTestBase
 
     /**
      * Getting values children, and match ids
+     */
+    /**
+     * @return void
      */
     public function testGetValuesWithChildren()
     {
@@ -529,6 +640,9 @@ class Api2Test extends ApiTestBase
     /**
     * Getting values children, and match ids
     */
+    /**
+     * @return void
+     */
     public function testGetValuesWithChildren2()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -548,6 +662,9 @@ class Api2Test extends ApiTestBase
         }
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetValues()
     {
         $token = $this->getAdminAccessToken([ApiScope::ME]);
@@ -561,6 +678,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testInvalidOrderGetValues()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -574,6 +694,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNoIndexOrderGetValues()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -587,6 +710,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetValuesPermissionCheck()
     {
         $token = $this->getUser2AccessToken([ApiScope::VALUE_READ]);
@@ -607,6 +733,9 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testNotFoundGetValues()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -617,6 +746,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(404);
     }
 
+    /**
+     * @return void
+     */
     public function testGetValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -632,6 +764,9 @@ class Api2Test extends ApiTestBase
 
     /**
      * Getting value children, and match ids
+     */
+    /**
+     * @return void
      */
     public function testGetValueWithChildren()
     {
@@ -653,6 +788,9 @@ class Api2Test extends ApiTestBase
     /**
      * Getting value children, and match ids
      */
+    /**
+     * @return void
+     */
     public function testGetValueWithChildren2()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -670,6 +808,9 @@ class Api2Test extends ApiTestBase
         $this->_testChildrenValues($d, TestDefine::TESTDATA_TABLE_NAME_PARENT_TABLE_MANY_TO_MANY, array_get($d, 'id'));
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::ME]);
@@ -683,6 +824,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNotFoundGetValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -693,6 +837,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(404);
     }
 
+    /**
+     * @return void
+     */
     public function testNotIdGetValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -712,6 +859,9 @@ class Api2Test extends ApiTestBase
     // get custom value with view -------------------------------------
 
 
+    /**
+     * @return void
+     */
     public function testGetViewData()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -732,6 +882,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($data[0], $user_key), '1');
     }
 
+    /**
+     * @return void
+     */
     public function testGetViewDataWithPage()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -745,6 +898,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(20, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetViewDataWithCount()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -758,6 +914,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(3, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetViewDataWithValueType()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -778,6 +937,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($data[0], $user_key), 'admin');
     }
 
+    /**
+     * @return void
+     */
     public function testGetViewDataWithSort()
     {
         $this->skipTempTest('ビューのソート処理について見直し');
@@ -804,6 +966,9 @@ class Api2Test extends ApiTestBase
         }
     }
 
+    /**
+     * @return void
+     */
     public function testGetViewDataById()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -824,6 +989,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($data, $id_key), '3');
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetViewData()
     {
         $token = $this->getAdminAccessToken([ApiScope::ME]);
@@ -839,6 +1007,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNotFoundGetViewData()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -849,6 +1020,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(400);
     }
 
+    /**
+     * @return void
+     */
     public function testNotIdGetViewData()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -869,6 +1043,9 @@ class Api2Test extends ApiTestBase
 
     // post value -------------------------------------
 
+    /**
+     * @return void
+     */
     public function testCreateValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -893,6 +1070,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateValueWithParent()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -922,6 +1102,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateValueWrongParent()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -943,6 +1126,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateMultipleValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -959,6 +1145,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(($pre_count + 3), $count);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateMultipleValueWithParent()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -981,6 +1170,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(($pre_count + 3), $count);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateMultipleValueWrongParent()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1001,6 +1193,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateMultipleValueWithParent2()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1030,6 +1225,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(($pre_count + 3), $count);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateValueWithFindkey()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1057,6 +1255,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateNoValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1075,6 +1276,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testOverCreateValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1088,6 +1292,9 @@ class Api2Test extends ApiTestBase
             ->assertStatus(400);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeCreateValue()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1106,6 +1313,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateValueInvalidFindkey()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1125,6 +1335,9 @@ class Api2Test extends ApiTestBase
         ->assertStatus(400);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateValueFindkeyNotFound()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1144,6 +1357,9 @@ class Api2Test extends ApiTestBase
         ->assertStatus(400);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateValueRequiredError()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1162,8 +1378,12 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValue()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()
             ->where('updated_user_id', '<>', '1')->first();
         $index_text = array_get($data->value, 'index_text');
@@ -1191,8 +1411,12 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueWithFindKey()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()
             ->where('updated_user_id', '<>', '2')->first();
         $old_text = array_get($data->value, 'text');
@@ -1224,8 +1448,12 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueWithParent()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('child_table')->getValueModel()
             ->where('parent_id', 1)->first();
 
@@ -1252,8 +1480,12 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueOnlyParent()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('child_table')->getValueModel()
             ->where('parent_id', 3)->first();
 
@@ -1277,8 +1509,12 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueWithParent2()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('child_table')->getValueModel()
             ->where('parent_id', 2)->first();
 
@@ -1307,6 +1543,9 @@ class Api2Test extends ApiTestBase
         ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueNotFound()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1326,8 +1565,12 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueNoPermissionData()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()
             ->where('created_user_id', '<>', '3')->first();
 
@@ -1347,8 +1590,12 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testUpdateValueInitOnly()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()
             ->where('updated_user_id', '<>', '1')->first();
         $init_text = array_get($data->value, 'init_text');
@@ -1367,6 +1614,9 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testDeleteValue()
     {
         $this->_testDeleteValue(false, true);
@@ -1375,6 +1625,9 @@ class Api2Test extends ApiTestBase
     /**
      * Force deleting
      *
+     * @return void
+     */
+    /**
      * @return void
      */
     public function testDeleteValueForce()
@@ -1388,6 +1641,9 @@ class Api2Test extends ApiTestBase
      *
      * @return void
      */
+    /**
+     * @return void
+     */
     public function testDeleteValueForceAlreadyTrashed()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1399,12 +1655,22 @@ class Api2Test extends ApiTestBase
      *
      * @return void
      */
+    /**
+     * @return void
+     */
     public function testDeleteValueForceConfig()
     {
         \Config::set('exment.delete_force_custom_value', true);
         $this->_testDeleteValue(false, false);
     }
 
+
+    /**
+     * @param bool $appendForceQuery
+     * @param bool $isGetTrashed
+     * @param bool $isAlreadyTrashed
+     * @return void
+     */
     protected function _testDeleteValue(bool $appendForceQuery, bool $isGetTrashed, bool $isAlreadyTrashed = false)
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1413,6 +1679,7 @@ class Api2Test extends ApiTestBase
         for ($i = 0; $i < 100; $i++) {
             $query = CustomTable::getEloquent('custom_value_edit')->getValueModel()->query();
             if ($isAlreadyTrashed) {
+                /** @phpstan-ignore-next-line */
                 $query->onlyTrashed();
             }
             $data = $query->find($id + $i);
@@ -1434,11 +1701,15 @@ class Api2Test extends ApiTestBase
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()->find($id);
         $this->assertTrue(!isset($data));
 
+        /** @phpstan-ignore-next-line */
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()->query()->onlyTrashed()->find($id);
         $this->assertTrue($isGetTrashed ? isset($data) : !isset($data));
     }
 
 
+    /**
+     * @return void
+     */
     public function testDeleteValueNotFound()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1455,8 +1726,12 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testDeleteValueNoPermissionData()
     {
+        /** @var mixed $data */
         $data = CustomTable::getEloquent('custom_value_edit')->getValueModel()
             ->where('created_user_id', '<>', '3')->first();
 
@@ -1474,6 +1749,9 @@ class Api2Test extends ApiTestBase
 
 
 
+    /**
+     * @return void
+     */
     public function testDataQuery()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1485,6 +1763,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(10, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryWithPage()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1496,6 +1777,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(20, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryWithCount()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1507,6 +1791,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(5, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryNoParam()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1520,6 +1807,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyDataQuery()
     {
         $token = $this->getUser2AccessToken([ApiScope::VALUE_READ]);
@@ -1534,6 +1824,9 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testDataQueryPermissionCheck()
     {
         $token = $this->getUser2AccessToken([ApiScope::VALUE_READ]);
@@ -1556,6 +1849,9 @@ class Api2Test extends ApiTestBase
 
 
     // Query column ----------------------------------------------------
+    /**
+     * @return void
+     */
     public function testDataQueryColumn()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1567,6 +1863,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(2, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnWithPage()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1578,6 +1877,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(20, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnWithCount()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1590,6 +1892,9 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnPermissionCheck()
     {
         $token = $this->getUser2AccessToken([ApiScope::VALUE_READ]);
@@ -1612,6 +1917,9 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnNotFound()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1623,6 +1931,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(0, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnNoParam()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1636,6 +1947,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnErrorColumn()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1649,6 +1963,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnErrorOperand()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1662,6 +1979,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDataQueryColumnNoIndex()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1675,6 +1995,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyDataQueryColumn()
     {
         $token = $this->getUser2AccessToken([ApiScope::VALUE_READ]);
@@ -1688,6 +2011,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetNotify()
     {
         $token = $this->getAdminAccessToken([ApiScope::NOTIFY_READ]);
@@ -1701,6 +2027,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount($itemCount, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetNotifyAll()
     {
         $token = $this->getAdminAccessToken([ApiScope::NOTIFY_WRITE]);
@@ -1714,6 +2043,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount($itemCount, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetNotifyWithCount()
     {
         $token = $this->getUser1AccessToken([ApiScope::NOTIFY_READ]);
@@ -1725,6 +2057,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(4, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetNotifyNotFound()
     {
         $token = $this->getUser2AccessToken([ApiScope::NOTIFY_READ]);
@@ -1737,6 +2072,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(0, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetNotify()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1756,6 +2094,9 @@ class Api2Test extends ApiTestBase
 
     // file, document, attachment -------------------------------------
     // test file column
+    /**
+     * @return void
+     */
     public function testPostFile()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1786,6 +2127,9 @@ class Api2Test extends ApiTestBase
         $this->assertFileUrl($token, $response);
     }
 
+    /**
+     * @return void
+     */
     public function testPutFile()
     {
         $token = $this->getUser1AccessToken([ApiScope::VALUE_WRITE]);
@@ -1806,6 +2150,9 @@ class Api2Test extends ApiTestBase
         $this->assertFileUrl($token, $response);
     }
 
+    /**
+     * @return void
+     */
     public function testPostFileMultiple()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1845,11 +2192,15 @@ class Api2Test extends ApiTestBase
     /**
      * Put file multiple, not contains file.
      */
+    /**
+     * @return void
+     */
     public function testPutFileMultiple()
     {
         $token = $this->getUser1AccessToken([ApiScope::VALUE_WRITE]);
         $custom_column = CustomColumn::getEloquent('file_multiple', TestDefine::TESTDATA_TABLE_NAME_ALL_COLUMNS_FORTEST);
 
+        /** @var CustomTable $custom_value */
         $custom_value = CustomTable::getEloquent(TestDefine::TESTDATA_TABLE_NAME_ALL_COLUMNS_FORTEST)
             ->getValueQuery()
             ->whereNull($custom_column->getQueryKey())
@@ -1879,11 +2230,15 @@ class Api2Test extends ApiTestBase
     /**
      * Put file multiple, append file.
      */
+    /**
+     * @return void
+     */
     public function testPutFileMultipleAppend()
     {
         $token = $this->getUser1AccessToken([ApiScope::VALUE_WRITE]);
         $custom_column = CustomColumn::getEloquent('file_multiple', TestDefine::TESTDATA_TABLE_NAME_ALL_COLUMNS_FORTEST);
 
+        /** @var CustomTable $custom_value */
         $custom_value = CustomTable::getEloquent(TestDefine::TESTDATA_TABLE_NAME_ALL_COLUMNS_FORTEST)
             ->getValueQuery()
             ->whereNull($custom_column->getQueryKey())
@@ -1923,6 +2278,9 @@ class Api2Test extends ApiTestBase
         $this->assertFilesUrl($token, $response, [TestDefine::FILE2_TESTSTRING, 'test']);
     }
 
+    /**
+     * @return void
+     */
     public function testPostDocument()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -1942,6 +2300,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($json, 'name'), 'test1.txt');
     }
 
+    /**
+     * @return void
+     */
     public function testGetDocument()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1964,6 +2325,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($data, 'created_user_id'), $document->created_user_id);
     }
 
+    /**
+     * @return void
+     */
     public function testDownloadFile()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1981,6 +2345,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch($file, TestDefine::FILE_TESTSTRING);
     }
 
+    /**
+     * @return void
+     */
     public function testDownloadFileJson()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
@@ -1999,6 +2366,9 @@ class Api2Test extends ApiTestBase
         $this->assertMatch(array_get($json, 'base64'), base64_encode(TestDefine::FILE_TESTSTRING));
     }
 
+    /**
+     * @return void
+     */
     public function testNoPermissionCreateDocument()
     {
         /// check not permission by user
@@ -2013,6 +2383,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNoPermissionGetDocuments()
     {
         /// check not permission by user
@@ -2027,6 +2400,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNoPermissionDownloadFile()
     {
         /// check not permission by user
@@ -2044,6 +2420,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testNoPermissionDeleteFile()
     {
         /// check not permission by user
@@ -2061,6 +2440,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeCreateDocument()
     {
         /// check not permission by user
@@ -2078,6 +2460,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetDocuments()
     {
         /// check not permission by user
@@ -2092,6 +2477,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeDownloadFile()
     {
         /// check not permission by user
@@ -2109,6 +2497,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeDeleteFile()
     {
         /// check not permission by user
@@ -2126,6 +2517,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDeleteFile()
     {
         $token = $this->getAdminAccessToken([ApiScope::VALUE_WRITE]);
@@ -2141,6 +2535,9 @@ class Api2Test extends ApiTestBase
 
     // post notify -------------------------------------
 
+    /**
+     * @return void
+     */
     public function testCreateNotify()
     {
         $token = $this->getAdminAccessToken([ApiScope::NOTIFY_WRITE]);
@@ -2160,6 +2557,9 @@ class Api2Test extends ApiTestBase
             ->assertSeeText($body);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateNotifyMultiple()
     {
         $token = $this->getUser1AccessToken([ApiScope::NOTIFY_WRITE]);
@@ -2178,6 +2578,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(3);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateNotifyNoRequired()
     {
         $token = $this->getAdminAccessToken([ApiScope::NOTIFY_WRITE]);
@@ -2197,6 +2600,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testCreateNotifyNoUser()
     {
         $token = $this->getAdminAccessToken([ApiScope::NOTIFY_WRITE]);
@@ -2217,6 +2623,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeCreateNotify()
     {
         $token = $this->getAdminAccessToken([ApiScope::NOTIFY_READ]);
@@ -2238,6 +2647,9 @@ class Api2Test extends ApiTestBase
     }
 
     // Log ----------------------------------------------------
+    /**
+     * @return void
+     */
     public function testGetLogs()
     {
         $token = $this->getAdminAccessToken([ApiScope::LOG]);
@@ -2264,6 +2676,9 @@ class Api2Test extends ApiTestBase
         ;
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsWithCount()
     {
         $token = $this->getAdminAccessToken([ApiScope::LOG]);
@@ -2275,6 +2690,9 @@ class Api2Test extends ApiTestBase
             ->assertJsonCount(3, 'data');
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsById()
     {
         $token = $this->getAdminAccessToken([ApiScope::LOG]);
@@ -2290,6 +2708,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterLoginUserId()
     {
         $filters = ['login_user_id' => 0, 'count' => 1000000];
@@ -2299,6 +2720,9 @@ class Api2Test extends ApiTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterBaseUserId()
     {
         $filters = ['base_user_id' => 1, 'count' => 1000000];
@@ -2309,6 +2733,9 @@ class Api2Test extends ApiTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterPath()
     {
         $filters = ['path' => admin_base_path('auth/login'), 'count' => 1000000];
@@ -2316,6 +2743,9 @@ class Api2Test extends ApiTestBase
         $this->assertLogsFilterResult($filters);
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterMethod()
     {
         $filters = ['method' => 'POST', 'count' => 1000000];
@@ -2323,6 +2753,9 @@ class Api2Test extends ApiTestBase
         $this->assertLogsFilterResult($filters);
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterIp()
     {
         $filters = ['ip' => '127.0.0.1', 'count' => 1000000];
@@ -2330,6 +2763,9 @@ class Api2Test extends ApiTestBase
         $this->assertLogsFilterResult($filters);
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterDatetimeStart()
     {
         $count = intval(OperationLog::count() / 2);
@@ -2348,6 +2784,9 @@ class Api2Test extends ApiTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testGetLogsFilterDatetimeEnd()
     {
         $count = intval(OperationLog::count() / 2);
@@ -2367,6 +2806,9 @@ class Api2Test extends ApiTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testWrongScopeGetLogs()
     {
         $token = $this->getAdminAccessToken([ApiScope::TABLE_READ]);
@@ -2380,6 +2822,9 @@ class Api2Test extends ApiTestBase
             ]);
     }
 
+    /**
+     * @return void
+     */
     public function testDenyGetLogs()
     {
         $token = $this->getUser1AccessToken([ApiScope::LOG]);
@@ -2396,7 +2841,7 @@ class Api2Test extends ApiTestBase
     /**
      * Test assert logs, filtering value
      *
-     * @param array $filters
+     * @param array<mixed> $filters
      * @return void
      */
     protected function assertLogsFilterResult(array $filters, ?\Closure $ckeckCallback = null)
@@ -2442,8 +2887,11 @@ class Api2Test extends ApiTestBase
     }
 
 
-
-
+    /**
+     * @param mixed $token
+     * @param mixed $response
+     * @return void
+     */
     protected function assertFileUrl($token, $response)
     {
         $json = json_decode_ex($response->baseResponse->getContent(), true);
@@ -2486,6 +2934,12 @@ class Api2Test extends ApiTestBase
     }
 
 
+    /**
+     * @param mixed $token
+     * @param mixed $response
+     * @param mixed $matchValues
+     * @return void
+     */
     protected function assertFilesUrl($token, $response, $matchValues)
     {
         $json = json_decode_ex($response->baseResponse->getContent(), true);
@@ -2533,6 +2987,12 @@ class Api2Test extends ApiTestBase
         }
     }
 
+    /**
+     * @param mixed $data
+     * @param string $table_name
+     * @param mixed $id
+     * @return void
+     */
     protected function _testChildrenValues($data, $table_name, $id)
     {
         $relations = CustomRelation::getRelationsByParent($table_name);

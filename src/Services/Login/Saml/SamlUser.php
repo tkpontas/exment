@@ -33,8 +33,10 @@ class SamlUser extends CustomLoginUserBase
     /**
      * Mapping saml user value
      *
-     * @param SamlUser $samlUser
-     * @return void
+     * @param $samlUser
+     * @param $mappingKey
+     * @param $replaceMaps
+     * @return array|mixed|string|string[]|null
      */
     protected static function getMappingItemValue($samlUser, $mappingKey, $replaceMaps)
     {
@@ -44,6 +46,7 @@ class SamlUser extends CustomLoginUserBase
         $hasValue = false;
         foreach ($replaceMaps as $replaceKey => $replaceValue) {
             if (!array_has($samlAttibutes, $replaceKey)) {
+                /** @phpstan-ignore-next-line str_replace expects array|string, null given */
                 $mappingKey = str_replace($replaceValue, null, $mappingKey);
                 continue;
             }

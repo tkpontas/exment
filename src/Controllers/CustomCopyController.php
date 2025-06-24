@@ -30,7 +30,7 @@ class CustomCopyController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -47,9 +47,9 @@ class CustomCopyController extends AdminControllerTableBase
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|Response
+     * @param $tableKey
+     * @param $id
+     * @return Content|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -66,7 +66,9 @@ class CustomCopyController extends AdminControllerTableBase
     /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -88,6 +90,7 @@ class CustomCopyController extends AdminControllerTableBase
         $grid->column('from_custom_table.table_view_name', exmtrans("custom_copy.from_custom_table_view_name"))->sortable();
         $grid->column('to_custom_table.table_view_name', exmtrans("custom_copy.to_custom_table_view_name"))->sortable();
         $grid->column('label', exmtrans("plugin.options.label"))->sortable()->display(function ($value) {
+            /** @phpstan-ignore-next-line array_get expects array|ArrayAccess, $this(Exceedone\Exment\Controllers\CustomCopyController) given  */
             return array_get($this, 'options.label');
         });
 
@@ -101,6 +104,7 @@ class CustomCopyController extends AdminControllerTableBase
                 'url' => admin_urls('copy', $this->custom_table->table_name, 'newModal')
             ]));
             //$tools->append($this->createNewModal());
+            /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('copy', $this->custom_table));
         });
 
@@ -230,6 +234,7 @@ class CustomCopyController extends AdminControllerTableBase
         ->descriptionHtml(exmtrans("custom_copy.input_column_description"));
 
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            /** @phpstan-ignore-next-line add() expects string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->add(new Tools\CustomTableMenuButton('copy', $custom_table));
         });
 
@@ -293,7 +298,7 @@ class CustomCopyController extends AdminControllerTableBase
             'title' => trans('admin.setting')
         ]);
 
-        // add button
-        return $form->render()->render();
+        // add button unreachable statement
+//        return $form->render()->render();
     }
 }

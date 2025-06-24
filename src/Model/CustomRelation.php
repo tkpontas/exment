@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property mixed $relation_type
  * @property mixed $parent_custom_table_id
  * @property mixed $child_custom_table_id
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
+ * @method static int count($columns = '*')
+ * @method static \Illuminate\Database\Query\Builder where($column, $operator = null, $value = null, $boolean = 'and')
  * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
  */
 class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInterface
@@ -183,7 +184,7 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
      * Get relation name using parent and child table.
      * @param CustomTable|string|null $parent
      * @param CustomTable|string|null $child
-     * @return string
+     * @return string|null
      */
     public static function getRelationNamebyTables($parent, $child)
     {
@@ -316,6 +317,15 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
         static::deleting(function ($model) {
             // Delete items
             $model->deletingChildren();
+            // Clear child table option (inherit parent permission)
+            if ($model->relation_type == RelationType::ONE_TO_MANY) {
+                $child_table = $model->child_custom_table;
+                if (boolval($child_table->getOption('inherit_parent_permission'))) {
+                    $child_table->setOption('inherit_parent_permission');
+                    $child_table->save();
+                }
+                return;
+            }
         });
     }
 

@@ -17,7 +17,7 @@ class HasMany extends AdminHasMany
      *
      * @throws \Exception
      *
-     * @return \Illuminate\View\View
+     * @return \Illuminate\View\View|string
      */
     public function render()
     {
@@ -54,7 +54,7 @@ class HasMany extends AdminHasMany
     {
         list($template, $script) = $form->getTemplateHtmlAndScript();
         return [$template, $script];
-        
+
         // // re-set $script
         // $scripts = [];
         // foreach ($form->fields() as $field) {
@@ -118,7 +118,7 @@ $("button[type='submit']").click(function(){
         return true;
     }
     var cnt = $('#has-many-{$this->column} .has-many-{$this->column}-forms > .fields-group').filter(':visible').length;
-    if (cnt == 0) { 
+    if (cnt == 0) {
         swal("$errortitle", "$requiremessage", "error");
         return false;
     };
@@ -266,6 +266,7 @@ EOT;
         }
 
         if (!empty($v = $this->getOld())) {
+            /** @phpstan-ignore-next-line Parameter #1 $value of function count expects array|Countable, string given. need to fix laravel-admin */
             return count($v);
         }
 

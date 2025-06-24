@@ -549,11 +549,18 @@ abstract class CustomItem implements ItemInterface
     /**
      * get cast name for sort
      */
-    public function getCastName()
+    public function getCastName($is_summary = false)
     {
         list($type, $addOption, $options) = $this->getCastOptions();
+
+        if ($is_summary && 
+           !(isMatchString($type, DatabaseDataType::TYPE_INTEGER) || isMatchString($type, DatabaseDataType::TYPE_DECIMAL))) {
+            return null;
+        }
+
         // if DatabaseDataType::TYPE_STRING, return null
-        if (isMatchString($type, DatabaseDataType::TYPE_STRING)) {
+        if (isMatchString($type, DatabaseDataType::TYPE_STRING) ||
+            isMatchString($type, DatabaseDataType::TYPE_STRING_MULTIPLE)) {
             return null;
         }
 
@@ -595,7 +602,8 @@ abstract class CustomItem implements ItemInterface
 
     /**
      * get original field value
-     * @return mix
+     *
+     * @return mixed
      */
     protected function getOriginalValue()
     {
@@ -609,8 +617,6 @@ abstract class CustomItem implements ItemInterface
 
     /**
      * get value before saving
-     *
-     * @return void
      */
     public function saving()
     {
@@ -618,8 +624,6 @@ abstract class CustomItem implements ItemInterface
 
     /**
      * get value after saving
-     *
-     * @return void
      */
     public function saved()
     {

@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Tests\Browser;
 
+use Exceedone\Exment\Model\CustomValue;
 use Exceedone\Exment\Tests\PluginTestTrait;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Dashboard;
@@ -25,6 +26,8 @@ class HPluginPageTest extends ExmentKitTestCase
 
     /**
      * display plugin page.
+     *
+     * @return void
      */
     public function testDisplayPluginPage()
     {
@@ -41,6 +44,8 @@ class HPluginPageTest extends ExmentKitTestCase
 
     /**
      * setting plugin dashboard.
+     *
+     * @return void
      */
     public function testSettingDashboard()
     {
@@ -49,7 +54,7 @@ class HPluginPageTest extends ExmentKitTestCase
         $pre_cnt = Dashboard::count();
         $pre_cnt_box = DashboardBox::count();
         // Create dashboard
-        $response = $this->visit(admin_url('dashboard/create'))
+        $this->visit(admin_url('dashboard/create'))
                 ->seePageIs(admin_url('dashboard/create'))
                 ->type('unit test', 'dashboard_view_name')
                 ->press('admin-submit')
@@ -57,12 +62,12 @@ class HPluginPageTest extends ExmentKitTestCase
                 ->seeInElement('button', 'unit test')
                 ->assertEquals($pre_cnt + 1, Dashboard::count());
 
-        $row = Dashboard::orderBy('created_at', 'desc')->first();
+        $row = Dashboard::orderBy('id', 'desc')->first();
         $suuid = array_get($row, 'suuid');
         $param = "?column_no=1&dashboard_box_type=plugin&dashboard_suuid=$suuid&row_no=1";
 
         // Create dashboard box
-        $response = $this->visit(admin_url('dashboardbox/create' . $param))
+        $this->visit(admin_url('dashboardbox/create' . $param))
                 ->seePageIs(admin_url('dashboardbox/create' . $param))
                 ->type('unit test box', 'dashboard_box_view_name')
                 ->select($plugin->id, 'options[target_plugin_id]')
@@ -74,11 +79,14 @@ class HPluginPageTest extends ExmentKitTestCase
 
     /**
      * display plugin dashboard.
+     *
+     * @return void
      */
     public function testDisplayDashboard()
     {
         System::clearCache();
 
+        /** @var CustomValue $data */
         $data = CustomTable::getEloquent('custom_value_edit_all')
                     ->getValueModel()->where('value->user', \Exment::user()->base_user->id)->first();
         $box = DashboardBox::where('dashboard_box_view_name', 'unit test box')->first();
@@ -97,11 +105,14 @@ class HPluginPageTest extends ExmentKitTestCase
 
     /**
      * delete plugin dashboard.
+     *
+     * @return void
      */
     public function testDeleteDashboard()
     {
         $pre_cnt = Dashboard::count();
         $pre_cnt_box = DashboardBox::count();
+        /** @var Dashboard $dashboard */
         $dashboard = Dashboard::where('dashboard_view_name', 'unit test')->first();
         // delete dashboard
         $this->delete('/admin/dashboard/'. $dashboard->id);
@@ -111,6 +122,8 @@ class HPluginPageTest extends ExmentKitTestCase
 
     /**
      * test plugin script.
+     *
+     * @return void
      */
     public function testScriptAddress()
     {
@@ -125,6 +138,8 @@ class HPluginPageTest extends ExmentKitTestCase
 
     /**
      * test plugin style.
+     *
+     * @return void
      */
     public function testStyleCss()
     {

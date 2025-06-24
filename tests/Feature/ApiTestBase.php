@@ -18,7 +18,7 @@ abstract class ApiTestBase extends FeatureTestBase
     /**
      * Get Client Id and Secret
      *
-     * @return array [client_id, client_secret]
+     * @return array<mixed> [client_id, client_secret]
      */
     protected function getClientIdAndSecret()
     {
@@ -31,7 +31,7 @@ abstract class ApiTestBase extends FeatureTestBase
     /**
      * Get Client Id and Secret and Key
      *
-     * @return array [client_id, client_secret, api_key]
+     * @return array<mixed> [client_id, client_secret, api_key]
      */
     protected function getClientIdAndSecretAndKey()
     {
@@ -40,10 +40,12 @@ abstract class ApiTestBase extends FeatureTestBase
 
         return [$client->id, $client->secret, $client->client_api_key->key];
     }
+
     /**
-     * Get Password token
-     *
-     * @return Illuminate\Testing\TestResponse
+     * @param string $user_code
+     * @param string $password
+     * @param array<mixed> $scope
+     * @return \Illuminate\Testing\TestResponse
      */
     protected function getPasswordToken($user_code, $password, $scope = [])
     {
@@ -66,7 +68,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get API Key
-     *
+     * @param array<mixed> $scope
      * @return \Illuminate\Testing\TestResponse
      */
     protected function getApiKey($scope = [])
@@ -90,7 +92,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get Admin access token for administrator
-     *
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getAdminAccessToken($scope = [])
@@ -102,7 +104,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get Admin access token for administrator. get as api key
-     *
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getAdminAccessTokenAsApiKey($scope = [])
@@ -114,7 +116,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get user1 access token for all-edit user
-     *
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getUser1AccessToken($scope = [])
@@ -126,7 +128,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get user2 access token for general user
-     *
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getUser2AccessToken($scope = [])
@@ -138,7 +140,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get dev0-userB access token for general user
-     *
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getDevUserBAccessToken($scope = [])
@@ -150,7 +152,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get dev1-userC access token for general user
-     *
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getDev1UserCAccessToken($scope = [])
@@ -162,7 +164,9 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get user access token for target user
-     *
+     * @param mixed $userid
+     * @param string $password
+     * @param array<mixed> $scope
      * @return string
      */
     protected function getUserAccessToken($userid, $password, $scope = [])
@@ -174,7 +178,7 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Get public form uri
-     *
+     * @param mixed $userid
      * @return string
      */
     protected function getPublicFormApiUri($userid)
@@ -191,7 +195,8 @@ abstract class ApiTestBase extends FeatureTestBase
 
     /**
      * Json inner fragment
-     *
+     * @param mixed $response
+     * @param array<mixed> $arrays
      * @return void
      */
     protected function assertJsonTrue($response, $arrays)
@@ -200,6 +205,12 @@ abstract class ApiTestBase extends FeatureTestBase
         $this->assertJsonTrueFunc([], $arrays, $json);
     }
 
+    /**
+     * @param mixed $keys
+     * @param array<mixed> $arrays
+     * @param mixed $json
+     * @return void
+     */
     protected function assertJsonTrueFunc($keys, $arrays, $json)
     {
         foreach ($arrays as $k => $v) {

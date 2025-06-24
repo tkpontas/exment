@@ -1,6 +1,6 @@
 @extends('exment::auth.layout') 
 @section('content')
-        <p class="login-box-msg">{{ trans('admin.login') }}</p>
+        <p class="login-box-msg">--- MFA{{ trans('admin.login') }} ---</p>
 
         @if($show_default_form)
             <form action="{{ admin_url('auth/login') }}" method="post">
@@ -11,7 +11,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="input" class="form-control" placeholder="{{ exmtrans('login.email_or_usercode') }}" name="username" value="{{ old('username') }}" required>
+                        <input type="text" class="form-control" placeholder="{{ exmtrans('login.email_or_usercode') }}" name="username" value="{{ old('username') }}" required>
                         <span class="glyphicon glyphicon-user form-control-feedback"></span>
                     </div>
                 </div>
@@ -57,7 +57,7 @@
         @if(count($login_providers) > 0)
         <div class="social-auth-links text-center">
         @if($show_default_form)
-        <p>- OR -</p>
+        <p>--- OAuth認証 ---</p>
         @endif
 
         @foreach($login_providers as $login_provider_name => $login_provider)

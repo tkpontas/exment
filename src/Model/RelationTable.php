@@ -39,7 +39,7 @@ class RelationTable
     /**
      * Search type
      *
-     * @var SearchType
+     * @var int
      */
     public $searchType;
 
@@ -68,7 +68,7 @@ class RelationTable
      * Sub query's callbacks. Use for summary.
      * If set, call for sub query select, group by etc.
      *
-     * @var []
+     * @var array
      */
     public $subQueryCallbacks = [];
 
@@ -349,13 +349,12 @@ class RelationTable
         return $results;
     }
 
-
     /**
      * Get custom tables as "relation tables".
      *
      * @param CustomTable $custom_table
      * @param array $options
-     * @return array
+     * @return Collection
      */
     protected static function _getTablesRelation(CustomTable $custom_table, array $options): Collection
     {
@@ -382,13 +381,12 @@ class RelationTable
         return $results;
     }
 
-
     /**
      * Get custom tables as "relation tables" to parent.
      *
      * @param CustomTable $custom_table
      * @param array $options
-     * @return array
+     * @return Collection
      */
     protected static function _getParentTablesRelation(CustomTable $custom_table, array $options): Collection
     {
@@ -623,7 +621,10 @@ class RelationTable
         // Append join query.
         $joinName = $leftJoin ? 'leftJoin' : 'join';
         $query->{$joinName}($relation_name, "$child_table_name.id", "=", "$relation_name.child_id")
-            ->{$joinName}("$parent_table_name AS {$this->tableUniqueName}", "{$this->tableUniqueName}.id", "=", "$relation_name.parent_id");
+            ->{$joinName}("$parent_table_name AS {$this->tableUniqueName}", function($join) use($relation_name) {
+                $join->on("{$this->tableUniqueName}.id", "=", "$relation_name.parent_id")
+                     ->whereNull("{$this->tableUniqueName}.deleted_at");
+            });
 
         return $query;
     }
@@ -692,6 +693,7 @@ class RelationTable
             // set from and default group by, select.
             $subQuery->from("$child_table_name AS {$this->tableUniqueName}")
                 ->select("{$this->tableUniqueName}.parent_id")
+                ->whereNull("{$this->tableUniqueName}.deleted_at")
                 ->groupBy("{$this->tableUniqueName}.parent_id");
 
             // call subquery object callbacks.
@@ -771,7 +773,10 @@ class RelationTable
 
             // set from and default group by, select.
             $subQuery->from($relation_name)
-                ->{$joinName}("$child_table_name AS {$this->tableUniqueName}", "{$this->tableUniqueName}.id", "=", "$relation_name.child_id")
+                ->{$joinName}("$child_table_name AS {$this->tableUniqueName}", function($join) use($relation_name) {
+                    $join->on("{$this->tableUniqueName}.id", "=", "$relation_name.child_id")
+                         ->whereNull("{$this->tableUniqueName}.deleted_at");
+                })
                 ->select("{$relation_name}.parent_id")
                 ->groupBy("{$relation_name}.parent_id");
 
@@ -814,6 +819,7 @@ class RelationTable
             // set from and default group by, select.
             $subQuery->from("$child_table_name AS {$this->tableUniqueName}")
                 ->select("{$this->tableUniqueName}.$query_key")
+                ->whereNull("{$this->tableUniqueName}.deleted_at")
                 ->groupBy("{$this->tableUniqueName}.$query_key");
 
             // call subquery object callbacks.
@@ -949,6 +955,35 @@ class RelationTable
         $joinFunc = $or_option ? 'leftJoinSub' : 'joinSub';
         $query->{$joinFunc}($subquery2, 'workflow_values_wf', function ($join) use ($tableName) {
             $join->on($tableName . '.id', 'workflow_values_wf.morph_id');
+        });
+    }
+
+
+    /**
+     * Create subquery for Workflow status join
+     *
+     * @param \Illuminate\Database\Query\Builder|\Illuminate\Database\Schema\Builder|\Illuminate\Database\Eloquent\Builder $query
+     * @param CustomTable $custom_table
+     * @param boolean $or_option
+     * @return void
+     */
+    public static function setCommentSubquery($query, CustomTable $custom_table, bool $or_option = false)
+    {
+        $tableName = getDBTableName($custom_table);
+        $tableNameComment = getDBTableName(SystemTableName::COMMENT);
+        $columnName = CustomColumn::getEloquent('comment_detail', SystemTableName::COMMENT)->getQueryKey();
+
+        $subquery = \DB::table($tableName)
+            ->leftJoin($tableNameComment, function ($join) use ($tableName, $tableNameComment, $custom_table) {
+                $join->on($tableNameComment . '.parent_id', "$tableName.id")
+                    ->where($tableNameComment . '.parent_type', $custom_table->table_name)
+                    ->whereNull($tableNameComment . '.deleted_at');
+            })->select(["$tableName.id as comment_id", "$tableNameComment.$columnName as comment"]);
+
+        // join query is $or_option is true then leftJoin
+        $joinFunc = $or_option ? 'leftJoinSub' : 'joinSub';
+        $query->{$joinFunc}($subquery, 'comment_values', function ($join) use ($tableName) {
+            $join->on($tableName . '.id', 'comment_values.comment_id');
         });
     }
 }
