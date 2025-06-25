@@ -1888,6 +1888,7 @@ return [
         'view_column_target' => 'View target column',
         'view_column_start_date' => 'Start date',
         'view_column_end_date' => 'End date',
+        'child_table_id' => 'Child table id',
         'color' => 'Display color',
         'font_color' => 'Letter color',
         'order' => 'Order',
@@ -1922,6 +1923,7 @@ return [
             'use_view_infobox' => 'By setting YES, you can set an information box at the top of the view where you can enter business details and messages to users.',
             'view_infobox_title' => 'Enter the title to be displayed in the information box.',
             'view_infobox' => 'Please fill in the HTML to be displayed in the information box. *Images and scripts cannot be entered.',
+            'child_table_id' => 'When you click a column for which a child table has been set on the list screen, the child table data will be displayed in accordion style.',
             'order' => 'Display order of custom view menu buttons.',
         ],
 
@@ -1994,6 +1996,7 @@ return [
             'create_sum' => 'Create Summary View',
             'create_calendar' => 'Calendar view new creation',
             'create_filter' => 'Create condition view new',
+            'create_expansion' => 'Create 1:n parent-child view new',
             
             'help' => [
                 'current_view_edit' => 'Change the settings of the currently displayed view.',
@@ -2002,6 +2005,7 @@ return [
                 'create_sum' => 'Create a new aggregation view that groups data items and aggregates and displays the total and maximum values.',
                 'create_calendar' => 'Create a new calendar view that displays the date of data in calendar format.',
                 'create_filter' => 'Create a new condition view that sets the conditions for notification and the conditions to be displayed in the form options.',
+                'create_expansion' => 'Create a new view that sets parent for child.',
             ],
         ],
         'message' => [
@@ -2020,6 +2024,7 @@ return [
             'default' => 'List view',
             'aggregate' => 'Summary view',
             'calendar' => 'Calendar view',
+            'expansion' => 'Parent-child view',
             'filter' => 'Filter view',
             'plugin' => 'Unique view',
             'alldata' => 'All data view',
