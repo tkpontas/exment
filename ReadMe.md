@@ -2,7 +2,7 @@
 
 - feature/issue_9002 （検索フィルタで条件を保持したままにする）
 
-- feature/add_expansion_view（1:Nリレーションのテーブルに親子ビューの追加）
+- feature/add_expansion_view （1:Nリレーションのテーブルに親子ビューの追加）
 
 以下、リンク
 
