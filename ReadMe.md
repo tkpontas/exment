@@ -4,6 +4,8 @@
 
 - feature/add_expansion_view（1:Nリレーションのテーブルに親子ビューの追加）
 
+以下、リンク
+
 - **[Manual/ja](https://exment.net/docs/#/ja/)**
 
 - **[Plugin Product](https://github.com/exment-git/plugin-product/tree/main/document/PluginInvoiceDocument)**  
