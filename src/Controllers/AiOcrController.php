@@ -136,9 +136,6 @@ class AiOcrController extends AdminControllerTableBase
                 $valueHash = [];
                 foreach ($aiOcrResult as $column => $field) {
                     $value = $field['value'];
-                    if ($field['value_type'] === 'number') {
-                        $value = preg_replace('/[^\d.-]/', '', $value);
-                    }
                     $valueHash[$column] = $value;
                 }
                 $new_record->value = $valueHash;
