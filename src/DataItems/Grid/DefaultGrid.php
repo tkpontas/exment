@@ -44,6 +44,8 @@ class DefaultGrid extends GridBase
      */
     public function grid()
     {
+        $this->loadGridParameters();
+
         $classname = getModelName($this->custom_table);
         $grid = new Grid(new $classname());
 
@@ -121,7 +123,7 @@ class DefaultGrid extends GridBase
                 ]);
             //$name = $item->indexEnabled() ? $item->index() : $item->uniqueName();
             $className = 'column-' . $item->name();
-            $grid->column($item->uniqueName(), $item->label())
+            $column = $grid->column($item->uniqueName(), $item->label())
                 ->sort($item->sortable())
                 ->sortName($item->getSortName())
                 //->cast($item->getCastName())
@@ -142,6 +144,8 @@ class DefaultGrid extends GridBase
                     }
                     return $item->setCustomValue($this)->html();
                 })->escape(false);
+            
+            $this->setGridColumn($column, $custom_view_column);
         }
 
         // set parpage
@@ -160,6 +164,13 @@ class DefaultGrid extends GridBase
         $custom_table->setQueryWith($grid->model(), $this->custom_view);
     }
 
+
+    /**
+     * set laravel-admin grid column specific setting for grid type
+     */
+    protected function setGridColumn($column, $custom_view_column)
+    {
+    }
 
     /**
      * execute filter for modal
@@ -336,11 +347,28 @@ class DefaultGrid extends GridBase
         // filter workflow
         if (!is_null($workflow = Workflow::getWorkflowByTable($this->custom_table))) {
             foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => false]) as $filterKey => $filterType) {
+                if (!SystemColumn::isWorkflow($filterKey)) {
+                    continue;
+                }
                 if ($this->custom_table->gridFilterDisable($filterKey)) {
                     continue;
                 }
 
                 $filterItems[] = ColumnItems\WorkflowItem::getItem($this->custom_table, $filterKey);
+            }
+        }
+
+        // filter comment
+        if (boolval($this->custom_table->getOption('comment_flg')?? true)) {
+            foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => false]) as $filterKey => $filterType) {
+                if (!SystemColumn::isComment($filterKey)) {
+                    continue;
+                }
+                if ($this->custom_table->gridFilterDisable($filterKey)) {
+                    continue;
+                }
+
+                $filterItems[] = ColumnItems\CommentItem::getItem($this->custom_table);
             }
         }
 
@@ -547,7 +575,7 @@ class DefaultGrid extends GridBase
                     $enableCreate = false;
                 }
 
-                if (!is_null($parent_value = $actions->row->getParentValue()) && $parent_value->enableEdit(true) !== true) {
+                if (!is_null($parent_value = $actions->row->getParentValue(null, true)) && $parent_value->enableEdit(true) !== true) {
                     $enableCreate = false;
                     $enableEdit = false;
                     $enableDelete = false;
@@ -565,21 +593,24 @@ class DefaultGrid extends GridBase
                     $actions->disableView();
                     $actions->disableDelete();
 
-                    // add restore link
-                    $restoreUrl = $actions->row->getUrl() . '/restoreClick';
-                    $linker = (new Linker())
-                        ->icon('fa-undo')
-                        ->script(true)
-                        ->linkattributes([
-                            'data-add-swal' => $restoreUrl,
-                            'data-add-swal-title' => exmtrans('custom_value.restore'),
-                            'data-add-swal-text' => exmtrans('custom_value.message.restore'),
-                            'data-add-swal-method' => 'get',
-                            'data-add-swal-confirm' => trans('admin.confirm'),
-                            'data-add-swal-cancel' => trans('admin.cancel'),
-                        ])
-                        ->tooltip(exmtrans('custom_value.restore'));
-                    $actions->append($linker);
+                    // if parent data does not exist or has not been deleted 
+                    if (!$parent_value || !$parent_value->trashed()) {
+                        // add restore link
+                        $restoreUrl = $actions->row->getUrl() . '/restoreClick';
+                        $linker = (new Linker())
+                            ->icon('fa-undo')
+                            ->script(true)
+                            ->linkattributes([
+                                'data-add-swal' => $restoreUrl,
+                                'data-add-swal-title' => exmtrans('custom_value.restore'),
+                                'data-add-swal-text' => exmtrans('custom_value.message.restore'),
+                                'data-add-swal-method' => 'get',
+                                'data-add-swal-confirm' => trans('admin.confirm'),
+                                'data-add-swal-cancel' => trans('admin.cancel'),
+                            ])
+                            ->tooltip(exmtrans('custom_value.restore'));
+                        $actions->append($linker);
+                    }
 
                     // append show url
                     $showUrl = $actions->row->getUrl() . '?trashed=1';
@@ -604,6 +635,18 @@ class DefaultGrid extends GridBase
                             'data-add-swal-cancel' => trans('admin.cancel'),
                         ])
                         ->tooltip(exmtrans('custom_value.hard_delete'));
+                    $actions->append($linker);
+
+                } elseif ($actions->row->trashed()) {
+                    $actions->disableView();
+                    $actions->disableDelete();
+                    // append show url
+                    $showUrl = $actions->row->getUrl() . '?trashed=1';
+                    // add new edit link
+                    $linker = (new Linker())
+                        ->url($showUrl)
+                        ->icon('fa-eye')
+                        ->tooltip(trans('admin.show'));
                     $actions->append($linker);
                 }
 
@@ -790,6 +833,7 @@ class DefaultGrid extends GridBase
             'append_table' => true,
             'include_parent' => true,
             'include_workflow' => true,
+            'include_comment' => true,
             'index_enabled_only' => true,
             'only_system_grid_filter' => true,
             'ignore_many_to_many' => true,
@@ -829,5 +873,36 @@ class DefaultGrid extends GridBase
 
         $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
             ->option(exmtrans("condition.condition_reverse_options"));
+    }
+
+    /**
+     * Get the previous filter, sort order, page, etc. of the list from the session
+     */
+    protected function loadGridParameters()
+    {
+        if (!boolval(config('exment.keep_grid_parameters', false))) {
+            return;
+        }
+
+        $previous_url = parse_url(url()->previous());
+        $current_url = parse_url(url()->current());
+        $previous_path = $previous_url? array_get($previous_url, 'path'): null;
+        $current_path = $current_url? array_get($current_url, 'path'): null;
+        $session_array = session(Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS);
+
+        $execute_filter = request()->get('execute_filter');
+        $_sort = request()->get('_sort');
+
+        if ($previous_path == $current_path) {
+            $session_array[$current_path] = request()->all();
+            session([Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS => $session_array]);
+        } elseif (boolval($execute_filter) || is_array($_sort)) {
+            $session_array[$current_path] = request()->all();
+            session([Define::SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS => $session_array]);
+        } else {
+            if ($session_array && array_key_exists($current_path, $session_array)) {
+                request()->merge($session_array[$current_path]);
+            }
+        }
     }
 }

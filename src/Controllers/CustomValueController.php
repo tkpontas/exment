@@ -1074,6 +1074,10 @@ class CustomValueController extends AdminControllerTableBase
             \DB::commit();
         } catch (\Exception $e) {
             \DB::rollback();
+            return getAjaxResponse([
+                'result'  => false,
+                'message' => $e->getMessage(),
+            ]);
         }
 
         return getAjaxResponse([
