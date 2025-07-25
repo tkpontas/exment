@@ -46,6 +46,30 @@
             <div style="margin-top:10px; text-align:center;">
                 <p class="m-0"><a href="{{admin_url('auth/forget')}}" class="text-decoration-none">{{ exmtrans('login.forget_password') }}</a></p>
             </div>
+            
+        @if(count($login_providers) > 0)
+        <div class="social-auth-links text-center">
+        @if($show_default_form)
+        <p>--- OAuth認証 ---</p>
+        @endif
+
+        @foreach($login_providers as $login_provider_name => $login_provider)
+        @include('exment::auth.login_button_style')
+        @endforeach
+
+        @foreach($login_providers as $login_provider_name => $login_provider)
+        <a href="{{ $login_provider['login_url'] }}" class="btn btn-block btn-social btn-flat click_disabled {{ $login_provider['btn_name'] ?? '' }}">
+            <i class="fa {{ $login_provider['font_owesome'] ?? '' }}"></i> {{ $login_provider['display_name'] }}
+        </a>
+        @endforeach
+
+        @if($errors->has('sso_error'))
+        <div class="has-error">
+        @foreach($errors->get('sso_error') as $message)
+        <label class="control-label" for="inputError"><i class="fa fa-times-circle-o"></i>{{$message}}</label></br>
+        @endforeach 
+        </div>
+
         @endif
     @endif
 
@@ -78,3 +102,7 @@
         background-image: none !important;
     }
 </style>
+
+<!-- /.login-box -->
+@endsection
+
