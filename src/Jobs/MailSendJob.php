@@ -28,14 +28,14 @@ class MailSendJob extends Notification implements ShouldQueue
      * @var MailHistory
      */
     protected $mailHistory;
-    protected $user;
-    protected $finalUser;
+    protected $target_user_id;
+    protected $notifyUserOnEmailFailureFlag;
 
 
-    public function __construct($user = null, $finalUser = false)
+    public function __construct($target_user_id = null, $notifyUserOnEmailFailureFlag = false)
     {
-        $this->user = $user;
-        $this->finalUser = $finalUser;
+        $this->target_user_id = $target_user_id;
+        $this->notifyUserOnEmailFailureFlag = $notifyUserOnEmailFailureFlag;
     }
 
     /**
@@ -95,20 +95,22 @@ class MailSendJob extends Notification implements ShouldQueue
      */
     public function failed($exception)
     {
-        $mail_template = CustomTable::getEloquent(SystemTableName::MAIL_TEMPLATE)
-            ->getValueModel()
-            ->where('value->mail_key_name', 'sendmail_error')
-            ->first();
-        if ($mail_template && $this->finalUser) {
-            $this->notify(new Jobs\NavbarJob(
-                $mail_template->getValue('mail_subject'),
-                $mail_template->getValue('mail_body'),
-                $this->notify_id ?? -1,
-                $this->user->id,
-                \Exment::getUserId() ?? null,
-                $this->mailHistory->getParentId(),
-                $this->mailHistory->getParentType()
-            ));
+        if ($this->notifyUserOnEmailFailureFlag) {
+            $mail_template = CustomTable::getEloquent(SystemTableName::MAIL_TEMPLATE)
+                ->getValueModel()
+                ->where('value->mail_key_name', 'sendmail_error')
+                ->first();
+            if ($mail_template) {
+                $this->notify(new Jobs\NavbarJob(
+                    $mail_template->getValue('mail_subject'),
+                    $mail_template->getValue('mail_body'),
+                    $this->notify_id ?? -1,
+                    $this->target_user_id,
+                    \Exment::getUserId() ?? null,
+                    $this->mailHistory->getParentId(),
+                    $this->mailHistory->getParentType()
+                ));
+            }
         }
     }
 
