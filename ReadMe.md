@@ -1,5 +1,4 @@
 本家Exmentの最新バージョンに以下のbranchをmargeしています。
-正式バージョンで採用された項目は順次、exceedone/exmentのmasterに置き換えていきます。
 
 - feature/issue_9002 （検索フィルタで条件を保持したままにする）
 - feature/add_expansion_view （1:Nリレーションのテーブルに親子ビューの追加）
