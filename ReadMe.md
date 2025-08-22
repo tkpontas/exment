@@ -5,6 +5,8 @@
 - hotfixfeature/issue_1627（集計ビュー並び順設定）
 - feature/issue_606_ex（カスタム列に表示専用項目追加・自動採番のプラグイン利用準備）
 
+素人が勝手にmargeしているものですので、予期せぬエラーが出てもメンテナンスできません。
+
 以下、リンク
 
 - **[Manual/ja](https://exment.net/docs/#/ja/)**
