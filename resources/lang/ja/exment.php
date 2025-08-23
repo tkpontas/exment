@@ -362,7 +362,7 @@ return [
         ],
         
         'date_format_options' => [
-            'format_default' => '標準（Y-m-d H:i）',
+            'format_default' => '標準（Y年m月d日 H:i）',
             'format_slash' => 'カスタム（Y/m/d H:i）',
             'format_local' => 'ローカル（Y年m月d日 H時i分）',
         ],
@@ -380,7 +380,7 @@ return [
         ],
         
         'date_format_list' => [
-            'format_default' => ['Y-m-d', 'Y-m-d H:i', 'H:i'],
+            'format_default' => ['Y年m月d日', 'Y年m月d日 H:i', 'H:i'],
             'format_slash' => ['Y/m/d', 'Y/m/d H:i', 'H:i'],
             'format_local' => ['Y年m月d日', 'Y年m月d日 H時i分', 'H時i分'],
         ],
