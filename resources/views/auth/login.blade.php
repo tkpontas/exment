@@ -1,6 +1,6 @@
 @extends('exment::auth.layout')
 @section('content')
-    <p class="login-box-msg">{{ trans('admin.login') }}</p>
+        <p class="login-box-msg">--- MFA{{ trans('admin.login') }} ---</p>
 
     @if($show_default_form)
         <form action="{{ admin_url('auth/login') }}" method="post">
@@ -52,7 +52,7 @@
     @if(count($login_providers) > 0)
         <div class="social-auth-links text-center m-0">
             @if($show_default_form)
-                <p class="m-1">- OR -</p>
+                <p class="m-1">--- OAuth認証 ---</p>
             @endif
             @foreach($login_providers as $login_provider_name => $login_provider)
                 @include('exment::auth.login_button_style')
@@ -78,3 +78,4 @@
         background-image: none !important;
     }
 </style>
+

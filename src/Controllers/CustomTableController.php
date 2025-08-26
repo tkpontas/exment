@@ -9,6 +9,13 @@ use OpenAdminCore\Admin\Layout\Content;
 use OpenAdminCore\Admin\Layout\Row;
 use OpenAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Model\Workflow;
+use Encore\Admin\Form;
+use Encore\Admin\Grid;
+use Encore\Admin\Facades\Admin;
+use Encore\Admin\Layout\Content;
+use Encore\Admin\Layout\Row;
+use Encore\Admin\Grid\Linker;
+use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Validator\ExmentCustomValidator;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,7 +29,6 @@ use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Form\Widgets\ModalForm;
 use Exceedone\Exment\Enums\MailKeyName;
 use Exceedone\Exment\Enums\FilterType;
-use Exceedone\Exment\Enums\ColumnType;
 use Exceedone\Exment\Enums\FilterOption;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\NotifyTrigger;
@@ -39,9 +45,8 @@ use Exceedone\Exment\Enums\CompareColumnType;
 use Exceedone\Exment\Enums\ShowPositionType;
 use Exceedone\Exment\Enums\DataSubmitRedirectEx;
 use Exceedone\Exment\Enums\DataScanSubmitRedirect;
+use Exceedone\Exment\Enums\RelationType;
 use Exceedone\Exment\Services\TableService;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 
 class CustomTableController extends AdminControllerBase
 {
@@ -245,6 +250,7 @@ class CustomTableController extends AdminControllerBase
     protected function form($id = null)
     {
         $form = new Form(new CustomTable());
+        $has_parent = false;
         if (!isset($id)) {
             $form->text('table_name', exmtrans("custom_table.table_name"))
                 ->required()
@@ -252,6 +258,11 @@ class CustomTableController extends AdminControllerBase
                 ->help(sprintf(exmtrans('common.help.max_length'), 30) . exmtrans('common.help_code'));
         } else {
             $form->display('table_name', exmtrans("custom_table.table_name"));
+
+            // get parent table
+            $custom_table = CustomTable::getEloquent($id);
+            $custom_relation_parent = CustomRelation::getRelationByChild($custom_table, RelationType::ONE_TO_MANY);
+            $has_parent = isset($custom_relation_parent);
         }
         $form->text('table_view_name', exmtrans("custom_table.table_view_name"))
             ->required()
@@ -264,7 +275,7 @@ class CustomTableController extends AdminControllerBase
 
         $form->exmheader(exmtrans('common.detail_setting'))->hr();
 
-        $form->embeds('options', exmtrans("custom_column.options.header"), function ($form) {
+        $form->embeds('options', exmtrans("custom_column.options.header"), function ($form) use ($has_parent) {
             $form->color('color', exmtrans("custom_table.color"))->help(exmtrans("custom_table.help.color"));
             $form->icon('icon', exmtrans("custom_table.icon"))->help(exmtrans("custom_table.help.icon"));
             $form->switchbool('search_enabled', exmtrans("custom_table.search_enabled"))->help(exmtrans("custom_table.help.search_enabled"))->default("1")
@@ -310,6 +321,11 @@ class CustomTableController extends AdminControllerBase
 
             $form->switchbool('all_user_accessable_flg', exmtrans("custom_table.all_user_accessable_flg"))->help(exmtrans("custom_table.help.all_user_accessable_flg"))
                 ->default("0");
+
+            if ($has_parent) {
+                $form->switchbool('inherit_parent_permission', exmtrans("custom_table.inherit_parent_permission"))->help(exmtrans("custom_table.help.inherit_parent_permission"))
+                    ->default("0");
+            }
         })->disableHeader();
 
         // if create table, show menulist
@@ -469,6 +485,7 @@ HTML;
             $form->select('table_label_id', exmtrans("custom_table.custom_column_multi.column_target"))->required()
                 ->options($custom_table->getColumnsSelectOptions([
                     'include_system' => false,
+                    'ignore_display_only' => false,
                 ]));
 
             $form->hidden('priority')->default(1);
@@ -481,14 +498,20 @@ HTML;
             $form->select('unique1', exmtrans("custom_table.custom_column_multi.unique1"))->required()
                 ->options($custom_table->getColumnsSelectOptions([
                     'include_system' => false,
+                    'include_parent_id' => true,
+                    'ignore_many_to_many' => true
                 ]));
             $form->select('unique2', exmtrans("custom_table.custom_column_multi.unique2"))->required()
                 ->options($custom_table->getColumnsSelectOptions([
                     'include_system' => false,
+                    'include_parent_id' => true,
+                    'ignore_many_to_many' => true
                 ]));
             $form->select('unique3', exmtrans("custom_table.custom_column_multi.unique3"))
                 ->options($custom_table->getColumnsSelectOptions([
                     'include_system' => false,
+                    'include_parent_id' => true,
+                    'ignore_many_to_many' => true
                 ]));
             $form->hidden('multisetting_type')->default(MultisettingType::MULTI_UNIQUES);
         })->setTableColumnWidth(4, 4, 3, 1)
@@ -926,6 +949,14 @@ HTML;
             ->rules("max:40")
             ->help(exmtrans('common.help.view_name'));
 
+        $form->switchbool('include_view_flg', exmtrans("custom_table.include_view_flg"))
+            ->help(exmtrans("custom_table.help.include_view_flg"))
+            ->default("0");
+
+        $form->switchbool('include_form_flg', exmtrans("custom_table.include_form_flg"))
+            ->help(exmtrans("custom_table.help.include_form_flg"))
+            ->default("0");
+
         $form->setWidth(9, 2);
 
         return getAjaxResponse([
@@ -963,8 +994,10 @@ HTML;
 
         $target_table = CustomTable::getEloquent($id);
         $inputs = $request->only(['table_name','table_view_name']);
+        $include_view = boolval($request->get('include_view_flg', 0));
+        $include_form = boolval($request->get('include_form_flg', 0));
         try {
-            $response = $target_table->copyTable($inputs);
+            $response = $target_table->copyTable($inputs, $include_view, $include_form);
         } catch (\Exception $e) {
             $response = [
                 'result' => false,
