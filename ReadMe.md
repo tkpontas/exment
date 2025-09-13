@@ -1,4 +1,6 @@
-Exment Ver.6系の最新バージョンに exceedone/exment の branch から、個人的に欲しいと思ったニッチな機能や改修内容を勝手に marge しています。
+Exment Ver.6系の最新バージョンに exceedone/exment の branch から
+
+公式バージョンでは採用されなかったが、個人的に欲しいと思ったニッチな機能や改修内容を勝手に marge しています。
 
 - feature/issue_9002 （検索フィルタで条件を保持したままにする）
 - feature/add_expansion_view （1:Nリレーションのテーブルに親子ビューの追加）※ lang/enに不足項目追加済
