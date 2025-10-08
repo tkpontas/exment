@@ -8,7 +8,6 @@ Exment Ver.6系の最新バージョンに exceedone/exment の branch から
 - feature/add_expansion_view （1:Nリレーションのテーブルに親子ビューの追加）※ lang/enに不足項目追加済
 - hotfixfeature/issue_1627（集計ビュー並び順設定の不具合解消）
 - feature/issue_606_ex（パラメータ値を使用した表示専用で検索不可の項目をカスタム列に追加）
-- feature/issue_1620（集計ビューでもフィルタ機能を使用可能に）
 
 一応、エラーが出ないかどうかを動作確認していますが、素人がmargeしていますので
 
