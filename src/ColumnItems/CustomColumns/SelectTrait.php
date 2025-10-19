@@ -29,4 +29,67 @@ trait SelectTrait
 
         return [$default_type, $default];
     }
+
+    /**
+     * Set Search orWhere for free text search
+     *
+     * @param Builder $mark
+     * @param string $mark
+     * @param string $value
+     * @param string|null $q
+     * @return $this
+     */
+    public function setSearchOrWhere(&$query, $mark, $value, $q)
+    {
+        return $this->_setSearchOrWhere($query, $mark, $value, $q);
+    }
+
+    /**
+     * Set Search orWhere for free text search
+     *
+     * @param Builder $mark
+     * @param string $mark
+     * @param string $value
+     * @param string|null $q
+     * @return $this
+     */
+    protected function _setSearchOrWhere(&$query, $mark, $value, $q)
+    {
+        if ($this->isMultipleEnabled()) {
+            $pureValue = $this->getPureValue($q)?? $q;
+            $isUseUnicode = \ExmentDB::isUseUnicodeMultipleColumn();
+            $query_value = collect($pureValue)->map(function ($val) use ($isUseUnicode) {
+                return $isUseUnicode? unicode_encode($val): $val;
+            })->toArray();
+            $query->orWhereInArrayString($this->custom_column->getIndexColumnName(), $query_value);
+            return $this;
+        }
+        return parent::setSearchOrWhere($query, $mark, $value, $q);
+    }
+
+    /**
+     * Get Search queries for free text search
+     *
+     * @param string $mark
+     * @param string $value
+     * @param int $takeCount
+     * @param string|null $q
+     * @return array
+     */
+    protected function getSearchQueriesTrait($mark, $value, $takeCount, $q, $options = [])
+    {
+        if ($this->isMultipleEnabled()) {
+            list($mark, $pureValue) = $this->getQueryMarkAndValue($mark, $value, $q, $options);
+            $isUseUnicode = \ExmentDB::isUseUnicodeMultipleColumn();
+            $query = $this->custom_table->getValueQuery();
+            $query_value = collect($pureValue)->map(function ($val) use ($isUseUnicode) {
+                $val = trim($val, '%');
+                return $isUseUnicode? unicode_encode($val): $val;
+            })->toArray();
+            $query->orWhereInArrayString($this->custom_column->getIndexColumnName(), $query_value)->select('id');
+            $query->take($takeCount);
+            return [$query];
+        }
+        return parent::getSearchQueries($mark, $value, $takeCount, $q, $options);
+    }
 }
