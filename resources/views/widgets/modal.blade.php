@@ -12,15 +12,15 @@
             <div class="modal-footer d-flex justify-content-between">
                 <div>
                     <button type="button" class="btn btn-default modal-close"
-                        data-bs-dismiss="modal">{{trans('admin.close')}}</button>
+                        data-bs-dismiss="modal">{{ trans('admin.close') }}</button>
                     <button type="button" class="btn btn-default modal-reset"
-                        data-bs-dismiss="modal">{{trans('admin.reset')}}</button>
+                        data-bs-dismiss="modal">{{ trans('admin.reset') }}</button>
                 </div>
 
                 <button type="button" class="btn btn-info modal-submit {!! $modalSubmitAttributes !!}">
                     {{ trans('admin.submit') }}
                 </button>
-
+                <input type="hidden" class="modal-title-default" value="{{ $header }}" />
                 <input type="hidden" class="modal-close-defaultlabel" value="{{ trans('admin.close') }}" />
                 <input type="hidden" class="modal-submit-defaultlabel" value="{{ trans('admin.submit') }}" />
             </div>
@@ -28,3 +28,10 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(document).on('hidden.bs.modal', '#modal-showmodal', function() {
+        const defaultTitle = $(this).find('.modal-title-default').val() || '';
+        $(this).find('.modal-title').text(defaultTitle);
+    });
+</script>
