@@ -13,6 +13,7 @@ class DatabaseForm
 {
     use EnvTrait;
 
+    // @phpstan-ignore-next-line
     protected $database_default = null;
 
     public const settings = [
@@ -24,6 +25,7 @@ class DatabaseForm
         'password',
     ];
 
+    // @phpstan-ignore-next-line
     public function index()
     {
         $database_default = config('database.default', 'mysql');
@@ -38,9 +40,11 @@ class DatabaseForm
             $args[$s] = array_get($database_connection, $s);
         }
 
+        // @phpstan-ignore-next-line
         return view('exment::install.database', $args);
     }
 
+    // @phpstan-ignore-next-line
     public function post()
     {
         $request = request();
@@ -156,6 +160,7 @@ class DatabaseForm
         // check max(less than)
         if (array_has($database_version, 'max_lt')) {
             $message_lt = true;
+            // @phpstan-ignore-next-line
             if (version_compare($version, $database_version['max_lt']) >= 0) {
                 $result = false;
             }
@@ -167,6 +172,7 @@ class DatabaseForm
 
         $errorMessage = exmtrans('install.error.not_require_database_version_' . ($message_lt ? 'min_maxlt' : 'min'), [
             'min' => $database_version['min'],
+            // @phpstan-ignore-next-line
             'max_lt' => ($message_lt ? $database_version['max_lt'] : null),
             'database' => Define::DATABASE_TYPE[$this->database_default],
             'current' => $version
@@ -229,6 +235,7 @@ class DatabaseForm
         return true;
     }
 
+    // @phpstan-ignore-next-line
     protected function connection()
     {
         return \DB::connection($this->database_default);

@@ -11,8 +11,12 @@ use Illuminate\Contracts\Validation\Rule;
  */
 class SelectValTextRule implements Rule
 {
+    /** @var mixed */
     protected $keys;
 
+    /**
+     * @param mixed $parameters
+     */
     public function __construct($parameters)
     {
         $this->keys = $parameters;
@@ -54,6 +58,6 @@ class SelectValTextRule implements Rule
      */
     public function message()
     {
-        return trans('validation.in', ['values' => implode(exmtrans('common.separate_word'), $this->keys)]);
+        return (string)trans('validation.in', ['values' => implode(exmtrans('common.separate_word'), $this->keys)]);
     }
 }

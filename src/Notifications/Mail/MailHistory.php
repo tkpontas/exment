@@ -55,11 +55,12 @@ class MailHistory
      * Get user id.
      * @return string|null
      */
-    public function getUserId()
+    public function getUserId(): ?string
     {
         if ($this->user instanceof CustomValue) {
             return $this->user->getUserId();
         } elseif ($this->user instanceof LoginUser) {
+            // @phpstan-ignore-next-line
             return $this->user->getUserId();
         } elseif ($this->user instanceof NotifyTarget) {
             return $this->user->id();
@@ -74,7 +75,7 @@ class MailHistory
 
     /**
      * Target mail template's id
-     * @return string|null
+     * @return string|int|null
      */
     public function getMailTemplateId()
     {
@@ -92,7 +93,7 @@ class MailHistory
      * Target custom value's id
      * @return string|null
      */
-    public function getParentId()
+    public function getParentId(): ?string
     {
         return $this->parent_id;
     }
@@ -101,7 +102,7 @@ class MailHistory
      * Target custom value's table name
      * @return string|null
      */
-    public function getParentType()
+    public function getParentType(): ?string
     {
         return $this->parent_type;
     }
@@ -153,14 +154,18 @@ class MailHistory
      *
      * @return  self
      */
-    public function setUser($user)
+    public function setUser($user): self
     {
         $this->user = $user;
 
         return $this;
     }
 
-    public function setCustomValue(?CustomValue $custom_value)
+    /**
+     * @param CustomValue|null $custom_value
+     * @return self
+     */
+    public function setCustomValue(?CustomValue $custom_value): self
     {
         $this->custom_value = $custom_value;
         $this->parent_id = $custom_value ? $custom_value->id : null;
@@ -169,13 +174,21 @@ class MailHistory
         return $this;
     }
 
-    public function setHistory(bool $isSetHistory)
+    /**
+     * @param bool $isSetHistory
+     * @return self
+     */
+    public function setHistory(bool $isSetHistory): self
     {
         $this->isSetHistory = $isSetHistory;
         return $this;
     }
 
-    public function setHistoryBody(bool $isSetHistoryBody)
+    /**
+     * @param bool $isSetHistoryBody
+     * @return self
+     */
+    public function setHistoryBody(bool $isSetHistoryBody): self
     {
         $this->isSetHistoryBody = $isSetHistoryBody;
         return $this;
@@ -188,7 +201,7 @@ class MailHistory
      *
      * @return  self
      */
-    public function setMailTemplate($mail_template)
+    public function setMailTemplate($mail_template): self
     {
         $this->mail_template = $mail_template;
 

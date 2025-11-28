@@ -27,6 +27,6 @@ class EmptyRule implements Rule
      */
     public function message()
     {
-        return exmtrans('validation.empty');
+        return (string)exmtrans('validation.empty');
     }
 }

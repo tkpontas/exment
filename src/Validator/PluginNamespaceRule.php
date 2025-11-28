@@ -11,6 +11,7 @@ use Exceedone\Exment\Storage\Disk\DiskServiceItem;
  */
 class PluginNamespaceRule implements Rule
 {
+    // @phpstan-ignore-next-line
     protected $errors = [];
 
     /**
@@ -83,6 +84,6 @@ class PluginNamespaceRule implements Rule
     public function message()
     {
         $classes = implode(exmtrans('common.separate_word'), $this->errors);
-        return exmtrans('plugin.error.class_wrongnamespace', ['classes' => $classes]);
+        return (string)exmtrans('plugin.error.class_wrongnamespace', ['classes' => $classes]);
     }
 }

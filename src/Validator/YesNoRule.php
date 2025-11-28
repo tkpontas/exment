@@ -41,7 +41,7 @@ class YesNoRule implements Rule
      */
     public function message()
     {
-        return trans('validation.in', [
+        return (string)trans('validation.in', [
             'values' => '0,1,YES,NO,yes,no,true,false'
         ]);
     }

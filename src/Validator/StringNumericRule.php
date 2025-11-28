@@ -40,6 +40,6 @@ class StringNumericRule implements Rule
      */
     public function message()
     {
-        return trans('validation.string');
+        return (string)trans('validation.string');
     }
 }

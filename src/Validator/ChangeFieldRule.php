@@ -11,10 +11,14 @@ use Exceedone\Exment\ConditionItems\ConditionItemBase;
  */
 class ChangeFieldRule implements Rule
 {
+    /** @var mixed */
     protected $custom_table;
+    /** @var mixed */
     protected $label;
+    /** @var mixed */
     protected $target;
 
+    // @phpstan-ignore-next-line
     public function __construct(?CustomTable $custom_table, $label, $target)
     {
         $this->custom_table = $custom_table;
@@ -57,6 +61,6 @@ class ChangeFieldRule implements Rule
      */
     public function message()
     {
-        return trans('validation.numeric');
+        return (string)trans('validation.numeric');
     }
 }

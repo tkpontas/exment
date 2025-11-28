@@ -41,6 +41,6 @@ class SamlNameUniqueRule implements Rule
      */
     public function message()
     {
-        return trans('validation.unique');
+        return (string)trans('validation.unique');
     }
 }

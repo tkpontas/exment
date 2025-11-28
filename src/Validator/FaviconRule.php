@@ -9,8 +9,8 @@ class FaviconRule extends FileRule
 {
     /**
      * @param array $extensions
-     * @phpstan-ignore-next-line
      */
+    // @phpstan-ignore-next-line
     public function __construct(array $extensions = [])
     {
         $this->extensions = ['ico'];
@@ -23,6 +23,6 @@ class FaviconRule extends FileRule
      */
     public function message()
     {
-        return trans('validation.image');
+        return (string)trans('validation.image');
     }
 }

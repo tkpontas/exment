@@ -45,6 +45,7 @@ class CustomTableController extends AdminControllerBase
 {
     use HasResourceActions;
 
+    // @phpstan-ignore-next-line
     protected $exists = false;
 
     public function __construct()
@@ -61,7 +62,7 @@ class CustomTableController extends AdminControllerBase
     {
         $content = $this->AdminContent($content);
 
-        /** @phpstan-ignore-next-line constructor expects string, Encore\Admin\Grid given*/
+        // @phpstan-ignore-next-line
         $row = new Row($this->grid());
         $row->class(['block_custom_table']);
 
@@ -76,6 +77,7 @@ class CustomTableController extends AdminControllerBase
      */
     protected function qrcodeActivate(Request $request, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->toggleActivateQr($request, $id, true);
     }
 
@@ -88,6 +90,7 @@ class CustomTableController extends AdminControllerBase
      */
     protected function qrcodeDeactivate(Request $request, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->toggleActivateQr($request, $id, false);
     }
     /**
@@ -119,6 +122,7 @@ class CustomTableController extends AdminControllerBase
      */
     protected function jancodeActivate(Request $request, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->toggleActivateJancode($request, $id, true);
     }
 
@@ -131,6 +135,7 @@ class CustomTableController extends AdminControllerBase
      */
     protected function jancodeDeactivate(Request $request, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->toggleActivateJancode($request, $id, false);
     }
     /**
@@ -167,7 +172,7 @@ class CustomTableController extends AdminControllerBase
 
         $grid->tools(function (Grid\Tools $tools) {
             $tools->disableBatchActions();
-            /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuAjaxButton given */
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomTableMenuAjaxButton());
         });
 
@@ -202,7 +207,7 @@ class CustomTableController extends AdminControllerBase
             // add data
             if ($custom_table->hasPermission(Permission::AVAILABLE_VIEW_CUSTOM_VALUE)) {
                 $linker = (new Linker())
-                    /** @phpstan-ignore-next-line Cannot call method getGridUrl() on stdClass. */
+                // @phpstan-ignore-next-line
                 ->url($actions->row->getGridUrl())
                 ->icon('fa-database')
                 ->tooltip(exmtrans('change_page_menu.custom_value'));
@@ -240,6 +245,7 @@ class CustomTableController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new CustomTable());
@@ -383,7 +389,7 @@ class CustomTableController extends AdminControllerBase
         $form->saved(function (Form $form) {
             // create or drop index --------------------------------------------------
             $model = $form->model();
-            /** @phpstan-ignore-next-line fix laravel-admin documentation */
+            // @phpstan-ignore-next-line
             $model->createTable();
 
             // redirect custom column page
@@ -404,6 +410,7 @@ class CustomTableController extends AdminControllerBase
      *
      * @return ?string
      */
+    // @phpstan-ignore-next-line
     protected function confirmDeleteButton($id = null)
     {
         if (is_null($id)) {
@@ -463,6 +470,7 @@ HTML;
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function formMultiColumn($id = null)
     {
         $form = new Form(new CustomTable());
@@ -606,6 +614,7 @@ HTML;
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function formQrCodeSetting($id = null)
     {
         $form = new Form(new CustomTable());
@@ -685,6 +694,7 @@ HTML;
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function formJanCodeSetting($id = null)
     {
         $form = new Form(new CustomTable());
@@ -743,6 +753,7 @@ HTML;
      * @param array $selectOptions
      * @return array|mixed[]
      */
+    // @phpstan-ignore-next-line
     protected function getColumnsSelectOptions($custom_table, $selectOptions = [])
     {
         $options = collect(CompareColumnType::transArray('custom_table.custom_column_multi.compare_column_options'))
@@ -809,6 +820,7 @@ HTML;
     /**
      * add menu after saved
      */
+    // @phpstan-ignore-next-line
     protected function addMenuAfterSaved($model)
     {
         // if has value 'add_parent_menu', add menu
@@ -849,6 +861,7 @@ HTML;
     /**
      * add notofy after saved
      */
+    // @phpstan-ignore-next-line
     protected function addNotifyAfterSaved($model)
     {
         // if has value 'add_parent_menu', add menu
@@ -886,6 +899,7 @@ HTML;
      * validate before delete.
      * @param int|string $id
      */
+    // @phpstan-ignore-next-line
     protected function validateDestroy($id)
     {
         return CustomTable::validateDestroy($id);
@@ -965,6 +979,7 @@ HTML;
      * @param $id
      * @return Response
      */
+    // @phpstan-ignore-next-line
     public function copyTable(Request $request, $id)
     {
         /** @var ExmentCustomValidator $validator */

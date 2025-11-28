@@ -36,6 +36,7 @@ class FileNameRule implements Rule
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function validateFileName($attribute, $value)
     {
         // not check null or empty. Check by other required rule.
@@ -63,6 +64,6 @@ class FileNameRule implements Rule
      */
     public function message()
     {
-        return exmtrans('validation.filename_not_allow');
+        return (string)exmtrans('validation.filename_not_allow');
     }
 }

@@ -36,6 +36,6 @@ class CurrentPasswordRule implements Rule
      */
     public function message()
     {
-        return exmtrans('validation.current_password');
+        return (string)exmtrans('validation.current_password');
     }
 }

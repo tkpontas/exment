@@ -12,14 +12,33 @@ class SlackSender extends SenderBase
     use Notifiable;
     use WebhookTrait;
 
+    /**
+     * @var mixed
+     */
     protected $name;
+
+    /**
+     * @var mixed
+     */
     protected $icon;
+
+    /**
+     * @var bool
+     */
     protected $mention_here = false;
+
+    /**
+     * @var array<int, mixed>
+     */
     protected $mention_users = [];
 
     /**
      * Create a new notification instance.
      *
+     * @param mixed $webhook_url
+     * @param mixed $subject
+     * @param mixed $body
+     * @param array<string, mixed> $options
      * @return void
      */
     public function __construct($webhook_url, $subject, $body, array $options = [])
@@ -36,9 +55,10 @@ class SlackSender extends SenderBase
     /**
      * Initialize $this
      *
-     * @param string $webhook_url
-     * @param string $subject
-     * @param string $body
+     * @param mixed $webhook_url
+     * @param mixed $subject
+     * @param mixed $body
+     * @param array<string, mixed> $options
      * @return SlackSender
      */
     public static function make($webhook_url, $subject, $body, $options): SlackSender
@@ -47,7 +67,10 @@ class SlackSender extends SenderBase
     }
 
 
-    protected function routeNotificationForSlack()
+    /**
+     * @return string|null
+     */
+    protected function routeNotificationForSlack(): ?string
     {
         return $this->webhook_url;
     }
@@ -57,7 +80,7 @@ class SlackSender extends SenderBase
      *
      * @return void
      */
-    public function send()
+    public function send(): void
     {
         // replace word
         $slack_content = $this->editContent();
@@ -67,8 +90,10 @@ class SlackSender extends SenderBase
 
     /**
      * replace url to slack format.
+     *
+     * @return string
      */
-    protected function editContent()
+    protected function editContent(): string
     {
         $content = $this->subject . "\n*************************\n" . $this->body;
 
@@ -87,7 +112,6 @@ class SlackSender extends SenderBase
         }
 
         preg_match_all(Define::RULES_REGEX_LINK_FORMAT, $content, $matches);
-
         // @phpstan-ignore-next-line
         if (isset($matches)) {
             for ($i = 0; $i < count($matches[1]); $i++) {

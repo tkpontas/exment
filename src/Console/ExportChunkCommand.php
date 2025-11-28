@@ -46,6 +46,7 @@ class ExportChunkCommand extends Command
         $this->initExmentCommand();
     }
 
+    // @phpstan-ignore-next-line
     protected function getParameters()
     {
         /** @var null|string $table_name */
@@ -118,7 +119,7 @@ class ExportChunkCommand extends Command
             $message = null;
 
             $executeCount = 0;
-            /** @phpstan-ignore-next-line Expression on left side of ?? is not nullable. */
+            // @phpstan-ignore-next-line
             for ($i = $options['start'] ?? 1; $i <= $options['end'] ?? 1000; $i++) {
                 $grid = new Grid(new $classname());
                 // set data get range
@@ -127,7 +128,7 @@ class ExportChunkCommand extends Command
                 if (isset($options['view']) && $options['view'] instanceof CustomView) {
                     $options['view']->filterSortModel($grid->model());
                 }
-                /* @phpstan-ignore-next-line str_pad expects string, int given */
+                // @phpstan-ignore-next-line
                 $seq = str_pad($i, $options['seqlength'], 0, STR_PAD_LEFT);
 
                 $service = (new DataImportExport\DataImportExportService())

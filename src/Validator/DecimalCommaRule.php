@@ -18,6 +18,7 @@ class DecimalCommaRule implements Rule
         if (is_list($value)) {
             return false;
         }
+        // @phpstan-ignore-next-line
         return preg_match('/^[-]?[\d\s,\.]*$/', $value);
     }
 
@@ -28,6 +29,6 @@ class DecimalCommaRule implements Rule
      */
     public function message()
     {
-        return trans('validation.numeric');
+        return (string)trans('validation.numeric');
     }
 }

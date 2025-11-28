@@ -45,7 +45,11 @@ class PluginServiceProvider extends ServiceProvider
 
         // loop
         foreach ($pluginPublics as $pluginScriptStyle) {
-            $this->pluginScriptStyleRoute($pluginScriptStyle->_plugin(), config('admin.route.prefix'), 'admin_plugin_public');
+            /** @var \Exceedone\Exment\Services\Plugin\PluginPublicBase $pluginScriptStyle */
+            $plugin = $pluginScriptStyle->_plugin();
+            /** @var string $prefix */
+            $prefix = config('admin.route.prefix');
+            $this->pluginScriptStyleRoute($plugin, $prefix, 'admin_plugin_public');
         }
     }
 
@@ -134,6 +138,8 @@ class PluginServiceProvider extends ServiceProvider
                     return;
                 }
 
+                /** @var array<mixed> $routes */
+                // @phpstan-ignore-next-line
                 $routes = array_get($json, 'route', []);
 
                 // if not has index endpoint, set.
@@ -146,33 +152,38 @@ class PluginServiceProvider extends ServiceProvider
                 }
 
                 foreach ($routes as $route) {
-                    $method = array_get($route, 'method');
-                    $methods = is_string($method) ? [$method] : $method;
+                    /** @var mixed $methodValue */
+                    $methodValue = array_get($route, 'method');
+                    $methods = is_string($methodValue) ? [$methodValue] : $methodValue;
                     $plugin_name = $isApi ? 'PluginApiController' : 'PluginPageController';
                     foreach ($methods as $method) {
-                        if ($method === "") {
-                            $method = 'get';
-                        }
-                        $method = strtolower($method);
+                        /** @var string $methodStr */
+                        $methodStr = ($method === "") ? 'get' : $method;
+                        $methodStr = strtolower($methodStr);
                         // call method in these http method
-                        if (in_array($method, ['get', 'post', 'put', 'patch', 'delete'])) {
+                        if (in_array($methodStr, ['get', 'post', 'put', 'patch', 'delete'])) {
+                            /** @var string $func */
                             $func = array_get($route, 'function');
-                            $router = Route::{$method}(array_get($route, 'uri'), $plugin_name . '@'. $func);
+                            /** @var string $uri */
+                            $uri = array_get($route, 'uri');
+                            $router = Route::{$methodStr}($uri, $plugin_name . '@'. $func);
                             $router->middleware(ApiScope::getScopeString($isApi, ApiScope::PLUGIN));
-                            $router->name("exment.plugins.{$plugin->id}.{$method}.{$func}");
+                            $router->name("exment.plugins.{$plugin->id}.{$methodStr}.{$func}");
                         }
                     }
                 }
             });
         }
 
-        $this->pluginScriptStyleRoute($plugin, config('admin.route.prefix'), 'admin_plugin_public');
+        /** @var string $adminPrefix */
+        $adminPrefix = config('admin.route.prefix');
+        $this->pluginScriptStyleRoute($plugin, $adminPrefix, 'admin_plugin_public');
     }
 
     /**
      * Check route has index.
      *
-     * @param array $routes
+     * @param array<mixed> $routes
      * @return boolean
      */
     protected function hasPluginRouteIndex($routes)
@@ -183,20 +194,21 @@ class PluginServiceProvider extends ServiceProvider
 
         foreach ($routes as $route) {
             // if uri is not empty, continue.
+            /** @var array<mixed> $route */
             if (array_get($route, 'uri') != '') {
                 continue;
             }
 
-            $method = array_get($route, 'method');
-            $methods = is_string($method) ? [$method] : $method;
+            /** @var mixed $methodValue */
+            $methodValue = array_get($route, 'method');
+            $methods = is_string($methodValue) ? [$methodValue] : $methodValue;
             foreach ($methods as $method) {
-                if ($method === "") {
-                    $method = 'get';
-                }
-                $method = strtolower($method);
+                /** @var string $methodStr */
+                $methodStr = ($method === "") ? 'get' : $method;
+                $methodStr = strtolower($methodStr);
 
                 // if not get, continue.
-                if ($method != 'get') {
+                if ($methodStr != 'get') {
                     continue;
                 }
                 return true;

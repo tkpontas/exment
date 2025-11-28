@@ -19,7 +19,7 @@ class MailChannel
      * @param  \Illuminate\Notifications\Notification  $notification
      * @return void
      */
-    public function send($notifiable, Notification $notification)
+    public function send($notifiable, Notification $notification): void
     {
         /** @var MailSendJob $notification */
         $mailMessage = $notification->toMail($notifiable);
@@ -29,7 +29,11 @@ class MailChannel
     }
 
 
-    protected function sendMail(MailMessage $mailMessage)
+    /**
+     * @param MailMessage $mailMessage
+     * @return void
+     */
+    protected function sendMail(MailMessage $mailMessage): void
     {
         // if use archive attachments, after sending, removing file
         $tmpZipPath = null;
@@ -63,7 +67,13 @@ class MailChannel
     }
 
 
-    protected function setAttachments(Message $message, MailMessage $mailMessage, &$tmpZipPath)
+    /**
+     * @param Message $message
+     * @param MailMessage $mailMessage
+     * @param string|null $tmpZipPath
+     * @return void
+     */
+    protected function setAttachments(Message $message, MailMessage $mailMessage, ?string &$tmpZipPath): void
     {
         if (collect($mailMessage->getAttachments())->count() == 0) {
             return;
@@ -86,9 +96,10 @@ class MailChannel
     /**
      * Archive tmp attachment
      *
-     * @return array offset 0 : zip path, offset 1 : filename
+     * @param MailMessage $mailMessage
+     * @return array<int, string> offset 0 : zip path, offset 1 : filename
      */
-    protected function archiveAttachments(MailMessage $mailMessage)
+    protected function archiveAttachments(MailMessage $mailMessage): array
     {
         $password = $mailMessage->getPassword();
         $filename = Carbon::now()->format('YmdHis') . '.zip';
@@ -111,7 +122,7 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return void
      */
-    protected function saveHistory(MailMessage $mailMessage)
+    protected function saveHistory(MailMessage $mailMessage): void
     {
         if (!$mailMessage->isSetHistory()) {
             return;

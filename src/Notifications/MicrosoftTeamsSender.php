@@ -14,6 +14,9 @@ class MicrosoftTeamsSender extends SenderBase
     /**
      * Create a new notification instance.
      *
+     * @param mixed $webhook_url
+     * @param mixed $subject
+     * @param mixed $body
      * @return void
      */
     public function __construct($webhook_url, $subject, $body)
@@ -27,9 +30,10 @@ class MicrosoftTeamsSender extends SenderBase
     /**
      * Initialize $this
      *
-     * @param string $webhook_url
-     * @param string $subject
-     * @param string $body
+     * @param mixed $webhook_url
+     * @param mixed $subject
+     * @param mixed $body
+     * @param array<string, mixed> $options
      * @return MicrosoftTeamsSender
      */
     public static function make($webhook_url, $subject, $body, array $options = []): MicrosoftTeamsSender
@@ -38,7 +42,10 @@ class MicrosoftTeamsSender extends SenderBase
     }
 
 
-    protected function routeNotificationForMicrosoftTeams()
+    /**
+     * @return string|null
+     */
+    protected function routeNotificationForMicrosoftTeams(): ?string
     {
         return $this->webhook_url;
     }
@@ -48,7 +55,7 @@ class MicrosoftTeamsSender extends SenderBase
      *
      * @return void
      */
-    public function send()
+    public function send(): void
     {
         // replace word
         $teams_content = $this->editContent();
@@ -58,12 +65,13 @@ class MicrosoftTeamsSender extends SenderBase
 
     /**
      * replace url to slack format.
+     *
+     * @return string
      */
-    protected function editContent()
+    protected function editContent(): string
     {
         $content = $this->body;
         preg_match_all(Define::RULES_REGEX_LINK_FORMAT, $content, $matches);
-
         // @phpstan-ignore-next-line
         if (isset($matches)) {
             for ($i = 0; $i < count($matches[1]); $i++) {

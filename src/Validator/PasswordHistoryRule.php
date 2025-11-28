@@ -12,6 +12,7 @@ use Exceedone\Exment\Model\PasswordHistory;
  */
 class PasswordHistoryRule implements Rule
 {
+    /** @var mixed */
     protected $login_user;
 
     public function __construct(?LoginUser $login_user)
@@ -61,6 +62,6 @@ class PasswordHistoryRule implements Rule
      */
     public function message()
     {
-        return exmtrans('validation.password_history');
+        return (string)exmtrans('validation.password_history');
     }
 }

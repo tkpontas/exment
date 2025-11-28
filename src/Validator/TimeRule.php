@@ -59,6 +59,6 @@ class TimeRule implements Rule
      */
     public function message()
     {
-        return trans('validation.regex');
+        return (string)trans('validation.regex');
     }
 }

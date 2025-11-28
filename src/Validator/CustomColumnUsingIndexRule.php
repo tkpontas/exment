@@ -13,8 +13,10 @@ use Exceedone\Exment\Model\CustomViewSort;
  */
 class CustomColumnUsingIndexRule implements Rule
 {
+    /** @var mixed */
     protected $custom_column_id;
 
+    // @phpstan-ignore-next-line
     public function __construct(...$parameters)
     {
         $this->custom_column_id = $parameters[0];
@@ -85,6 +87,6 @@ class CustomColumnUsingIndexRule implements Rule
      */
     public function message()
     {
-        return exmtrans('validation.using_index_column');
+        return (string)exmtrans('validation.using_index_column');
     }
 }

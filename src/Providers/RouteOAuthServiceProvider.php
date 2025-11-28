@@ -144,6 +144,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function getOauthDefaultOptions()
     {
         return [
@@ -152,6 +155,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
             'middleware' => 'adminapi'
         ];
     }
+    /**
+     * @return array<string, mixed>
+     */
     protected function getOauthAnonymousOptions()
     {
         return [
@@ -160,6 +166,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
             'middleware' => ['adminapi_anonymous'],
         ];
     }
+    /**
+     * @return array<string, mixed>
+     */
     protected function getOauthWebOptions()
     {
         return [
@@ -174,37 +183,54 @@ class RouteOAuthServiceProvider extends ServiceProvider
         parent::boot();
 
         if (canConnection() && hasTable(SystemTableName::SYSTEM) && System::api_available()) {
-            app(AuthorizationServer::class)->enableGrantType(
+            /** @var AuthorizationServer $authServer */
+            $authServer = app(AuthorizationServer::class);
+            /** @var \DateInterval $tokenExpiry */
+            $tokenExpiry = Passport::tokensExpireIn();
+
+            $authServer->enableGrantType(
                 $this->makeApiKeyGrant(),
-                Passport::tokensExpireIn()
+                $tokenExpiry
             );
 
-            app(AuthorizationServer::class)->enableGrantType(
+            $authServer->enableGrantType(
                 $this->makePasswordGrant(),
-                Passport::tokensExpireIn()
+                $tokenExpiry
             );
         }
     }
 
+    /**
+     * @return ApiKeyGrant
+     */
     protected function makeApiKeyGrant()
     {
-        $grant = new ApiKeyGrant(
-            $this->app->make(RefreshTokenRepository::class)
-        );
+        /** @var RefreshTokenRepository $refreshTokenRepository */
+        $refreshTokenRepository = $this->app->make(RefreshTokenRepository::class);
+        $grant = new ApiKeyGrant($refreshTokenRepository);
 
-        $grant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
+        /** @var \DateInterval $refreshTokenTTL */
+        $refreshTokenTTL = Passport::refreshTokensExpireIn();
+        $grant->setRefreshTokenTTL($refreshTokenTTL);
 
         return $grant;
     }
 
+    /**
+     * @return PasswordGrant
+     */
     protected function makePasswordGrant()
     {
-        $grant = new PasswordGrant(
-            $this->app->make(Bridge\UserRepository::class),
-            $this->app->make(Bridge\RefreshTokenRepository::class)
-        );
+        /** @var Bridge\UserRepository $userRepository */
+        $userRepository = $this->app->make(Bridge\UserRepository::class);
+        /** @var Bridge\RefreshTokenRepository $refreshTokenRepository */
+        $refreshTokenRepository = $this->app->make(Bridge\RefreshTokenRepository::class);
 
-        $grant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
+        $grant = new PasswordGrant($userRepository, $refreshTokenRepository);
+
+        /** @var \DateInterval $refreshTokenTTL */
+        $refreshTokenTTL = Passport::refreshTokensExpireIn();
+        $grant->setRefreshTokenTTL($refreshTokenTTL);
 
         return $grant;
     }

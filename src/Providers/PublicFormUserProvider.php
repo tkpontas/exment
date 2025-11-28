@@ -19,6 +19,7 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
      */
     public function retrieveById($identifier)
     {
+        return null;
     }
 
     /**
@@ -30,6 +31,7 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
      */
     public function retrieveByToken($identifier, $token)
     {
+        return null;
     }
 
     /**
@@ -46,11 +48,12 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
     /**
      * Retrieve a user by the given credentials.
      *
-     * @param  array  $credentials
+     * @param  array<string, mixed>  $credentials
      * @return \Illuminate\Contracts\Auth\Authenticatable|null
      */
     public function retrieveByCredentials(array $credentials)
     {
+        /** @var string|null $uuid */
         $uuid = array_get($credentials, 'uuid');
         $public_form = PublicForm::getPublicFormByUuid($uuid);
         if (!$public_form) {
@@ -63,10 +66,11 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
      * Validate a user against the given credentials.
      *
      * @param Authenticatable $user
-     * @param array $credentials
-     * @return void|bool
+     * @param array<string, mixed> $credentials
+     * @return bool
      */
     public function validateCredentials(Authenticatable $user, array $credentials)
     {
+        return true;
     }
 }

@@ -10,11 +10,11 @@ class NavbarChannel
     /**
      * Notify
      *
-     * @param $notifiable
+     * @param mixed $notifiable
      * @param Notification $notification
      * @return void
      */
-    public function send($notifiable, Notification $notification)
+    public function send($notifiable, Notification $notification): void
     {
         /** @var NavbarJob $notification */
         $notification->toNavbar($notifiable);

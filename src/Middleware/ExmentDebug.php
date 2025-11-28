@@ -11,6 +11,9 @@ use Exceedone\Exment\Services\QueryLogger;
 
 class ExmentDebug
 {
+    /**
+     * @return mixed
+     */
     public function handle(Request $request, \Closure $next)
     {
         static::handleLog($request);
@@ -19,6 +22,9 @@ class ExmentDebug
     }
 
 
+    /**
+     * @return void
+     */
     public static function handleLog(?Request $request = null)
     {
         if (boolval(config('exment.debugmode', false)) || boolval(config('exment.debugmode_sql', false)) || System::logging_toggle_available()) {
@@ -30,6 +36,9 @@ class ExmentDebug
         }
     }
 
+    /**
+     * @var array<int, mixed>
+     */
     protected static $queryLogs = [];
 
     /**
@@ -69,6 +78,7 @@ class ExmentDebug
     /**
      * Output log request
      *
+     * @param Request $request
      * @return void
      */
     protected static function logRequest($request)
@@ -89,6 +99,10 @@ class ExmentDebug
         \Log::debug("\nIP : {$ip}\nURL : $url\nInput : $input\nHeaders --------------------------------------\n$headers");
     }
 
+    /**
+     * @param bool $oneFunction
+     * @return string
+     */
     protected static function getFunctionName($oneFunction = false)
     {
         $bt = debug_backtrace();
@@ -96,6 +110,7 @@ class ExmentDebug
         $i = 0;
         foreach ($bt as $b) {
             if ($i > 1 && strpos_ex(array_get($b, 'class'), 'Exceedone') !== false) {
+                // @phpstan-ignore-next-line
                 $functions[] = $b['class'] . '->' . $b['function'] . '.' . array_get($b, 'line');
             }
 

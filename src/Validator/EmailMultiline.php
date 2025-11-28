@@ -45,6 +45,6 @@ class EmailMultiline implements Rule
      */
     public function message()
     {
-        return exmtrans('validation.email_multiline');
+        return (string)exmtrans('validation.email_multiline');
     }
 }

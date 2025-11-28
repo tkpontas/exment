@@ -62,6 +62,6 @@ class SelectTableNumericRule implements Rule
      */
     public function message()
     {
-        return trans('validation.numeric');
+        return (string)trans('validation.numeric');
     }
 }
