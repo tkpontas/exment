@@ -90,18 +90,15 @@
         if (scrollTop > 0) {
             // Use setTimeout to ensure DOM is ready
             setTimeout(function() {
-                $('html, body').scrollTop(scrollTop);
-                $(window).scrollTop(scrollTop);
-                document.documentElement.scrollTop = scrollTop;
-                document.body.scrollTop = scrollTop;
+                window.scrollTo(0, scrollTop);
+                // Verify and retry if needed
+                setTimeout(function() {
+                    const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+                    if (Math.abs(currentScroll - scrollTop) > 50) {
+                        window.scrollTo(0, scrollTop);
+                    }
+                }, 100);
             }, 0);
-            
-            // Fallback restore after a bit longer delay
-            setTimeout(function() {
-                if (Math.abs($(window).scrollTop() - scrollTop) > 50) {
-                    $('html, body').scrollTop(scrollTop);
-                }
-            }, 100);
         }
     }
 
@@ -112,7 +109,13 @@
         const oneHour = 60 * 60 * 1000;
         
         Object.keys(positions).forEach(key => {
-            if (now - positions[key].timestamp > oneHour) {
+            try {
+                const position = positions[key];
+                if (!position || typeof position !== 'object' || !position.timestamp || now - position.timestamp > oneHour) {
+                    delete positions[key];
+                }
+            } catch (e) {
+                // Remove invalid entry
                 delete positions[key];
             }
         });
@@ -122,6 +125,12 @@
 
     // Initialize on document ready
     $(function() {
+        // Prevent multiple initialization
+        if (window.exmentScrollFixInitialized) {
+            return;
+        }
+        window.exmentScrollFixInitialized = true;
+
         // Disable browser's default scroll restoration
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
