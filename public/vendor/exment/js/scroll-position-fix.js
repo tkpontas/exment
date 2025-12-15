@@ -32,8 +32,11 @@
             // Limit the number of stored positions
             const keys = Object.keys(positions);
             if (keys.length > MAX_HISTORY) {
-                // Remove oldest entries
-                keys.slice(0, keys.length - MAX_HISTORY).forEach(key => {
+                // Sort by timestamp and remove oldest entries
+                const sortedKeys = keys.sort((a, b) => {
+                    return (positions[a].timestamp || 0) - (positions[b].timestamp || 0);
+                });
+                sortedKeys.slice(0, keys.length - MAX_HISTORY).forEach(key => {
                     delete positions[key];
                 });
             }
