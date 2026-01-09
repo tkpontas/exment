@@ -275,6 +275,7 @@ return [
         'outside_api' => 'サーバー外部通信を行う',
         'permission_available' => '権限管理を使用する',
         'organization_available' => '組織管理を使用する',
+        'logging_toggle_available' => '操作ログを有効にする',
         'system_admin_users' => 'システム管理者',
         'system_mail' => 'システムメール設定',
         'system_mail_host' => 'ホスト名',
@@ -447,6 +448,7 @@ return [
             'datalist_pager_count' => 'キーワード検索や、ダッシュボードのデータ一覧で表示されるデータの、既定の表示件数です。システム全体に反映されます。',
             'permission_available' => 'YESにした場合、ユーザーや役割によって、アクセスできる項目を管理します。',
             'organization_available' => 'YESにした場合、ユーザーが所属する組織や部署を作成します。',
+            'logging_toggle_available' => 'YESに設定すると、操作ログ機能が有効になり、ユーザーのすべての操作が記録されます。',
             'system_admin_users' => 'システム管理者となるユーザーを設定してください。',
             'system_mail' => 'システムからメールを送付する時の設定を行います。',
             'system_mail_from' => '送信元のメールアドレスです。このメールアドレスをFromとして、メールが送付されます。',
@@ -1151,6 +1153,7 @@ return [
             'ignore_work_and_action_select' => '実行可能ユーザーが「前アクションの実行ユーザーが選択」の場合、「特殊なアクション」を設定できません。',
             'action_execute' => '以下のアクションを実行します。',
             'nextuser_not_found' => '次の作業ユーザーが存在しません。管理者に問い合わせください。',
+            'status_changed' => 'このアクションは実行できません。他のユーザーがワークフローを実行した可能性があります。',
         ],
         
         'comment_options' => [
@@ -1202,6 +1205,8 @@ return [
         'expand_setting' => '拡張設定',
         'copy_from_table' => 'コピー元テーブル',
         'copy_custom_table' => 'カスタムテーブルをコピーする',
+        'include_view_flg' => 'ビューを含める',
+        'include_form_flg' => 'フォームを含める',
         'no_selected' => '対象データが選択されていません',
         'qr_code' => [
             'setting' => '二次元バーコード設定',
@@ -1282,7 +1287,9 @@ return [
             'saved_redirect_column' => '保存しました！次はカスタム列を設定してください。',
             'delete_confirm_message' => '削除する場合は「%s」を入力してください。',
             'delete_confirm_error' => 'キーワードが正しくありません。',
-            'copy_custom_table' => '通常設定、拡張設定、カスタム列をコピーします。<br />その他の設定は対象外になります。手動で設定を行ってください。',
+            'copy_custom_table' => '通常設定、拡張設定、カスタム列をコピーします。<br />オプションでカスタムビュー、カスタムフォームもコピーできます。<br />その他の設定は対象外になります。手動で設定を行ってください。',
+            'include_view_flg' => 'リレーションやワークフローはコピーしないため、それらに関連した項目を含むビューは対象外です。またユーザービューも対象外です。',
+            'include_form_flg' => 'フォーム優先順位設定、公開フォームはコピーしません。また子テーブルのブロックは対象外です。',
             'qrcode_activate' => 'このテーブルの二次元バーコード機能を有効化にします。有効化しますか？',
             'qrcode_deactivate' => 'このテーブルの二次元バーコード機能を無効化にします。無効化しますか？',
             'jancode_activate' => 'このテーブルのJANバーコード機能を有効にします。有効にしますか?',
@@ -1917,6 +1924,7 @@ return [
         'description_custom_view_sorts' => 'ビューに表示するデータの並べ替え(表示順序)を設定します。<br/>※２件以上登録した場合、データ量が非常に多いテーブルですと、パフォーマンスが低下する場合があります。<br/>※「対象列」にカスタム列が表示されない場合、<a href="%s" target="_blank">検索インデックス<i class="fa fa-external-link"></i></a>が設定されていません。リンク先の内容をご確認いただき、設定を行ってください。',
         'description_custom_view_filters' => 'ビューに表示する条件を設定します。<br/>※この設定の他に、ログインユーザーが所有する権限のデータのみ表示するよう、データのフィルターを行います。<br/>※「対象列」にカスタム列が表示されない場合、<a href="%s" target="_blank">検索インデックス<i class="fa fa-external-link"></i></a>が設定されていません。リンク先の内容をご確認いただき、設定を行ってください。',
         'description_custom_view_grid_filters' => 'ビューの上部に表示する「フィルタ」で、選択肢として表示する列を指定します。<br/>※システム既定の項目を表示する場合、この一覧に列を追加しないでください。<br/>※「対象列」にカスタム列が表示されない場合、<a href="%s" target="_blank">検索インデックス<i class="fa fa-external-link"></i></a>が設定されていません。リンク先の内容をご確認いただき、設定を行ってください。',
+        'description_custom_view_summary_filters' => '<br/>※この「フィルタ」は集計結果ではなく集計前のデータを絞り込むためのものです。',
 
         'help' => [
             'custom_view_type' => 'システムビュー：このテーブルを使用するユーザー全員が使用できるビューです。 ユーザービュー：作成したユーザーのみが使用できるビューです。',
