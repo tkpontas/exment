@@ -521,9 +521,10 @@ class SelectTable extends CustomItem
 
     /**
      * Get pure value. If you want to change the search value, change it with this function.
+     * Call from freeword search.
      *
      * @param string $label
-     * @return ?string string:matched, null:not matched
+     * @return ?array array:matched, null:not matched
      */
     public function getPureValue($label)
     {
@@ -591,7 +592,7 @@ class SelectTable extends CustomItem
 
         // get value
         $ids = $query->pluck('id');
-        return is_nullorempty($ids) ? null : ($this->isMultipleEnabled() ? $ids->toArray() : $ids->first());
+        return is_nullorempty($ids) ? null : $ids->toArray();
     }
 
     protected function setSelectTableQuery($query, $custom_column_id, $value)
@@ -609,6 +610,8 @@ class SelectTable extends CustomItem
         $searchValue = $column_item->getPureValue($value);
         if (!isset($searchValue)) {
             $searchValue = $value;
+        } elseif (is_array($searchValue) && count($searchValue) > 0) {
+            $searchValue = $searchValue[0];
         }
 
         if (System::filter_search_type() == FilterSearchType::ALL) {
@@ -635,17 +638,7 @@ class SelectTable extends CustomItem
      */
     public function getSearchQueries($mark, $value, $takeCount, $q, $options = [])
     {
-        if (!$this->isMultipleEnabled()) {
-            return parent::getSearchQueries($mark, $value, $takeCount, $q, $options);
-        }
-
-        // If multiple enabled,
-        $query = $this->custom_table->getValueQuery();
-        $this->getAdminFilterWhereQuery($query, $value);
-
-        $query->take($takeCount)->select('id');
-
-        return [$query];
+        return $this->getSearchQueriesTrait($mark, $value, $takeCount, $q, $options);
     }
 
     public function isMultipleEnabled()
@@ -823,5 +816,22 @@ class SelectTable extends CustomItem
             'index_enabled_only' => $isImport,
             'include_system' => false,
         ]) ?? [];
+    }
+
+    /**
+     * Set Search orWhere for free text search
+     *
+     * @param Builder $mark
+     * @param string $mark
+     * @param string $value
+     * @param string|null $q
+     * @return $this
+     */
+    public function setSearchOrWhere(&$query, $mark, $value, $q)
+    {
+        if (!$this->isMultipleEnabled()) {
+            return parent::setSearchOrWhere($query, '=', $q, $q);
+        }
+        return $this->_setSearchOrWhere($query, $mark, $value, $q);
     }
 }
