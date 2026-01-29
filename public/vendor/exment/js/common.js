@@ -755,6 +755,103 @@ var Exment;
                 // We only act when it is related to Exment date inputs.
                 if (!window.__exment_datetimepicker_body_fix) {
                     window.__exment_datetimepicker_body_fix = true;
+
+                    // Pre-show guard: set a class before the picker becomes visible.
+                    // This lets CSS force the widget to fixed/hidden at (0,0) so it can't create temporary scrollbars.
+                    $(document)
+                        .off('mousedown.exmentDtpPrep pointerdown.exmentDtpPrep touchstart.exmentDtpPrep focusin.exmentDtpPrep')
+                        .on('mousedown.exmentDtpPrep pointerdown.exmentDtpPrep touchstart.exmentDtpPrep focusin.exmentDtpPrep', '[data-add-date], input[data-column_type="date"], .input-group .input-group-addon, .input-group .btn', function (e) {
+                            try {
+                                var $src = $(this);
+                                var $group = $src.closest('.input-group');
+                                var $dateInput = $src.is('[data-add-date], input[data-column_type="date"]')
+                                    ? $src
+                                    : $group.find('input[data-column_type="date"], input[data-add-date]').first();
+                                if ($dateInput && $dateInput.length && $dateInput.closest('.table-responsive').length) {
+                                    document.documentElement.classList.add('exment-dtp-opening');
+
+                                    // Avoid the browser auto-scrolling the responsive container on focus.
+                                    // That "scroll then restore" is perceived as a flicker/jump.
+                                    if (e && (e.type === 'mousedown' || e.type === 'pointerdown' || e.type === 'touchstart')) {
+                                        // IMPORTANT:
+                                        // - Clicking the input itself already triggers DateTimePicker via allowInputToggle.
+                                        // - If we also call picker.show() here, some pages end up with two widgets.
+                                        // So we only force-show when the user clicked an addon/button (not the input).
+                                        var isDirectInputClick = $src.is('input');
+
+                                        var $scrollParent = $dateInput.closest('.table-responsive');
+                                        var leftBefore = $scrollParent.scrollLeft();
+                                        var topBefore = $scrollParent.scrollTop();
+                                        if (!isDirectInputClick) {
+                                            try {
+                                                // Prevent default focus behavior that may scroll containers.
+                                                e.preventDefault();
+                                            }
+                                            catch (ePd) {
+                                            }
+                                        }
+
+                                        try {
+                                            var el = $dateInput.get(0);
+                                            if (el && typeof el.focus === 'function') {
+                                                try {
+                                                    el.focus({ preventScroll: true });
+                                                }
+                                                catch (eFocus1) {
+                                                    el.focus();
+                                                }
+                                            }
+                                        }
+                                        catch (eFocus2) {
+                                        }
+
+                                        // Restore scroll immediately (fallback for browsers without preventScroll).
+                                        try {
+                                            $scrollParent.scrollLeft(leftBefore);
+                                            $scrollParent.scrollTop(topBefore);
+                                            requestAnimationFrame(function () {
+                                                try {
+                                                    $scrollParent.scrollLeft(leftBefore);
+                                                    $scrollParent.scrollTop(topBefore);
+                                                }
+                                                catch (eRaf) {
+                                                }
+                                            });
+                                        }
+                                        catch (eRestore) {
+                                        }
+
+                                        // Ensure the picker still opens when we preventDefault (addon/button click).
+                                        if (!isDirectInputClick) {
+                                            try {
+                                                var picker = $dateInput.data('DateTimePicker');
+                                                if (!picker) {
+                                                    picker = $dateInput.closest('.input-group').data('DateTimePicker');
+                                                }
+                                                if (picker && typeof picker.show === 'function') {
+                                                    picker.show();
+                                                }
+                                            }
+                                            catch (eShow) {
+                                            }
+
+                                            return false;
+                                        }
+                                    }
+                                }
+                            }
+                            catch (e) {
+                            }
+                        })
+                        .off('dp.hide.exmentDtpPrep')
+                        .on('dp.hide.exmentDtpPrep', function () {
+                            try {
+                                document.documentElement.classList.remove('exment-dtp-opening');
+                            }
+                            catch (e2) {
+                            }
+                        });
+
                     $(document)
                         .off('dp.show.exmentFix')
                         .on('dp.show.exmentFix', function (ev) {
@@ -767,6 +864,33 @@ var Exment;
                                     $t.closest('.input-group').find('input[data-column_type="date"]').length > 0;
                                 if (!isExmentDate) {
                                     return;
+                                }
+
+                                // If another datepicker plugin is also bound, hide it to avoid "two calendars".
+                                try {
+                                    $('.datepicker.datepicker-dropdown:visible').hide();
+                                }
+                                catch (eHideDp0) {
+                                }
+
+                                // Anchor input used for positioning.
+                                var $anchorInput = null;
+                                if ($t && $t.length) {
+                                    if ($t.is('input')) {
+                                        $anchorInput = $t;
+                                    }
+                                    else {
+                                        $anchorInput = $t.closest('.input-group').find('input[data-column_type="date"], input[data-add-date], input').first();
+                                    }
+                                }
+
+                                // Ensure pre-show guard is set even for keyboard-triggered show.
+                                try {
+                                    if ($anchorInput && $anchorInput.length && $anchorInput.closest('.table-responsive').length) {
+                                        document.documentElement.classList.add('exment-dtp-opening');
+                                    }
+                                }
+                                catch (e0) {
                                 }
 
                                 // Try to locate the picker instance from target, input-group wrapper, or input.
@@ -783,31 +907,80 @@ var Exment;
                                 }
 
                                 // IMPORTANT: Do NOT call picker.widgetParent() here; that method triggers hide/show.
+                                var $pickerWidget = null;
                                 if (picker && typeof picker.widget === 'function') {
                                     var $w = picker.widget();
                                     if ($w && $w.length) {
-                                        $(document.body).append($w);
+                                        $pickerWidget = $w;
+                                        // Ensure the widget never affects document scrollbars while moving.
+                                        $w.css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto' });
+                                        if ($w.parent()[0] !== document.body) {
+                                            $(document.body).append($w);
+                                        }
+                                        // Prevent a visible "jump" while we move/reposition the widget.
+                                        $w.css('visibility', 'hidden');
                                         $w.css('z-index', 1060);
                                     }
                                 }
 
                                 // Fallback: some pages store the instance differently; always move visible widgets to body.
-                                setTimeout(function () {
+                                // Do it synchronously to avoid a one-frame "jump" from setTimeout.
+                                (function () {
                                     try {
-                                        var $anchorInput = null;
-                                        if ($t && $t.length) {
-                                            if ($t.is('input')) {
-                                                $anchorInput = $t;
-                                            }
-                                            else {
-                                                $anchorInput = $t.closest('.input-group').find('input[data-column_type="date"], input[data-add-date], input').first();
-                                            }
-                                        }
-
-                                        var $visibleDtp = $('.bootstrap-datetimepicker-widget:visible');
+                                        var $visibleDtp = ($pickerWidget && $pickerWidget.length)
+                                            ? $pickerWidget
+                                            : $('.bootstrap-datetimepicker-widget:visible').first();
                                         if ($visibleDtp.length) {
+                                            // If multiple widgets exist (can happen with repeated init or race),
+                                            // force-hide any other visible widgets to prevent a "second calendar".
+                                            try {
+                                                var $otherVisibleDtp = $('.bootstrap-datetimepicker-widget:visible').not($visibleDtp);
+                                                if ($otherVisibleDtp.length) {
+                                                    $otherVisibleDtp
+                                                        .css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
+                                                        .hide();
+                                                }
+                                            }
+                                            catch (eHide1) {
+                                            }
+
+                                            // Some pages use a horizontally scrollable container (e.g. table responsive).
+                                            // Preserve its scroll position too, otherwise users may see a horizontal "jump".
+                                            var scrollParent = null;
+                                            var scrollParentLeftBefore = null;
+                                            var scrollParentTopBefore = null;
+                                            if ($anchorInput && $anchorInput.length) {
+                                                $anchorInput.parents().each(function () {
+                                                    if (this === document.body) {
+                                                        return false;
+                                                    }
+                                                    var style = window.getComputedStyle(this);
+                                                    if (!style) {
+                                                        return;
+                                                    }
+                                                    var overflowX = style.overflowX;
+                                                    if ((overflowX === 'auto' || overflowX === 'scroll') && this.scrollWidth > this.clientWidth) {
+                                                        scrollParent = this;
+                                                        return false;
+                                                    }
+                                                });
+                                            }
+                                            if (scrollParent) {
+                                                scrollParentLeftBefore = scrollParent.scrollLeft;
+                                                scrollParentTopBefore = scrollParent.scrollTop;
+                                            }
+
                                             // Move widget to body to avoid overflow clipping.
-                                            $(document.body).append($visibleDtp);
+                                            $visibleDtp.css('visibility', 'hidden');
+                                            // Important: switch to fixed *before* append to avoid a one-frame scrollbar flicker.
+                                            $visibleDtp.css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto' });
+                                            if ($visibleDtp.parent()[0] !== document.body) {
+                                                $(document.body).append($visibleDtp);
+                                            }
+                                            if (scrollParent && (scrollParent.scrollLeft !== scrollParentLeftBefore || scrollParent.scrollTop !== scrollParentTopBefore)) {
+                                                scrollParent.scrollLeft = scrollParentLeftBefore;
+                                                scrollParent.scrollTop = scrollParentTopBefore;
+                                            }
                                             $visibleDtp.css('z-index', 9999);
 
                                             // Reposition under the input (since moving to body breaks relative positioning).
@@ -847,7 +1020,7 @@ var Exment;
                                                             ? Math.min(anchorTopVp + anchorH, Math.max(0, winH - widgetH))
                                                             : Math.max(0, anchorTopVp - widgetH);
                                                     }
-                                                    var top = winTop + desiredTopVp;
+                                                    var top = desiredTopVp;
 
                                                     // Horizontal: prefer align left, else align right edge, else clamp.
                                                     var desiredLeftVp;
@@ -860,17 +1033,60 @@ var Exment;
                                                     else {
                                                         desiredLeftVp = Math.max(0, winW - widgetW);
                                                     }
-                                                    var left = winLeft + desiredLeftVp;
+                                                    // Fine-tune: shift popup slightly left.
+                                                    desiredLeftVp = Math.max(0, Math.min(desiredLeftVp - 36, winW - widgetW));
+                                                    var left = desiredLeftVp;
 
                                                     // Keep arrow direction consistent.
                                                     $visibleDtp.toggleClass('top', !placeBelow).toggleClass('bottom', placeBelow);
-                                                    $visibleDtp.css({ top: top, left: left, bottom: 'auto', right: 'auto' });
+                                                    $visibleDtp.css({ position: 'fixed', top: top, left: left, bottom: 'auto', right: 'auto' });
                                                 }
+                                            }
+
+                                            // Show after repositioning.
+                                            $visibleDtp.css('visibility', 'visible');
+
+                                            // Safety: hide any other widgets again before releasing the global guard.
+                                            try {
+                                                var $otherVisibleDtp2 = $('.bootstrap-datetimepicker-widget:visible').not($visibleDtp);
+                                                if ($otherVisibleDtp2.length) {
+                                                    $otherVisibleDtp2
+                                                        .css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
+                                                        .hide();
+                                                }
+                                            }
+                                            catch (eHide2) {
+                                            }
+
+                                            // Clear pre-show guard once positioned.
+                                            try {
+                                                document.documentElement.classList.remove('exment-dtp-opening');
+                                            }
+                                            catch (e3) {
                                             }
                                         }
                                         var $visibleDp = $('.datepicker.datepicker-dropdown:visible');
                                         if ($visibleDp.length) {
+                                            // Same issue can happen with bootstrap-datepicker: ensure only one is visible.
+                                            try {
+                                                var $otherVisibleDp = $('.datepicker.datepicker-dropdown:visible').not($visibleDp);
+                                                if ($otherVisibleDp.length) {
+                                                    $otherVisibleDp
+                                                        .css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
+                                                        .hide();
+                                                }
+                                            }
+                                            catch (eHide3) {
+                                            }
+
+                                            var scrollTopBefore2 = $(window).scrollTop();
+                                            var scrollLeftBefore2 = $(window).scrollLeft();
+
+                                            $visibleDp.css('visibility', 'hidden');
                                             $(document.body).append($visibleDp);
+                                            if ($(window).scrollTop() !== scrollTopBefore2 || $(window).scrollLeft() !== scrollLeftBefore2) {
+                                                window.scrollTo(scrollLeftBefore2, scrollTopBefore2);
+                                            }
                                             $visibleDp.css('z-index', 9999);
                                             if ($anchorInput && $anchorInput.length) {
                                                 var off2 = $anchorInput.offset();
@@ -924,11 +1140,14 @@ var Exment;
                                                     $visibleDp.css({ top: top2, left: left2, bottom: 'auto', right: 'auto' });
                                                 }
                                             }
+
+                                            // Show after repositioning.
+                                            $visibleDp.css('visibility', 'visible');
                                         }
                                     }
                                     catch (e2) {
                                     }
-                                }, 0);
+                                })();
                             }
                             catch (e) {
                                 // swallow to avoid breaking picker display
@@ -959,43 +1178,18 @@ var Exment;
                         var $input = $elem.is('input') ? $elem : $elem.find('input');
                         existingPicker = $input.data('DateTimePicker');
                     }
-                    if (existingPicker) {
-                        if (typeof existingPicker.widgetParent === 'function') {
-                            try {
-                                existingPicker.widgetParent($(document.body));
-                            }
-                            catch (e) {
-                            }
+                    if (!existingPicker) {
+                        var $group = $elem.closest('.input-group');
+                        if ($group.length) {
+                            existingPicker = $group.data('DateTimePicker');
                         }
-                        $elem.off('dp.show.exment').on('dp.show.exment', function () {
-                            var picker = $(this).data('DateTimePicker');
-                            if (!picker) {
-                                var $input2 = $(this).is('input') ? $(this) : $(this).find('input');
-                                picker = $input2.data('DateTimePicker');
-                            }
-                            if (picker && typeof picker.widget === 'function') {
-                                var $w = picker.widget();
-                                if ($w && $w.length) {
-                                    $(document.body).append($w);
-                                    $w.css('z-index', 1060);
-                                }
-                            }
-                        });
+                    }
+                    if (existingPicker) {
                         $elem.addClass('added-datepicker');
                         return;
                     }
 
                     $elem.datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $(document.body) });
-                    $elem.off('dp.show.exment').on('dp.show.exment', function () {
-                        var picker = $(this).data('DateTimePicker');
-                        if (picker && typeof picker.widget === 'function') {
-                            var $w = picker.widget();
-                            if ($w && $w.length) {
-                                $(document.body).append($w);
-                                $w.css('z-index', 1060);
-                            }
-                        }
-                    });
                     $elem.addClass('added-datepicker');
                 });
             }
