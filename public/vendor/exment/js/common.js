@@ -750,10 +750,255 @@ var Exment;
          * add field event (datepicker, icheck)
          */
         static addFieldEvent() {
-            $('[data-add-date]').not('.added-datepicker').each(function (index, elem) {
-                $(elem).datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true });
-                $(elem).addClass('added-datepicker');
-            });
+            if (typeof $.fn.datetimepicker === 'function') {
+                // Global handler: dp.show may be triggered on a plain `.input-group` wrapper (no `.date` class).
+                // We only act when it is related to Exment date inputs.
+                if (!window.__exment_datetimepicker_body_fix) {
+                    window.__exment_datetimepicker_body_fix = true;
+                    $(document)
+                        .off('dp.show.exmentFix')
+                        .on('dp.show.exmentFix', function (ev) {
+                            try {
+                                var $t = $(ev.target);
+
+                                // Detect whether this dp.show is for an Exment date field.
+                                var isExmentDate = $t.is('[data-add-date], input[data-column_type="date"]') ||
+                                    $t.closest('[data-add-date]').length > 0 ||
+                                    $t.closest('.input-group').find('input[data-column_type="date"]').length > 0;
+                                if (!isExmentDate) {
+                                    return;
+                                }
+
+                                // Try to locate the picker instance from target, input-group wrapper, or input.
+                                var picker = $t.data('DateTimePicker');
+                                if (!picker) {
+                                    picker = $t.closest('.input-group').data('DateTimePicker');
+                                }
+                                if (!picker) {
+                                    var $input = $t.is('input') ? $t : $t.find('input');
+                                    if ($input.length === 0) {
+                                        $input = $t.closest('.input-group').find('input');
+                                    }
+                                    picker = $input.data('DateTimePicker');
+                                }
+
+                                // IMPORTANT: Do NOT call picker.widgetParent() here; that method triggers hide/show.
+                                if (picker && typeof picker.widget === 'function') {
+                                    var $w = picker.widget();
+                                    if ($w && $w.length) {
+                                        $(document.body).append($w);
+                                        $w.css('z-index', 1060);
+                                    }
+                                }
+
+                                // Fallback: some pages store the instance differently; always move visible widgets to body.
+                                setTimeout(function () {
+                                    try {
+                                        var $anchorInput = null;
+                                        if ($t && $t.length) {
+                                            if ($t.is('input')) {
+                                                $anchorInput = $t;
+                                            }
+                                            else {
+                                                $anchorInput = $t.closest('.input-group').find('input[data-column_type="date"], input[data-add-date], input').first();
+                                            }
+                                        }
+
+                                        var $visibleDtp = $('.bootstrap-datetimepicker-widget:visible');
+                                        if ($visibleDtp.length) {
+                                            // Move widget to body to avoid overflow clipping.
+                                            $(document.body).append($visibleDtp);
+                                            $visibleDtp.css('z-index', 9999);
+
+                                            // Reposition under the input (since moving to body breaks relative positioning).
+                                            if ($anchorInput && $anchorInput.length) {
+                                                var off = $anchorInput.offset();
+                                                if (off) {
+                                                    var winTop = $(window).scrollTop();
+                                                    var winLeft = $(window).scrollLeft();
+                                                    var winH = $(window).height();
+                                                    var winW = $(window).width();
+
+                                                    var anchorH = $anchorInput.outerHeight();
+                                                    var anchorW = $anchorInput.outerWidth();
+                                                    var anchorTopVp = off.top - winTop;
+                                                    var anchorLeftVp = off.left - winLeft;
+
+                                                    var widgetH = $visibleDtp.outerHeight();
+                                                    var widgetW = $visibleDtp.outerWidth();
+
+                                                    // Vertical: prefer fit below/above; otherwise clamp toward side with more space.
+                                                    var spaceBelow = winH - (anchorTopVp + anchorH);
+                                                    var spaceAbove = anchorTopVp;
+                                                    var desiredTopVp;
+                                                    var placeBelow;
+                                                    if (widgetH <= spaceBelow) {
+                                                        placeBelow = true;
+                                                        desiredTopVp = anchorTopVp + anchorH;
+                                                    }
+                                                    else if (widgetH <= spaceAbove) {
+                                                        placeBelow = false;
+                                                        desiredTopVp = anchorTopVp - widgetH;
+                                                    }
+                                                    else {
+                                                        // Not enough space either side; choose the side with more space.
+                                                        placeBelow = spaceBelow >= spaceAbove;
+                                                        desiredTopVp = placeBelow
+                                                            ? Math.min(anchorTopVp + anchorH, Math.max(0, winH - widgetH))
+                                                            : Math.max(0, anchorTopVp - widgetH);
+                                                    }
+                                                    var top = winTop + desiredTopVp;
+
+                                                    // Horizontal: prefer align left, else align right edge, else clamp.
+                                                    var desiredLeftVp;
+                                                    if (anchorLeftVp + widgetW <= winW) {
+                                                        desiredLeftVp = anchorLeftVp;
+                                                    }
+                                                    else if (anchorLeftVp + anchorW - widgetW >= 0) {
+                                                        desiredLeftVp = anchorLeftVp + anchorW - widgetW;
+                                                    }
+                                                    else {
+                                                        desiredLeftVp = Math.max(0, winW - widgetW);
+                                                    }
+                                                    var left = winLeft + desiredLeftVp;
+
+                                                    // Keep arrow direction consistent.
+                                                    $visibleDtp.toggleClass('top', !placeBelow).toggleClass('bottom', placeBelow);
+                                                    $visibleDtp.css({ top: top, left: left, bottom: 'auto', right: 'auto' });
+                                                }
+                                            }
+                                        }
+                                        var $visibleDp = $('.datepicker.datepicker-dropdown:visible');
+                                        if ($visibleDp.length) {
+                                            $(document.body).append($visibleDp);
+                                            $visibleDp.css('z-index', 9999);
+                                            if ($anchorInput && $anchorInput.length) {
+                                                var off2 = $anchorInput.offset();
+                                                if (off2) {
+                                                    var winTop2 = $(window).scrollTop();
+                                                    var winLeft2 = $(window).scrollLeft();
+                                                    var winH2 = $(window).height();
+                                                    var winW2 = $(window).width();
+
+                                                    var anchorH2 = $anchorInput.outerHeight();
+                                                    var anchorW2 = $anchorInput.outerWidth();
+                                                    var anchorTopVp2 = off2.top - winTop2;
+                                                    var anchorLeftVp2 = off2.left - winLeft2;
+
+                                                    var widgetH2 = $visibleDp.outerHeight();
+                                                    var widgetW2 = $visibleDp.outerWidth();
+
+                                                    var spaceBelow2 = winH2 - (anchorTopVp2 + anchorH2);
+                                                    var spaceAbove2 = anchorTopVp2;
+                                                    var desiredTopVp2;
+                                                    var placeBelow2;
+                                                    if (widgetH2 <= spaceBelow2) {
+                                                        placeBelow2 = true;
+                                                        desiredTopVp2 = anchorTopVp2 + anchorH2;
+                                                    }
+                                                    else if (widgetH2 <= spaceAbove2) {
+                                                        placeBelow2 = false;
+                                                        desiredTopVp2 = anchorTopVp2 - widgetH2;
+                                                    }
+                                                    else {
+                                                        placeBelow2 = spaceBelow2 >= spaceAbove2;
+                                                        desiredTopVp2 = placeBelow2
+                                                            ? Math.min(anchorTopVp2 + anchorH2, Math.max(0, winH2 - widgetH2))
+                                                            : Math.max(0, anchorTopVp2 - widgetH2);
+                                                    }
+                                                    var top2 = winTop2 + desiredTopVp2;
+
+                                                    var desiredLeftVp2;
+                                                    if (anchorLeftVp2 + widgetW2 <= winW2) {
+                                                        desiredLeftVp2 = anchorLeftVp2;
+                                                    }
+                                                    else if (anchorLeftVp2 + anchorW2 - widgetW2 >= 0) {
+                                                        desiredLeftVp2 = anchorLeftVp2 + anchorW2 - widgetW2;
+                                                    }
+                                                    else {
+                                                        desiredLeftVp2 = Math.max(0, winW2 - widgetW2);
+                                                    }
+                                                    var left2 = winLeft2 + desiredLeftVp2;
+
+                                                    $visibleDp.toggleClass('top', !placeBelow2).toggleClass('bottom', placeBelow2);
+                                                    $visibleDp.css({ top: top2, left: left2, bottom: 'auto', right: 'auto' });
+                                                }
+                                            }
+                                        }
+                                    }
+                                    catch (e2) {
+                                    }
+                                }, 0);
+                            }
+                            catch (e) {
+                                // swallow to avoid breaking picker display
+                            }
+                        });
+                }
+
+                // exment date fields can be marked by data-add-date or data-column_type="date".
+                // Prefer initializing on the .input-group.date wrapper (when present) to keep bootstrap-datetimepicker happy.
+                var initTargets = [];
+                $('[data-add-date], input[data-column_type="date"]').each(function (index, elem) {
+                    var $elem = $(elem);
+                    var $initElem = $elem.is('.input-group.date') ? $elem : $elem.closest('.input-group.date');
+                    if ($initElem.length === 0) {
+                        $initElem = $elem;
+                    }
+                    var dom = $initElem.get(0);
+                    if (initTargets.indexOf(dom) === -1) {
+                        initTargets.push(dom);
+                    }
+                });
+
+                $(initTargets).not('.added-datepicker').each(function (index, elem) {
+                    var $elem = $(elem);
+                    // If already initialized elsewhere, force widgetParent/body and ensure z-index/move on show.
+                    var existingPicker = $elem.data('DateTimePicker');
+                    if (!existingPicker) {
+                        var $input = $elem.is('input') ? $elem : $elem.find('input');
+                        existingPicker = $input.data('DateTimePicker');
+                    }
+                    if (existingPicker) {
+                        if (typeof existingPicker.widgetParent === 'function') {
+                            try {
+                                existingPicker.widgetParent($(document.body));
+                            }
+                            catch (e) {
+                            }
+                        }
+                        $elem.off('dp.show.exment').on('dp.show.exment', function () {
+                            var picker = $(this).data('DateTimePicker');
+                            if (!picker) {
+                                var $input2 = $(this).is('input') ? $(this) : $(this).find('input');
+                                picker = $input2.data('DateTimePicker');
+                            }
+                            if (picker && typeof picker.widget === 'function') {
+                                var $w = picker.widget();
+                                if ($w && $w.length) {
+                                    $(document.body).append($w);
+                                    $w.css('z-index', 1060);
+                                }
+                            }
+                        });
+                        $elem.addClass('added-datepicker');
+                        return;
+                    }
+
+                    $elem.datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $(document.body) });
+                    $elem.off('dp.show.exment').on('dp.show.exment', function () {
+                        var picker = $(this).data('DateTimePicker');
+                        if (picker && typeof picker.widget === 'function') {
+                            var $w = picker.widget();
+                            if ($w && $w.length) {
+                                $(document.body).append($w);
+                                $w.css('z-index', 1060);
+                            }
+                        }
+                    });
+                    $elem.addClass('added-datepicker');
+                });
+            }
             $('[data-add-icheck]').not('.added-icheck').each(function (index, elem) {
                 $(elem).iCheck({ checkboxClass: 'icheckbox_minimal-blue' });
                 $(elem).addClass('added-icheck');
