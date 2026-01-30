@@ -36,6 +36,12 @@ var Exment;
             });
         }
         static AddEvent() {
+            // Safety: never keep the pre-show guard across screen transitions.
+            try {
+                document.documentElement.classList.remove('exment-dtp-opening');
+            }
+            catch (e) {
+            }
             CommonEvent.ToggleHelp();
             CommonEvent.addSelect2();
             CommonEvent.addShowModalEvent();
@@ -750,6 +756,57 @@ var Exment;
          * add field event (datepicker, icheck)
          */
         static addFieldEvent() {
+            // Lazy init/show (installed once): fixes pages where datetimepicker plugin loads after the initial AddEvent().
+            if (!window.__exment_datepicker_lazy_init) {
+                window.__exment_datepicker_lazy_init = true;
+                $(document)
+                    .off('click.exmentDtpLazy')
+                    .on('click.exmentDtpLazy', '[data-add-date], input[data-column_type="date"]', function () {
+                        try {
+                            if (typeof $.fn.datetimepicker !== 'function') {
+                                return;
+                            }
+                            var $src = $(this);
+                            var $initElem = $src.is('.input-group.date') ? $src : $src.closest('.input-group.date');
+                            if ($initElem.length === 0) {
+                                $initElem = $src;
+                            }
+
+                            // bootstrap-datetimepicker requires a relative positioned container.
+                            // Prefer the input-group, else fall back to a nearby parent/form-group and enforce position:relative.
+                            var $widgetParent = $src.closest('.input-group');
+                            if ($widgetParent.length === 0) {
+                                $widgetParent = $src.closest('.form-group');
+                            }
+                            if ($widgetParent.length === 0) {
+                                $widgetParent = $src.parent();
+                            }
+                            try {
+                                if ($widgetParent && $widgetParent.length && $widgetParent.css('position') === 'static') {
+                                    $widgetParent.css('position', 'relative');
+                                }
+                            }
+                            catch (eWp) {
+                            }
+
+                            // Already initialized?
+                            var picker = $src.data('DateTimePicker') || $initElem.data('DateTimePicker') || $src.closest('.input-group').data('DateTimePicker');
+                            if (!picker) {
+                                $initElem.datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $widgetParent });
+                                $initElem.addClass('added-datepicker');
+                                picker = $src.data('DateTimePicker') || $initElem.data('DateTimePicker') || $src.closest('.input-group').data('DateTimePicker');
+                            }
+
+                            // Ensure it opens on click.
+                            if (picker && typeof picker.show === 'function') {
+                                picker.show();
+                            }
+                        }
+                        catch (e) {
+                        }
+                    });
+            }
+
             if (typeof $.fn.datetimepicker === 'function') {
                 // Global handler: dp.show may be triggered on a plain `.input-group` wrapper (no `.date` class).
                 // We only act when it is related to Exment date inputs.
@@ -769,6 +826,22 @@ var Exment;
                                     : $group.find('input[data-column_type="date"], input[data-add-date]').first();
                                 if ($dateInput && $dateInput.length && $dateInput.closest('.table-responsive').length) {
                                     document.documentElement.classList.add('exment-dtp-opening');
+
+                                    // Safety timeout: if dp.show never fires (not initialized yet, etc.), don't leave the guard stuck.
+                                    try {
+                                        if (window.__exment_dtp_opening_timer) {
+                                            clearTimeout(window.__exment_dtp_opening_timer);
+                                        }
+                                        window.__exment_dtp_opening_timer = setTimeout(function () {
+                                            try {
+                                                document.documentElement.classList.remove('exment-dtp-opening');
+                                            }
+                                            catch (eT) {
+                                            }
+                                        }, 1500);
+                                    }
+                                    catch (eTimer) {
+                                    }
 
                                     // Avoid the browser auto-scrolling the responsive container on focus.
                                     // That "scroll then restore" is perceived as a flicker/jump.
@@ -1033,8 +1106,20 @@ var Exment;
                                                     else {
                                                         desiredLeftVp = Math.max(0, winW - widgetW);
                                                     }
-                                                    // Fine-tune: shift popup slightly left.
-                                                    desiredLeftVp = Math.max(0, Math.min(desiredLeftVp - 36, winW - widgetW));
+                                                    // Fine-tune: shift popup slightly left only when there's an addon/icon.
+                                                    // For plain inputs (no icon), keep aligned so the arrow points correctly.
+                                                    var fineTuneLeft = 0;
+                                                    try {
+                                                        if ($anchorInput && $anchorInput.length) {
+                                                            var $ig = $anchorInput.closest('.input-group');
+                                                            if ($ig.length && ($ig.find('.input-group-addon, .input-group-btn, .btn').length > 0)) {
+                                                                fineTuneLeft = 36;
+                                                            }
+                                                        }
+                                                    }
+                                                    catch (eTune) {
+                                                    }
+                                                    desiredLeftVp = Math.max(0, Math.min(desiredLeftVp - fineTuneLeft, winW - widgetW));
                                                     var left = desiredLeftVp;
 
                                                     // Keep arrow direction consistent.
@@ -1189,7 +1274,24 @@ var Exment;
                         return;
                     }
 
-                    $elem.datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $(document.body) });
+                    // bootstrap-datetimepicker requires a relative positioned container for its widget parent.
+                    // Use the input-group/date wrapper if possible; otherwise use the element's parent and enforce position:relative.
+                    var $widgetParent = $elem.is('.input-group') ? $elem : $elem.closest('.input-group');
+                    if ($widgetParent.length === 0) {
+                        $widgetParent = $elem.closest('.form-group');
+                    }
+                    if ($widgetParent.length === 0) {
+                        $widgetParent = $elem.parent();
+                    }
+                    try {
+                        if ($widgetParent && $widgetParent.length && $widgetParent.css('position') === 'static') {
+                            $widgetParent.css('position', 'relative');
+                        }
+                    }
+                    catch (eWp2) {
+                    }
+
+                    $elem.datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $widgetParent });
                     $elem.addClass('added-datepicker');
                 });
             }
