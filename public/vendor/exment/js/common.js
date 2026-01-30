@@ -942,7 +942,7 @@ var Exment;
                                     if ($w && $w.length) {
                                         $pickerWidget = $w;
                                         // Ensure the widget never affects document scrollbars while moving.
-                                        $w.css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto' });
+                                        $w.css({ position: 'absolute', top: 0, left: 0, right: 'auto', bottom: 'auto' });
                                         if ($w.parent()[0] !== document.body) {
                                             $(document.body).append($w);
                                         }
@@ -966,7 +966,7 @@ var Exment;
                                                 var $otherVisibleDtp = $('.bootstrap-datetimepicker-widget:visible').not($visibleDtp);
                                                 if ($otherVisibleDtp.length) {
                                                     $otherVisibleDtp
-                                                        .css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
+                                                        .css({ position: 'absolute', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
                                                         .hide();
                                                 }
                                             }
@@ -975,8 +975,8 @@ var Exment;
 
                                             // Move widget to body to avoid overflow clipping.
                                             $visibleDtp.css('visibility', 'hidden');
-                                            // Important: switch to fixed *before* append to avoid a one-frame scrollbar flicker.
-                                            $visibleDtp.css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto' });
+                                            // Use absolute positioning so the widget follows the page scroll like the input/icon.
+                                            $visibleDtp.css({ position: 'absolute', top: 0, left: 0, right: 'auto', bottom: 'auto' });
                                             if ($visibleDtp.parent()[0] !== document.body) {
                                                 $(document.body).append($visibleDtp);
                                             }
@@ -1019,7 +1019,8 @@ var Exment;
                                                             ? Math.min(anchorTopVp + anchorH, Math.max(0, winH - widgetH))
                                                             : Math.max(0, anchorTopVp - widgetH);
                                                     }
-                                                    var top = desiredTopVp;
+                                                    // Convert viewport coords to document coords (absolute positioning).
+                                                    var top = winTop + desiredTopVp;
 
                                                     // Horizontal: prefer align left, else align right edge, else clamp.
                                                     var desiredLeftVp;
@@ -1046,11 +1047,12 @@ var Exment;
                                                     catch (eTune) {
                                                     }
                                                     desiredLeftVp = Math.max(0, Math.min(desiredLeftVp - fineTuneLeft, winW - widgetW));
-                                                    var left = desiredLeftVp;
+                                                    // Convert viewport coords to document coords (absolute positioning).
+                                                    var left = winLeft + desiredLeftVp;
 
                                                     // Keep arrow direction consistent.
                                                     $visibleDtp.toggleClass('top', !placeBelow).toggleClass('bottom', placeBelow);
-                                                    $visibleDtp.css({ position: 'fixed', top: top, left: left, bottom: 'auto', right: 'auto' });
+                                                    $visibleDtp.css({ position: 'absolute', top: top, left: left, bottom: 'auto', right: 'auto' });
                                                 }
                                             }
 
@@ -1062,7 +1064,7 @@ var Exment;
                                                 var $otherVisibleDtp2 = $('.bootstrap-datetimepicker-widget:visible').not($visibleDtp);
                                                 if ($otherVisibleDtp2.length) {
                                                     $otherVisibleDtp2
-                                                        .css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
+                                                        .css({ position: 'absolute', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
                                                         .hide();
                                                 }
                                             }
