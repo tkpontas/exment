@@ -843,56 +843,12 @@ var Exment;
                                     catch (eTimer) {
                                     }
 
-                                    // Avoid the browser auto-scrolling the responsive container on focus.
-                                    // That "scroll then restore" is perceived as a flicker/jump.
                                     if (e && (e.type === 'mousedown' || e.type === 'pointerdown' || e.type === 'touchstart')) {
                                         // IMPORTANT:
                                         // - Clicking the input itself already triggers DateTimePicker via allowInputToggle.
                                         // - If we also call picker.show() here, some pages end up with two widgets.
                                         // So we only force-show when the user clicked an addon/button (not the input).
                                         var isDirectInputClick = $src.is('input');
-
-                                        var $scrollParent = $dateInput.closest('.table-responsive');
-                                        var leftBefore = $scrollParent.scrollLeft();
-                                        var topBefore = $scrollParent.scrollTop();
-                                        if (!isDirectInputClick) {
-                                            try {
-                                                // Prevent default focus behavior that may scroll containers.
-                                                e.preventDefault();
-                                            }
-                                            catch (ePd) {
-                                            }
-                                        }
-
-                                        try {
-                                            var el = $dateInput.get(0);
-                                            if (el && typeof el.focus === 'function') {
-                                                try {
-                                                    el.focus({ preventScroll: true });
-                                                }
-                                                catch (eFocus1) {
-                                                    el.focus();
-                                                }
-                                            }
-                                        }
-                                        catch (eFocus2) {
-                                        }
-
-                                        // Restore scroll immediately (fallback for browsers without preventScroll).
-                                        try {
-                                            $scrollParent.scrollLeft(leftBefore);
-                                            $scrollParent.scrollTop(topBefore);
-                                            requestAnimationFrame(function () {
-                                                try {
-                                                    $scrollParent.scrollLeft(leftBefore);
-                                                    $scrollParent.scrollTop(topBefore);
-                                                }
-                                                catch (eRaf) {
-                                                }
-                                            });
-                                        }
-                                        catch (eRestore) {
-                                        }
 
                                         // Ensure the picker still opens when we preventDefault (addon/button click).
                                         if (!isDirectInputClick) {
@@ -1017,42 +973,12 @@ var Exment;
                                             catch (eHide1) {
                                             }
 
-                                            // Some pages use a horizontally scrollable container (e.g. table responsive).
-                                            // Preserve its scroll position too, otherwise users may see a horizontal "jump".
-                                            var scrollParent = null;
-                                            var scrollParentLeftBefore = null;
-                                            var scrollParentTopBefore = null;
-                                            if ($anchorInput && $anchorInput.length) {
-                                                $anchorInput.parents().each(function () {
-                                                    if (this === document.body) {
-                                                        return false;
-                                                    }
-                                                    var style = window.getComputedStyle(this);
-                                                    if (!style) {
-                                                        return;
-                                                    }
-                                                    var overflowX = style.overflowX;
-                                                    if ((overflowX === 'auto' || overflowX === 'scroll') && this.scrollWidth > this.clientWidth) {
-                                                        scrollParent = this;
-                                                        return false;
-                                                    }
-                                                });
-                                            }
-                                            if (scrollParent) {
-                                                scrollParentLeftBefore = scrollParent.scrollLeft;
-                                                scrollParentTopBefore = scrollParent.scrollTop;
-                                            }
-
                                             // Move widget to body to avoid overflow clipping.
                                             $visibleDtp.css('visibility', 'hidden');
                                             // Important: switch to fixed *before* append to avoid a one-frame scrollbar flicker.
                                             $visibleDtp.css({ position: 'fixed', top: 0, left: 0, right: 'auto', bottom: 'auto' });
                                             if ($visibleDtp.parent()[0] !== document.body) {
                                                 $(document.body).append($visibleDtp);
-                                            }
-                                            if (scrollParent && (scrollParent.scrollLeft !== scrollParentLeftBefore || scrollParent.scrollTop !== scrollParentTopBefore)) {
-                                                scrollParent.scrollLeft = scrollParentLeftBefore;
-                                                scrollParent.scrollTop = scrollParentTopBefore;
                                             }
                                             $visibleDtp.css('z-index', 9999);
 
