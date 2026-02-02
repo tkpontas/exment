@@ -86,6 +86,7 @@ class Bootstrap
             'vendor/exment/js/customcolumn.js',
             'vendor/exment/js/customformitem.js',
             'vendor/exment/js/customform.js',
+            'vendor/exment/js/hasmanytable-validation.js',
             'vendor/exment/js/preview.js',
             'vendor/exment/js/webapi.js',
             'vendor/exment/js/admin.webapi.js',
