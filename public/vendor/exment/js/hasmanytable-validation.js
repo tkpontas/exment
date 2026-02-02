@@ -117,45 +117,79 @@
     function showAlert(fields) {
         if (!fields.length) return;
 
-        var byTable = {};
+        function escHtml(s) {
+            return String(s).replace(/[&<>"']/g, function(c) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+            });
+        }
+
+        function hval(id, fallback) {
+            var $el = $('#' + id);
+            return $el.length ? $el.val() : fallback;
+        }
+
+        var TITLE = hval('exment_hm_validation_title', 'バリデーションエラー');
+        var PLAIN_PREFIX = hval('exment_hm_validation_plain_prefix', '以下の必須項目が非表示になっています：');
+        var HTML_PREFIX = hval('exment_hm_validation_html_prefix', '以下の必須項目が非表示になっており、表示する必要があります：');
+        var OK_TEXT = hval('exment_hm_validation_ok', 'OK');
+        var ROW_TEXT = hval('exment_common_row', '行');
+
+        // Group: table -> row -> [field...]
+        var byTableRow = {};
         fields.forEach(function(x) {
-            (byTable[x.table] = byTable[x.table] || []).push(x);
+            byTableRow[x.table] = byTableRow[x.table] || {};
+            byTableRow[x.table][x.row] = byTableRow[x.table][x.row] || [];
+            byTableRow[x.table][x.row].push(x.field);
         });
 
         var lines = [];
-        Object.keys(byTable).forEach(function(t) {
+        Object.keys(byTableRow).forEach(function(t) {
             lines.push(t + ':');
-            byTable[t].forEach(function(x) {
-                lines.push('  • 行 ' + x.row + ': ' + x.field);
+
+            Object.keys(byTableRow[t]).sort(function(a, b) {
+                return parseInt(a, 10) - parseInt(b, 10);
+            }).forEach(function(r) {
+                var parts = byTableRow[t][r].map(function(f) {
+                    return '• ' + ROW_TEXT + ' ' + r + ': ' + f;
+                });
+                lines.push(parts.join(' '));
             });
         });
-        var plain = '以下の必須項目が非表示になっています：\n\n' + lines.join('\n');
+
+        var plain = PLAIN_PREFIX + '\n\n' + lines.join('\n');
 
         if (typeof toastr !== 'undefined') {
-            toastr.error(plain, 'バリデーションエラー', {
+            var toastHtml = escHtml(plain).replace(/\n/g, '<br>');
+            toastr.error(toastHtml, TITLE, {
                 timeOut: 10000,
                 extendedTimeOut: 5000,
                 closeButton: true,
                 progressBar: true,
-                positionClass: 'toast-top-right'
+                positionClass: 'toast-top-right',
+                escapeHtml: false
             });
             return;
         }
 
-        var html = '<div style="text-align: left;"><strong>以下の必須項目が非表示になっており、表示する必要があります：</strong><br><br>';
-        Object.keys(byTable).forEach(function(t) {
+        var html = '<div style="text-align: left;"><strong>' + escHtml(HTML_PREFIX) + '</strong><br><br>';
+        Object.keys(byTableRow).forEach(function(t) {
             html += '<strong>' + t + ':</strong><ul style="margin: 5px 0 15px 20px;">';
-            byTable[t].forEach(function(x) {
-                html += '<li>行 ' + x.row + ': <em>' + x.field + '</em></li>';
+            Object.keys(byTableRow[t]).sort(function(a, b) {
+                return parseInt(a, 10) - parseInt(b, 10);
+            }).forEach(function(r) {
+                var parts = byTableRow[t][r].map(function(f) {
+                    return escHtml(ROW_TEXT) + ' ' + r + ': <em>' + escHtml(f) + '</em>';
+                });
+                html += '<li>' + parts.join(' / ') + '</li>';
             });
             html += '</ul>';
         });
         html += '</div>';
 
         if (typeof swal !== 'undefined') {
-            swal({ title: 'バリデーションエラー', text: html, html: true, type: 'error', confirmButtonText: 'OK' });
+            swal({ title: TITLE, text: html, html: true, type: 'error', confirmButtonText: OK_TEXT });
         } else if (typeof Swal !== 'undefined') {
-            Swal.fire({ title: 'バリデーションエラー', html: html, icon: 'error', confirmButtonText: 'OK' });
+            Swal.fire({ title: TITLE, html: html, icon: 'error', confirmButtonText: OK_TEXT });
         } else {
             alert(plain);
         }
