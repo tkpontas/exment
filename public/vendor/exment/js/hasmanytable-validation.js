@@ -87,6 +87,24 @@
         return 'Table';
     }
 
+    function isEmptyRequiredValue($f) {
+        if (!$f || !$f.length) return true;
+        if ($f.is(':disabled')) return false;
+
+        if ($f.is('input[type="checkbox"], input[type="radio"]')) {
+            return !$f.is(':checked');
+        }
+
+        if ($f.is('select')) {
+            var v = $f.val();
+            if (Array.isArray(v)) return v.length === 0;
+            return $.trim(v) === '';
+        }
+
+        var val = $f.val();
+        return val == null || $.trim(val) === '';
+    }
+
     function findHiddenRequired() {
         var bad = [];
 
@@ -103,6 +121,9 @@
                         var n = $f.attr('name') || '';
                         if (n.indexOf('[value][') === -1) return;
                     }
+
+                    // Only block when required field is hidden AND empty
+                    if (!isEmptyRequiredValue($f)) return;
 
                     if (isHidden($f) || isHidden($f.closest('td'))) {
                         bad.push({ table: tname, row: rowNo, field: fieldLabel($f), element: $f });
