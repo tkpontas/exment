@@ -2750,6 +2750,20 @@ class Api2Test extends ApiTestBase
     {
         $token = $this->getAdminAccessToken([ApiScope::LOG]);
 
+         // seed logs
+        $current_count = OperationLog::count();
+        if ($current_count < 20) {
+            for ($i = 0; $i < (20 - $current_count); $i++) {
+                OperationLog::create([
+                    'user_id' => 1,
+                    'path' => 'api/log',
+                    'method' => 'GET',
+                    'ip' => '127.0.0.1',
+                    'input' => '[]',
+                ]);
+            }
+        }
+
         $this->withHeaders([
             'Authorization' => "Bearer $token",
         ])->get(admin_urls('api', 'log'))
@@ -2779,6 +2793,20 @@ class Api2Test extends ApiTestBase
     {
         $token = $this->getAdminAccessToken([ApiScope::LOG]);
 
+        // seed logs
+        $current_count = OperationLog::count();
+        if ($current_count < 3) {
+            for ($i = 0; $i < (3 - $current_count); $i++) {
+                OperationLog::create([
+                    'user_id' => 1,
+                    'path' => 'api/log',
+                    'method' => 'GET',
+                    'ip' => '127.0.0.1',
+                    'input' => '[]',
+                ]);
+            }
+        }
+
         $this->withHeaders([
             'Authorization' => "Bearer $token",
         ])->get(admin_urls('api', 'log').'?count=3')
@@ -2792,6 +2820,16 @@ class Api2Test extends ApiTestBase
     public function testGetLogsById()
     {
         $token = $this->getAdminAccessToken([ApiScope::LOG]);
+
+        if (OperationLog::count() == 0) {
+             OperationLog::create([
+                'user_id' => 1,
+                'path' => 'api/log',
+                'method' => 'GET',
+                'ip' => '127.0.0.1',
+                'input' => '[]',
+            ]);
+        }
 
         $data = OperationLog::first();
 

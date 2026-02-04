@@ -108,7 +108,8 @@ abstract class ExmentKitTestCase extends BaseTestCase
      */
     public function seeOuterElement($element, $text, $negate = false)
     {
-        return $this->assertInPage(new Constraints\HasOuterElement($element, $text), $negate);
+        // return $this->assertInPage(new Constraints\HasOuterElement($element, $text), $negate);
+        return $this->assertInPage(new Constraints\HasOuterElement($element, (string) $text), $negate);
     }
 
 
