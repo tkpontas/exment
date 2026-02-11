@@ -831,21 +831,6 @@ EOT;
         // get key name for delete
         $del_key = $request->input('key');
 
-        // get original updated_at from PARENT table BEFORE deleting file to avoid validator lock
-        // check if this is child table and has parent
-        $parent_value = $this->custom_value->getParentValue(null, true);
-        if ($parent_value) {
-            // get parent's updated_at using getValueQuery (same way as validatorLock)
-            $updated_value = $parent_value->custom_table->getValueQuery()
-                ->select(['updated_at'])
-                ->find($parent_value->id)->updated_at ?? null;
-        } else {
-            // no parent, use current table's updated_at
-            $updated_value = $this->custom_table->getValueQuery()
-                ->select(['updated_at'])
-                ->find($this->custom_value->id)->updated_at ?? null;
-        }
-
         // get custom column and item
         $custom_column = CustomColumn::getEloquent($del_column_name, $this->custom_table);
         /** @var ColumnItems\CustomItem|null $custom_item */
@@ -854,16 +839,17 @@ EOT;
             $custom_item->setCustomValue($this->custom_value)->deleteFile($del_key);
         }
 
+        // reget custom value
+        $updated_value = getModelName($this->custom_table)::find($this->custom_value->id);
         return getAjaxResponse([
             'result'  => true,
             'message' => trans('admin.delete_succeeded'),
             'reload' => false,
             'updateValue' => [
-                'updated_at' => $updated_value->format('Y-m-d H:i:s'),
+                'updated_at' => $updated_value->updated_at->format('Y-m-d H:i:s'),
             ],
         ]);
     }
-
     /**
      * add comment.
      */
