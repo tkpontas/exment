@@ -4246,3 +4246,7 @@ label.radio-inline:has(input[readonly][type=radio]) {
 label.checkboxone-label:has(input[readonly][type=checkbox]) {
   pointer-events: none;
 }
+
+.btn.btn-file>input[type='file'] {
+    font-size: 0px !important;
+}
