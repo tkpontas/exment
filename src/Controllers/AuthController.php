@@ -191,8 +191,7 @@ class AuthController extends \OpenAdminCore\Admin\Controllers\AuthController
         }
 
         // calc diff days
-        $diff_days = $last_history->created_at->diffInDays(Carbon::now());
-
+        $diff_days = (int) $last_history->created_at->diffInDays(Carbon::now(), true);
         if ($diff_days > $expiration_days) {
             return false;
         }
