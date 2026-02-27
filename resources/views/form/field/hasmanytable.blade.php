@@ -130,7 +130,7 @@
         white-space: nowrap;
     }
     input {
-        min-width: 90px;
+        min-width: 90px !important;
     }
     .select2 {
         min-width: 100px;

@@ -15,7 +15,7 @@
     
     @foreach($custom_form_blocks as $index => $custom_form_block)
 <div class="box card box-custom_form_block">
-    <div class="box-header card-header with-border d-flex justify-content-between p-2 px-3">
+    <div class="box-header card-header with-border d-flex  p-2 px-3">
         <h3 class="box-title">{{$custom_form_block['label']}}</h3>
         <div class="box-tools ms-auto">
             <button type="button" class="btn btn-box-tool shadow-none" 
@@ -30,7 +30,7 @@
         <div class="box-body show" id="custom_form_block_{{$index}}">
             {{-- Use checkbox only relation block --}} 
             @if($custom_form_block['form_block_type'] != '0')
-            <div class="custom_form_block_available pt-3 ms-3">
+            <div class="custom_form_block_available pt-3 ms-3" style="padding-left:0px;">
                 <input type="checkbox" name="{{ $custom_form_block['header_name'] }}[available]" value="1" id="custom_form_block_{{ $custom_form_block['header_name'] }}__available_" class="icheck icheck_toggleblock custom_form_block_available" data-add-icheck="1" {{ $custom_form_block['available'] ? 'checked' : '' }} />
                 <label for="custom_form_block_{{ $custom_form_block['header_name'] }}__available_">{{ exmtrans('common.available') }}</label>
             </div>
