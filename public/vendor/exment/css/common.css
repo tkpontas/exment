@@ -3697,6 +3697,10 @@ body .navbar-nav > .notifications-menu > .dropdown-menu, .navbar-nav > .messages
   max-width: 100%;
 }
 
+.checkbox {
+  padding-top: 7px;
+}
+
 .has-error .btn-valuemodal, .has-error .text-valuemodal, .has-error .checkbox, .has-error .checkbox-inline, .has-error .control-label, .has-error .help-block, .has-error .radio, .has-error .radio-inline {
   color: #dd4b39 !important;
 }
