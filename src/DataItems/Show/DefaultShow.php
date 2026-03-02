@@ -521,7 +521,6 @@ class DefaultShow extends ShowBase
             })->count() > 0
         ];
 
-        dd($pjax);
         if ($pjax) {
             return view("exment::custom-value.revision-compare-inner", $prms);
         }
