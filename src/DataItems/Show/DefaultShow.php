@@ -521,6 +521,7 @@ class DefaultShow extends ShowBase
             })->count() > 0
         ];
 
+        dd($pjax);
         if ($pjax) {
             return view("exment::custom-value.revision-compare-inner", $prms);
         }
@@ -534,7 +535,11 @@ class DefaultShow extends ShowBase
                 query['trashed'] = 1;
             }
 
-            $.pjax({container:'#pjax-container-revision', url: url +'?' + $.param(query) });
+            $.pjax({
+                container: '#pjax-container-revision',
+                fragment: '#pjax-container-revision',
+                url: url +'?' + $.param(query)
+            });
         });
 
 EOT;

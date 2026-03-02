@@ -5,7 +5,7 @@
         </h3>
         @if($has_edit_permission)
         <div class="btn-group float-end" style="margin-right: 5px">
-            <a href="{{$custom_value->getUrl(['uri' => 'edit'])}}" class="btn btn-sm btn-primary p-2" title="{{ trans('admin.edit') }}">
+            <a href="{{$custom_value->getUrl(['uri' => 'edit'])}}" class="btn btn-sm btn-primary" title="{{ trans('admin.edit') }}">
                 <i class="fa fa-edit"></i><span class="d-none d-md-inline"> {{ trans('admin.edit') }}</span>
             </a>
         </div>
