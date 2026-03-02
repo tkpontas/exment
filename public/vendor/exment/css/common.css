@@ -3857,6 +3857,10 @@ body .navbar-nav > .notifications-menu > .dropdown-menu, .navbar-nav > .messages
   color: #dd4b39;
 }
 
+.has-error .help-block, .has-error .help-block .fa {
+  color: #737373 !important;
+}
+
 .column-__actions__ {
   min-width: 50px;
 }
