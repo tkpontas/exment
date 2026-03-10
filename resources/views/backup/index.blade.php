@@ -1,4 +1,4 @@
-<div class="box card p-3">
+<div class="box p-3">
     <div class="box-header with-border">
         <div class="float-end pb-3">
             <div class="btn-group float-end" style="margin-right: 5px">

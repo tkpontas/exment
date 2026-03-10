@@ -46,7 +46,7 @@ class TableService
                         'url' => route('exment.jancode_activate', ['id' => $custom_table->id]),
                         'label' => exmtrans('common.activate'),
                         'icon' => 'fa-check-circle',
-                        'btn_class' => 'btn-success p-2',
+                        'btn_class' => 'btn-success',
                         'title' => exmtrans('common.activate'),
                         'text' => exmtrans('custom_table.help.jancode_activate'),
                         'method' => 'post',
