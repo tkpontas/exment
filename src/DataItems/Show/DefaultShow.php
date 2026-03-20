@@ -39,7 +39,6 @@ use Exceedone\Exment\Enums\ShowGridType;
 use Exceedone\Exment\Enums\ShowPositionType;
 use Exceedone\Exment\Services\PartialCrudService;
 use Exceedone\Exment\ColumnItems\ItemInterface;
-use Illuminate\Support\Str;
 
 /** @phpstan-consistent-constructor */
 class DefaultShow extends ShowBase
@@ -847,30 +846,18 @@ EOT;
             $custom_item->setCustomValue($this->custom_value)->deleteFile($del_key);
         }
 
-        // Reget custom value and updated_at
-        $updated_at = null;
-        $parent_value = $this->custom_value->getParentValue();
-        $referer = $request->header('referer');
-        
-        if ($parent_value && $referer && Str::contains($referer, '/' . $parent_value->custom_table->table_name . '/')) {
-            $updated_value = $parent_value->custom_table->getValueQuery()
-                ->select(['updated_at'])
-                ->find($parent_value->id);
-            $updated_at = $updated_value->updated_at ?? null;
-        } else {
-            $updated_value = getModelName($this->custom_table)::find($this->custom_value->id);
-            $updated_at = $updated_value->updated_at ?? null;
-        }
-
+        // reget custom value
+        $updated_value = getModelName($this->custom_table)::find($this->custom_value->id);
         return getAjaxResponse([
             'result'  => true,
             'message' => trans('admin.delete_succeeded'),
             'reload' => false,
             'updateValue' => [
-                'updated_at' => $updated_at ? $updated_at->format('Y-m-d H:i:s') : null,
+                'updated_at' => $updated_value->updated_at->format('Y-m-d H:i:s'),
             ],
         ]);
     }
+
     /**
      * add comment.
      */

@@ -69,7 +69,6 @@ class BootstrapPublicForm
             'vendor/exment/jstree/jstree.min.js',
             'vendor/exment/js/common_all.js',
             'vendor/exment/js/common.js',
-            'vendor/exment/js/file-required.js',
             'vendor/exment/js/calc.js',
             'vendor/exment/js/modal.js',
             'vendor/exment/js/changefield.js',
