@@ -14,7 +14,6 @@ use Laravel\BrowserKitTesting\TestCase as BaseTestCase;
  */
 abstract class ExmentKitTestCase extends BaseTestCase
 {
-    use \Tests\CreatesApplication;
     use TestTrait;
 
     /**

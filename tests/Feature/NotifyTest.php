@@ -180,7 +180,7 @@ class NotifyTest extends FeatureTestBase
         $this->init(false);
 
         $hh = Carbon::now()->format('G');
-        $target_date = Carbon::today()->addDays(100)->format('Y-m-d');
+        $target_date = Carbon::today()->addDays(101)->format('Y-m-d');
 
         // Login user.
         $user_id = \Exment::user()->base_user_id;
@@ -189,7 +189,7 @@ class NotifyTest extends FeatureTestBase
         /** @var Notify $notify */
         $notify = Notify::where('notify_trigger', NotifyTrigger::TIME)->first();
         $notify->setTriggerSetting('notify_hour', $hh);
-        $notify->setTriggerSetting('notify_day', 100);
+        $notify->setTriggerSetting('notify_day', 101);
         $notify->setTriggerSetting('notify_beforeafter', -1);
         $notify->save();
 
