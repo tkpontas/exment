@@ -211,18 +211,6 @@ class MenuController extends AdminControllerBase
             return $contoller->getViewList($custom_table, false);
         });
         
-    $uriField = $form->text('uri', trans('admin.uri'))
-        ->attribute([
-            'data-filter' => json_encode([
-                'key' => 'menu_type',
-                'readonlyValue' => [MenuType::SYSTEM, MenuType::PLUGIN, MenuType::TABLE, MenuType::PARENT_NODE]
-            ])
-        ]);
-
-    if (isset($id)) {
-        $uriField->addElementClass('pe-none');
-    }
-
     if (!isset($id)) {
         $form->text('menu_name', exmtrans("menu.menu_name"))
         ->required()
@@ -312,20 +300,6 @@ class MenuController extends AdminControllerBase
 
 
     $form->saving(function ($form) {
-        
-        // Handle menu_target_view before validate and save
-        if ($form->menu_type != MenuType::TABLE) {
-            $form->menu_target_view = null;
-        }
-
-        if ($form->menu_type !== MenuType::PARENT_NODE) {
-            $form->uri = null;
-        }
-
-        if (in_array($form->menu_type, [MenuType::CUSTOM, MenuType::PARENT_NODE])) {
-            $form->menu_target = null;
-        }
-        
         // Whether set order
         $isset_order = false;
         // Get parent id
