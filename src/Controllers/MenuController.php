@@ -308,6 +308,14 @@ class MenuController extends AdminControllerBase
 
 
     $form->saving(function ($form) {
+        // Handle menu_target_view before validate and save
+        if ($form->menu_type != MenuType::TABLE) {
+            $form->menu_target_view = null;
+        }
+
+        if (in_array($form->menu_type, [MenuType::CUSTOM, MenuType::PARENT_NODE])) {
+            $form->menu_target = null;
+        }
         // Whether set order
         $isset_order = false;
         // Get parent id
