@@ -41,6 +41,17 @@ composer update
 </phpunit>
 ```
 
+- **phpunit.xml** に `BCRYPT_ROUNDS` の値がハードコードされている場合は、テスト用データベースで使用されている `BCRYPT_ROUNDS` の値（`.env` または `config/hashing.php` で設定）と一致していることを確認してください。  
+  **⚠️ 設定されていない場合、デフォルト値は `12` です。**  
+  例えば、データベースが `BCRYPT_ROUNDS=12` で初期化されているにもかかわらず、**phpunit.xml** の値が `value="4"` になっている場合、テスト実行時に認証が失敗します。  
+  **→ 解決案：** **phpunit.xml** を開き、値が一致するように更新してください。
+
+``` xml
+<php>
+    <env name="BCRYPT_ROUNDS" value="12"/> <!-- テストデータ作成時に使用した BCRYPT_ROUNDS の値に合わせて変更してください -->
+</php>
+```
+
 - テストではAPIを施しますが、場合により、429エラー(Too Many Requests)が発生するようです。  
 app\Http\Kernel.phpを開き、以下の記述を修正してください。
 
