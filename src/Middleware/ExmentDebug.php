@@ -21,6 +21,7 @@ class ExmentDebug
 
     public static function handleLog(?Request $request = null)
     {
+        // Check if database is initialized before accessing System settings
         $loggingToggle = false;
         try {
             $loggingToggle = System::initialized() && System::logging_toggle_available();
