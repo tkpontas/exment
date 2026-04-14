@@ -46,8 +46,7 @@ class IMenuTest extends ExmentKitTestCase
         $this->_testCreateMenu('parent_menu_name', [
             'parent_id' =>'0',
             'menu_type' =>'parent_node',
-            'menu_target' =>'',
-            'uri' =>'/',
+            'menu_target' => null,
             'title' =>'MenuTestParent',
             'icon' =>'fa-user',
         ]);
@@ -299,26 +298,13 @@ class IMenuTest extends ExmentKitTestCase
         // Check database
         $model = $this->getMenuTestModel($menu_name);
 
-        // foreach ($data as $key => $value) {
-        //     $this->assertMatch($model->{$key}, $value);
-        // }
-        $persistKeys = [
-            'parent_id',
-            'menu_type',
-            'menu_name',
-            'title',
-            'icon',
-        ];
-        foreach ($persistKeys as $key) {
-            if (array_key_exists($key, $data)) {
-                $this->assertMatch($model->{$key}, $data[$key]);
-            }
+        foreach ($data as $key => $value) {
+            $this->assertMatch($model->{$key}, $value, "Field $key mismatch");
         }
-        if (($data['menu_type'] ?? null) === 'custom' && array_key_exists('uri', $data)) {
-            $storedUri = array_get($model->options, 'uri') ?? $model->uri;
-            if (!is_null($storedUri)) {
-                $this->assertEquals($data['uri'], $storedUri);
-            }
+
+        // Additional assertion for parent_node: uri must be null
+        if (array_get($data, 'menu_type') === 'parent_node') {
+            $this->assertNull($model->uri, 'parent_node menu must have null uri');
         }
         if ($checkFunc instanceof \Closure) {
             $checkFunc($model);
@@ -354,26 +340,11 @@ class IMenuTest extends ExmentKitTestCase
         $this->assertPostResponse($this->response, admin_url('auth/menu'));
 
         $model = Menu::find($menu->id);
-        // foreach ($data as $key => $value) {
-        //     $this->assertMatch($model->{$key}, $value);
-        // }
-        $persistKeys = [
-            'parent_id',
-            'menu_type',
-            'menu_name',
-            'title',
-            'icon',
-        ];
-        foreach ($persistKeys as $key) {
-            if (array_key_exists($key, $data)) {
-                $this->assertMatch($model->{$key}, $data[$key]);
-            }
+        foreach ($data as $key => $value) {
+            $this->assertMatch($model->{$key}, $value, "Field $key mismatch after edit");
         }
-        if ($model->menu_type === 'custom' && array_key_exists('uri', $editData)) {
-            $storedUri = array_get($model->options, 'uri') ?? $model->uri;
-            if (!is_null($storedUri)) {
-                $this->assertEquals($editData['uri'], $storedUri);
-            }
+        if ($model->menu_type === 'parent_node') {
+            $this->assertNull($model->uri, 'parent_node menu must have null uri after edit');
         }
     }
 
