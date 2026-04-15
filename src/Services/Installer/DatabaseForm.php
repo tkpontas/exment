@@ -154,7 +154,7 @@ class DatabaseForm
         }
 
         // check max(less than)
-        if (array_has($database_version, 'max_lt')) {
+        if (isset($database_version['max_lt'])) {
             $message_lt = true;
             if (version_compare($version, $database_version['max_lt']) >= 0) {
                 $result = false;
@@ -167,7 +167,7 @@ class DatabaseForm
 
         $errorMessage = exmtrans('install.error.not_require_database_version_' . ($message_lt ? 'min_maxlt' : 'min'), [
             'min' => $database_version['min'],
-            'max_lt' => ($message_lt ? $database_version['max_lt'] : null),
+            'max_lt' => ($message_lt ? ($database_version['max_lt'] ?? null) : null),
             'database' => Define::DATABASE_TYPE[$this->database_default],
             'current' => $version
         ]);
