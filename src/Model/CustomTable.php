@@ -3350,6 +3350,34 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * copy this table
      */
+    /**
+     * Barcode-related option keys that should be excluded when copying a table.
+     */
+    protected static $barcodeOptionKeys = [
+        // QR code settings
+        'active_qr_flg',
+        'qr_use',
+        'text_qr',
+        'refer_column',
+        'cell_width',
+        'cell_height',
+        'margin_left',
+        'margin_top',
+        'col_per_page',
+        'row_per_page',
+        'col_spacing',
+        'row_spacing',
+        'form_after_read',
+        'action_after_read',
+        // JAN code settings
+        'active_jan_flg',
+        'jan_use',
+        'form_after_create_jan_code',
+        'action_after_create_jan_code',
+        'form_after_read_jan_code',
+        'action_after_read_jan_code',
+    ];
+
     public function copyTable($inputs = null, bool $include_view = false, bool $include_form = false)
     {
         \ExmentDB::transaction(function ($connect) use ($inputs, $include_view, $include_form) {
@@ -3357,6 +3385,12 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             foreach($inputs as $key => $input) {
                 $new_table->{$key} = $input;
             }
+
+            // Remove barcode-related options from the copied table
+            foreach (static::$barcodeOptionKeys as $optionKey) {
+                $new_table->setOption($optionKey, null);
+            }
+
             $new_table->save();
 
             $replaceColumns = [];
