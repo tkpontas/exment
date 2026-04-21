@@ -286,8 +286,7 @@ EOT;
             }
             // upload zip file
             elseif ($file->getClientOriginalExtension() == 'zip') {
-                $upload_template = $importer->uploadTemplate($file);
-                $importer->importTemplate($upload_template);
+                $importer->uploadTemplate($file);
             }
         }
     }
