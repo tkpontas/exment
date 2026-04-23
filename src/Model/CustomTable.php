@@ -81,6 +81,17 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     ];
 
     /**
+     * Table option keys that reference CustomForm IDs and their exported suuid keys.
+     *
+     * @var array<int, string>
+     */
+    protected static $templateFormOptionMap = [
+        'form_after_read',
+        'form_after_create_jan_code',
+        'form_after_read_jan_code',
+    ];
+
+    /**
      * Getted custom columns. if call attributes "custom_columns_cache", already called, return this value.
      */
     protected $cached_custom_columns = [];
@@ -1295,6 +1306,30 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         return $obj;
     }
 
+    protected static function exportReplaceJson(&$json)
+    {
+        foreach (static::$templateFormOptionMap as $optionKey) {
+            $suuidKey = 'options.' . $optionKey . '_suuid';
+            $formId = array_get($json, 'options.' . $optionKey);
+            if (is_null($formId)) {
+                continue;
+            }
+
+            $customForm = CustomForm::getEloquent($formId);
+            if ($customForm) {
+                array_set($json, $suuidKey, $customForm->suuid);
+            }
+        }
+    }
+
+    protected static function importReplaceJson(&$json, $options = [])
+    {
+        // These keys are helper metadata for template import and should not be persisted as table options.
+        foreach (static::$templateFormOptionMap as $optionKey) {
+            array_forget($json, 'options.' . $optionKey . '_suuid');
+        }
+    }
+
     protected function importSetValue(&$json, $options = [])
     {
         $system_flg = array_get($options, 'system_flg', false);
@@ -1316,6 +1351,29 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
 
     public function importSaved($json, $options = [])
     {
+        $updated = false;
+        foreach (static::$templateFormOptionMap as $optionKey) {
+            $suuidKey = 'options.' . $optionKey . '_suuid';
+            $formSuuid = array_get($json, $suuidKey);
+            if (is_nullorempty($formSuuid)) {
+                continue;
+            }
+
+            // Mark as updated whenever suuid metadata is present so the cleanup save always runs,
+            // even when the form cannot be located (ensures suuid is stripped from options via the saving event).
+            $updated = true;
+
+            $customForm = CustomForm::where('custom_table_id', $this->id)
+                ->where('suuid', $formSuuid)
+                ->first();
+            if ($customForm) {
+                $this->setOption($optionKey, strval($customForm->id));
+            }
+        }
+        if ($updated) {
+            $this->save();
+        }
+
         $this->createTable();
 
         return $this;
