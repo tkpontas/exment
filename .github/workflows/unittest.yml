@@ -24,9 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: oreno4649/docker-exment
+          repository: ${{ env.DOCKER_EXMENT_REPOSITORY}}
           path: ./docker-exment
-          ref: fix/mysql-warning
 
       - uses: actions/checkout@v4
         with:
