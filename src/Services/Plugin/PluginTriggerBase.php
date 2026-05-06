@@ -17,10 +17,6 @@ class PluginTriggerBase
     public $custom_value;
     // @phpstan-ignore-next-line
     public $isCreate;
-    // @phpstan-ignore-next-line
-    public $isDelete;
-    // @phpstan-ignore-next-line
-    public $isForceDelete;
 
     // @phpstan-ignore-next-line
     public function __construct($plugin, $custom_table, $custom_value, $options = [])

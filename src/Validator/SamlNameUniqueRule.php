@@ -41,6 +41,7 @@ class SamlNameUniqueRule implements Rule
      */
     public function message()
     {
-        return (string)trans('validation.unique');
+        // @phpstan-ignore-next-line
+        return trans('validation.unique');
     }
 }

@@ -119,7 +119,7 @@ class ExportChunkCommand extends Command
             $message = null;
 
             $executeCount = 0;
-            // @phpstan-ignore-next-line
+            /** @phpstan-ignore-next-line Expression on left side of ?? is not nullable. */
             for ($i = $options['start'] ?? 1; $i <= $options['end'] ?? 1000; $i++) {
                 $grid = new Grid(new $classname());
                 // set data get range
@@ -128,7 +128,7 @@ class ExportChunkCommand extends Command
                 if (isset($options['view']) && $options['view'] instanceof CustomView) {
                     $options['view']->filterSortModel($grid->model());
                 }
-                // @phpstan-ignore-next-line
+                /* @phpstan-ignore-next-line str_pad expects string, int given */
                 $seq = str_pad($i, $options['seqlength'], 0, STR_PAD_LEFT);
 
                 $service = (new DataImportExport\DataImportExportService())

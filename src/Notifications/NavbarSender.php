@@ -36,8 +36,8 @@ class NavbarSender extends SenderBase
      * Create a new notification instance.
      *
      * @return void
+     * @phpstan-ignore-next-line
      */
-    // @phpstan-ignore-next-line
     public function __construct($notify_id, $subject, $body, array $options = [])
     {
         $this->notify_id = $notify_id;
@@ -104,7 +104,8 @@ class NavbarSender extends SenderBase
      *
      * @return void
      */
-    public function send(): void
+    // @phpstan-ignore-next-line
+    public function send()
     {
         if ($this->user instanceof CustomValue) {
             $target_user_id = $this->user->getUserId();

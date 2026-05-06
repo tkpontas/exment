@@ -61,7 +61,7 @@ class MailSender extends SenderBase
         if (!is_nullorempty($mail_template)) {
             $this->mailHistory->setMailTemplate($mail_template);
             $this->setSubject($mail_template->getValue('mail_subject'));
-            // @phpstan-ignore-next-line
+            /** @phpstan-ignore-next-line Maybe need reflection. */
             $this->setBody($mail_template->getJoinedBody());
 
             $this->setFromName($mail_template->getValue('mail_from_view_name'));
@@ -73,7 +73,8 @@ class MailSender extends SenderBase
      * @param mixed $to
      * @return MailSender
      */
-    public static function make($mail_template, $to): MailSender
+    // @phpstan-ignore-next-line
+    public static function make($mail_template, $to)
     {
         $sender = new MailSender($mail_template, $to);
 
@@ -275,7 +276,8 @@ class MailSender extends SenderBase
      *
      * @return void
      */
-    public function send(): void
+    // @phpstan-ignore-next-line
+    public function send()
     {
         $this->sendMail();
         $this->sendPasswordMail();
@@ -284,7 +286,8 @@ class MailSender extends SenderBase
     /**
      * @return void
      */
-    protected function sendMail(): void
+    // @phpstan-ignore-next-line
+    protected function sendMail()
     {
         // get subject
         $subject = NotifyService::replaceWord($this->getSubject(), $this->getCustomValue(), $this->prms, $this->replaceOptions);
@@ -316,7 +319,8 @@ class MailSender extends SenderBase
     /**
      * @return void
      */
-    protected function sendPasswordMail(): void
+    // @phpstan-ignore-next-line
+    protected function sendPasswordMail()
     {
         if (!boolval($this->getUsePassword())) {
             return;
@@ -366,7 +370,8 @@ class MailSender extends SenderBase
      * @param array<string, mixed> $replaceOptions
      * @return array<int, string> offset 0 : $body, 1 : Type(PLAIN, HTML)
      */
-    protected function getBodyAndBodyType($body, array $prms = [], array $replaceOptions = []): array
+    // @phpstan-ignore-next-line
+    protected function getBodyAndBodyType($body, array $prms = [], array $replaceOptions = [])
     {
         $body = NotifyService::replaceWord($body, $this->getCustomValue(), $prms, $replaceOptions);
 

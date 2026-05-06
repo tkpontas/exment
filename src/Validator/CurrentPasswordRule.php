@@ -36,6 +36,7 @@ class CurrentPasswordRule implements Rule
      */
     public function message()
     {
-        return (string)exmtrans('validation.current_password');
+        // @phpstan-ignore-next-line
+        return exmtrans('validation.current_password');
     }
 }

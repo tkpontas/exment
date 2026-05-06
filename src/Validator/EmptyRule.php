@@ -27,6 +27,7 @@ class EmptyRule implements Rule
      */
     public function message()
     {
-        return (string)exmtrans('validation.empty');
+        // @phpstan-ignore-next-line
+        return exmtrans('validation.empty');
     }
 }

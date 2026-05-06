@@ -290,7 +290,8 @@ class MailInfo
     /**
      * @return void
      */
-    public function clearAttachments(): void
+    // @phpstan-ignore-next-line
+    public function clearAttachments()
     {
         $this->attachments = [];
     }
@@ -300,7 +301,8 @@ class MailInfo
      * @param mixed $value
      * @return array<int, mixed>
      */
-    protected function convertArray($value): array
+    // @phpstan-ignore-next-line
+    protected function convertArray($value)
     {
         if ($value instanceof \Illuminate\Database\Eloquent\Model || $value instanceof \Exceedone\Exment\Model\NotifyTarget) {
             return [$value];

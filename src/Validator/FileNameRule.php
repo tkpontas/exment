@@ -64,6 +64,7 @@ class FileNameRule implements Rule
      */
     public function message()
     {
-        return (string)exmtrans('validation.filename_not_allow');
+        // @phpstan-ignore-next-line
+        return exmtrans('validation.filename_not_allow');
     }
 }

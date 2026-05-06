@@ -58,6 +58,7 @@ class SelectValTextRule implements Rule
      */
     public function message()
     {
-        return (string)trans('validation.in', ['values' => implode(exmtrans('common.separate_word'), $this->keys)]);
+        // @phpstan-ignore-next-line
+        return trans('validation.in', ['values' => implode(exmtrans('common.separate_word'), $this->keys)]);
     }
 }

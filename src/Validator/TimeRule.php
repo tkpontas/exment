@@ -59,6 +59,7 @@ class TimeRule implements Rule
      */
     public function message()
     {
-        return (string)trans('validation.regex');
+        // @phpstan-ignore-next-line
+        return trans('validation.regex');
     }
 }

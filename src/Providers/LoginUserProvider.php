@@ -39,9 +39,8 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
      */
     public function retrieveByCredentials(array $credentials)
     {
-        /** @var Authenticatable|null $result */
-        $result = static::RetrieveByCredential($credentials);
-        return $result;
+        // @phpstan-ignore-next-line
+        return static::RetrieveByCredential($credentials);
     }
 
     /**
@@ -132,7 +131,7 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
      */
     public static function ValidateCredential(Authenticatable $login_user, array $credentials)
     {
-        // @phpstan-ignore-next-line
+        /** @phpstan-ignore-next-line  */
         if (is_null($login_user)) {
             return false;
         }

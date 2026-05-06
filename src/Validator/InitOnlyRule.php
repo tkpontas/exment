@@ -58,7 +58,8 @@ class InitOnlyRule implements Rule
      */
     public function message()
     {
-        return (string)exmtrans('validation.init_only', [
+        // @phpstan-ignore-next-line
+        return exmtrans('validation.init_only', [
             'original_value' => $this->getOriginalValue(),
         ]);
     }

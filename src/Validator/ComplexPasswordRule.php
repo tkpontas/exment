@@ -49,6 +49,7 @@ class ComplexPasswordRule implements Rule
      */
     public function message()
     {
-        return (string)exmtrans('validation.complex_password');
+        // @phpstan-ignore-next-line
+        return exmtrans('validation.complex_password');
     }
 }

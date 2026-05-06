@@ -183,19 +183,16 @@ class RouteOAuthServiceProvider extends ServiceProvider
         parent::boot();
 
         if (canConnection() && hasTable(SystemTableName::SYSTEM) && System::api_available()) {
-            /** @var AuthorizationServer $authServer */
-            $authServer = app(AuthorizationServer::class);
-            /** @var \DateInterval $tokenExpiry */
-            $tokenExpiry = Passport::tokensExpireIn();
-
-            $authServer->enableGrantType(
+            // @phpstan-ignore-next-line
+            app(AuthorizationServer::class)->enableGrantType(
                 $this->makeApiKeyGrant(),
-                $tokenExpiry
+                Passport::tokensExpireIn()
             );
 
-            $authServer->enableGrantType(
+            // @phpstan-ignore-next-line
+            app(AuthorizationServer::class)->enableGrantType(
                 $this->makePasswordGrant(),
-                $tokenExpiry
+                Passport::tokensExpireIn()
             );
         }
     }
@@ -205,13 +202,12 @@ class RouteOAuthServiceProvider extends ServiceProvider
      */
     protected function makeApiKeyGrant()
     {
-        /** @var RefreshTokenRepository $refreshTokenRepository */
-        $refreshTokenRepository = $this->app->make(RefreshTokenRepository::class);
-        $grant = new ApiKeyGrant($refreshTokenRepository);
+        $grant = new ApiKeyGrant(
+            $this->app->make(RefreshTokenRepository::class)
+        );
 
-        /** @var \DateInterval $refreshTokenTTL */
-        $refreshTokenTTL = Passport::refreshTokensExpireIn();
-        $grant->setRefreshTokenTTL($refreshTokenTTL);
+        // @phpstan-ignore-next-line
+        $grant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
         return $grant;
     }
@@ -221,16 +217,13 @@ class RouteOAuthServiceProvider extends ServiceProvider
      */
     protected function makePasswordGrant()
     {
-        /** @var Bridge\UserRepository $userRepository */
-        $userRepository = $this->app->make(Bridge\UserRepository::class);
-        /** @var Bridge\RefreshTokenRepository $refreshTokenRepository */
-        $refreshTokenRepository = $this->app->make(Bridge\RefreshTokenRepository::class);
+        $grant = new PasswordGrant(
+            $this->app->make(Bridge\UserRepository::class),
+            $this->app->make(Bridge\RefreshTokenRepository::class)
+        );
 
-        $grant = new PasswordGrant($userRepository, $refreshTokenRepository);
-
-        /** @var \DateInterval $refreshTokenTTL */
-        $refreshTokenTTL = Passport::refreshTokensExpireIn();
-        $grant->setRefreshTokenTTL($refreshTokenTTL);
+        // @phpstan-ignore-next-line
+        $grant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
         return $grant;
     }

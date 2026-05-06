@@ -45,11 +45,8 @@ class PluginServiceProvider extends ServiceProvider
 
         // loop
         foreach ($pluginPublics as $pluginScriptStyle) {
-            /** @var \Exceedone\Exment\Services\Plugin\PluginPublicBase $pluginScriptStyle */
-            $plugin = $pluginScriptStyle->_plugin();
-            /** @var string $prefix */
-            $prefix = config('admin.route.prefix');
-            $this->pluginScriptStyleRoute($plugin, $prefix, 'admin_plugin_public');
+            // @phpstan-ignore-next-line
+            $this->pluginScriptStyleRoute($pluginScriptStyle->_plugin(), config('admin.route.prefix'), 'admin_plugin_public');
         }
     }
 
@@ -152,32 +149,30 @@ class PluginServiceProvider extends ServiceProvider
                 }
 
                 foreach ($routes as $route) {
-                    /** @var mixed $methodValue */
-                    $methodValue = array_get($route, 'method');
-                    $methods = is_string($methodValue) ? [$methodValue] : $methodValue;
+                    $method = array_get($route, 'method');
+                    $methods = is_string($method) ? [$method] : $method;
                     $plugin_name = $isApi ? 'PluginApiController' : 'PluginPageController';
+                    // @phpstan-ignore-next-line
                     foreach ($methods as $method) {
-                        /** @var string $methodStr */
-                        $methodStr = ($method === "") ? 'get' : $method;
-                        $methodStr = strtolower($methodStr);
+                        if ($method === "") {
+                            $method = 'get';
+                        }
+                        $method = strtolower($method);
                         // call method in these http method
-                        if (in_array($methodStr, ['get', 'post', 'put', 'patch', 'delete'])) {
-                            /** @var string $func */
+                        if (in_array($method, ['get', 'post', 'put', 'patch', 'delete'])) {
                             $func = array_get($route, 'function');
-                            /** @var string $uri */
-                            $uri = array_get($route, 'uri');
-                            $router = Route::{$methodStr}($uri, $plugin_name . '@'. $func);
+                            // @phpstan-ignore-next-line
+                            $router = Route::{$method}(array_get($route, 'uri'), $plugin_name . '@'. $func);
                             $router->middleware(ApiScope::getScopeString($isApi, ApiScope::PLUGIN));
-                            $router->name("exment.plugins.{$plugin->id}.{$methodStr}.{$func}");
+                            $router->name("exment.plugins.{$plugin->id}.{$method}.{$func}");
                         }
                     }
                 }
             });
         }
 
-        /** @var string $adminPrefix */
-        $adminPrefix = config('admin.route.prefix');
-        $this->pluginScriptStyleRoute($plugin, $adminPrefix, 'admin_plugin_public');
+        // @phpstan-ignore-next-line
+        $this->pluginScriptStyleRoute($plugin, config('admin.route.prefix'), 'admin_plugin_public');
     }
 
     /**
@@ -199,16 +194,17 @@ class PluginServiceProvider extends ServiceProvider
                 continue;
             }
 
-            /** @var mixed $methodValue */
-            $methodValue = array_get($route, 'method');
-            $methods = is_string($methodValue) ? [$methodValue] : $methodValue;
+            $method = array_get($route, 'method');
+            $methods = is_string($method) ? [$method] : $method;
+            // @phpstan-ignore-next-line
             foreach ($methods as $method) {
-                /** @var string $methodStr */
-                $methodStr = ($method === "") ? 'get' : $method;
-                $methodStr = strtolower($methodStr);
+                if ($method === "") {
+                    $method = 'get';
+                }
+                $method = strtolower($method);
 
                 // if not get, continue.
-                if ($methodStr != 'get') {
+                if ($method != 'get') {
                     continue;
                 }
                 return true;

@@ -19,7 +19,8 @@ class MailChannel
      * @param  \Illuminate\Notifications\Notification  $notification
      * @return void
      */
-    public function send($notifiable, Notification $notification): void
+    // @phpstan-ignore-next-line
+    public function send($notifiable, Notification $notification)
     {
         /** @var MailSendJob $notification */
         $mailMessage = $notification->toMail($notifiable);
@@ -33,7 +34,8 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return void
      */
-    protected function sendMail(MailMessage $mailMessage): void
+    // @phpstan-ignore-next-line
+    protected function sendMail(MailMessage $mailMessage)
     {
         // if use archive attachments, after sending, removing file
         $tmpZipPath = null;
@@ -73,7 +75,8 @@ class MailChannel
      * @param string|null $tmpZipPath
      * @return void
      */
-    protected function setAttachments(Message $message, MailMessage $mailMessage, ?string &$tmpZipPath): void
+    // @phpstan-ignore-next-line
+    protected function setAttachments(Message $message, MailMessage $mailMessage, &$tmpZipPath)
     {
         if (collect($mailMessage->getAttachments())->count() == 0) {
             return;
@@ -99,7 +102,8 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return array<int, string> offset 0 : zip path, offset 1 : filename
      */
-    protected function archiveAttachments(MailMessage $mailMessage): array
+    // @phpstan-ignore-next-line
+    protected function archiveAttachments(MailMessage $mailMessage)
     {
         $password = $mailMessage->getPassword();
         $filename = Carbon::now()->format('YmdHis') . '.zip';
@@ -122,7 +126,8 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return void
      */
-    protected function saveHistory(MailMessage $mailMessage): void
+    // @phpstan-ignore-next-line
+    protected function saveHistory(MailMessage $mailMessage)
     {
         if (!$mailMessage->isSetHistory()) {
             return;

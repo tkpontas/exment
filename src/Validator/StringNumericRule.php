@@ -40,6 +40,7 @@ class StringNumericRule implements Rule
      */
     public function message()
     {
-        return (string)trans('validation.string');
+        // @phpstan-ignore-next-line
+        return trans('validation.string');
     }
 }

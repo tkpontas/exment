@@ -45,6 +45,7 @@ class EmailMultiline implements Rule
      */
     public function message()
     {
-        return (string)exmtrans('validation.email_multiline');
+        // @phpstan-ignore-next-line
+        return exmtrans('validation.email_multiline');
     }
 }

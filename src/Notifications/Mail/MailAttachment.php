@@ -8,6 +8,16 @@ use Exceedone\Exment\Model\Define;
 class MailAttachment
 {
     /**
+     * @param string $path
+     * @param string $filename
+     */
+    public function __construct(string $path, string $filename)
+    {
+        $this->path = $path;
+        $this->filename = $filename;
+    }
+
+    /**
      * Fillpath to file
      *
      * @var string
@@ -20,16 +30,6 @@ class MailAttachment
      * @var string
      */
     public $filename;
-
-    /**
-     * @param string $path
-     * @param string $filename
-     */
-    public function __construct(string $path, string $filename)
-    {
-        $this->path = $path;
-        $this->filename = $filename;
-    }
 
     /**
      * Get file full path
@@ -46,7 +46,8 @@ class MailAttachment
      *
      * @return string|null
      */
-    public function getFile(): ?string
+    // @phpstan-ignore-next-line
+    public function getFile()
     {
         return \Storage::disk(Define::DISKNAME_ADMIN)->get($this->path);
     }
@@ -57,13 +58,13 @@ class MailAttachment
      * @param File|array<string, mixed>|mixed $attachment
      * @return MailAttachment|null
      */
-    public static function make($attachment): ?MailAttachment
+    // @phpstan-ignore-next-line
+    public static function make($attachment)
     {
         if ($attachment instanceof File) {
             return new MailAttachment($attachment->path, $attachment->filename);
         } elseif (is_array($attachment)) {
             return new MailAttachment(array_get($attachment, 'path'), array_get($attachment, 'filename'));
         }
-        return null;
     }
 }

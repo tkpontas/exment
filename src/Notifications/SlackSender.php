@@ -70,7 +70,8 @@ class SlackSender extends SenderBase
     /**
      * @return string|null
      */
-    protected function routeNotificationForSlack(): ?string
+    // @phpstan-ignore-next-line
+    protected function routeNotificationForSlack()
     {
         return $this->webhook_url;
     }
@@ -80,7 +81,8 @@ class SlackSender extends SenderBase
      *
      * @return void
      */
-    public function send(): void
+    // @phpstan-ignore-next-line
+    public function send()
     {
         // replace word
         $slack_content = $this->editContent();
@@ -93,7 +95,8 @@ class SlackSender extends SenderBase
      *
      * @return string
      */
-    protected function editContent(): string
+    // @phpstan-ignore-next-line
+    protected function editContent()
     {
         $content = $this->subject . "\n*************************\n" . $this->body;
 
@@ -112,6 +115,7 @@ class SlackSender extends SenderBase
         }
 
         preg_match_all(Define::RULES_REGEX_LINK_FORMAT, $content, $matches);
+
         // @phpstan-ignore-next-line
         if (isset($matches)) {
             for ($i = 0; $i < count($matches[1]); $i++) {

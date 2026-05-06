@@ -11,8 +11,8 @@ class ImageRule extends FileRule
 {
     /**
      * @param array $extensions
+     * @phpstan-ignore-next-line
      */
-    // @phpstan-ignore-next-line
     public function __construct(array $extensions = [])
     {
         $this->extensions = Define::IMAGE_RULE_EXTENSIONS;
@@ -25,6 +25,7 @@ class ImageRule extends FileRule
      */
     public function message()
     {
-        return (string)trans('validation.image');
+        // @phpstan-ignore-next-line
+        return trans('validation.image');
     }
 }

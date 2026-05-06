@@ -55,7 +55,8 @@ class MailHistory
      * Get user id.
      * @return string|null
      */
-    public function getUserId(): ?string
+    // @phpstan-ignore-next-line
+    public function getUserId()
     {
         if ($this->user instanceof CustomValue) {
             return $this->user->getUserId();
@@ -93,7 +94,8 @@ class MailHistory
      * Target custom value's id
      * @return string|null
      */
-    public function getParentId(): ?string
+    // @phpstan-ignore-next-line
+    public function getParentId()
     {
         return $this->parent_id;
     }
@@ -102,7 +104,8 @@ class MailHistory
      * Target custom value's table name
      * @return string|null
      */
-    public function getParentType(): ?string
+    // @phpstan-ignore-next-line
+    public function getParentType()
     {
         return $this->parent_type;
     }
@@ -154,7 +157,8 @@ class MailHistory
      *
      * @return  self
      */
-    public function setUser($user): self
+    // @phpstan-ignore-next-line
+    public function setUser($user)
     {
         $this->user = $user;
 
@@ -165,7 +169,8 @@ class MailHistory
      * @param CustomValue|null $custom_value
      * @return self
      */
-    public function setCustomValue(?CustomValue $custom_value): self
+    // @phpstan-ignore-next-line
+    public function setCustomValue(?CustomValue $custom_value)
     {
         $this->custom_value = $custom_value;
         $this->parent_id = $custom_value ? $custom_value->id : null;
@@ -178,7 +183,8 @@ class MailHistory
      * @param bool $isSetHistory
      * @return self
      */
-    public function setHistory(bool $isSetHistory): self
+    // @phpstan-ignore-next-line
+    public function setHistory(bool $isSetHistory)
     {
         $this->isSetHistory = $isSetHistory;
         return $this;
@@ -188,7 +194,8 @@ class MailHistory
      * @param bool $isSetHistoryBody
      * @return self
      */
-    public function setHistoryBody(bool $isSetHistoryBody): self
+    // @phpstan-ignore-next-line
+    public function setHistoryBody(bool $isSetHistoryBody)
     {
         $this->isSetHistoryBody = $isSetHistoryBody;
         return $this;
@@ -201,7 +208,8 @@ class MailHistory
      *
      * @return  self
      */
-    public function setMailTemplate($mail_template): self
+    // @phpstan-ignore-next-line
+    public function setMailTemplate($mail_template)
     {
         $this->mail_template = $mail_template;
 

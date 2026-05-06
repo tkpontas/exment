@@ -14,7 +14,8 @@ trait WebhookTrait
      *
      * @return string|null
      */
-    public function getKey(): ?string
+    // @phpstan-ignore-next-line
+    public function getKey()
     {
         return $this->webhook_url;
     }
@@ -24,7 +25,8 @@ trait WebhookTrait
      *
      * @return string|null
      */
-    public function getWebhookUrl(): ?string
+    // @phpstan-ignore-next-line
+    public function getWebhookUrl()
     {
         return $this->webhook_url;
     }

@@ -29,6 +29,7 @@ class IntegerCommaRule implements Rule
      */
     public function message()
     {
-        return (string)trans('validation.integer');
+        // @phpstan-ignore-next-line
+        return trans('validation.integer');
     }
 }

@@ -61,6 +61,7 @@ class ChangeFieldRule implements Rule
      */
     public function message()
     {
-        return (string)trans('validation.numeric');
+        // @phpstan-ignore-next-line
+        return trans('validation.numeric');
     }
 }

@@ -19,7 +19,6 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
      */
     public function retrieveById($identifier)
     {
-        return null;
     }
 
     /**
@@ -31,7 +30,6 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
      */
     public function retrieveByToken($identifier, $token)
     {
-        return null;
     }
 
     /**
@@ -67,10 +65,9 @@ class PublicFormUserProvider extends \Illuminate\Auth\EloquentUserProvider
      *
      * @param Authenticatable $user
      * @param array<string, mixed> $credentials
-     * @return bool
+     * @return void|bool
      */
     public function validateCredentials(Authenticatable $user, array $credentials)
     {
-        return true;
     }
 }
