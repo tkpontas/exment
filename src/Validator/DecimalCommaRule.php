@@ -29,7 +29,6 @@ class DecimalCommaRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return trans('validation.numeric');
     }
 }

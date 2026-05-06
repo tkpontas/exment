@@ -79,7 +79,6 @@ class FileRequredRule implements ImplicitRule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return trans('validation.required');
     }
 }

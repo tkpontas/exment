@@ -53,7 +53,6 @@ class DuplicateRelationRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return exmtrans('validation.duplicate_relation');
     }
 }

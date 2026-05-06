@@ -39,6 +39,5 @@ abstract class SenderBase
      *
      * @return void
      */
-    // @phpstan-ignore-next-line
     abstract public function send();
 }

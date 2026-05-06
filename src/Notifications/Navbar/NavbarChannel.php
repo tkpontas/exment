@@ -14,7 +14,6 @@ class NavbarChannel
      * @param Notification $notification
      * @return void
      */
-    // @phpstan-ignore-next-line
     public function send($notifiable, Notification $notification)
     {
         /** @var NavbarJob $notification */

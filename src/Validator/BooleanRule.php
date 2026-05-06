@@ -56,7 +56,6 @@ class BooleanRule implements Rule
             $values[] = $v;
         }
 
-        // @phpstan-ignore-next-line
         return trans('validation.in', [
             'values' => implode(",", $values)
         ]);

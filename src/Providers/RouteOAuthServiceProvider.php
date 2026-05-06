@@ -183,15 +183,15 @@ class RouteOAuthServiceProvider extends ServiceProvider
         parent::boot();
 
         if (canConnection() && hasTable(SystemTableName::SYSTEM) && System::api_available()) {
-            // @phpstan-ignore-next-line
             app(AuthorizationServer::class)->enableGrantType(
                 $this->makeApiKeyGrant(),
+                // @phpstan-ignore-next-line
                 Passport::tokensExpireIn()
             );
 
-            // @phpstan-ignore-next-line
             app(AuthorizationServer::class)->enableGrantType(
                 $this->makePasswordGrant(),
+                // @phpstan-ignore-next-line
                 Passport::tokensExpireIn()
             );
         }

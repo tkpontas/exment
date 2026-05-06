@@ -104,7 +104,6 @@ class NavbarSender extends SenderBase
      *
      * @return void
      */
-    // @phpstan-ignore-next-line
     public function send()
     {
         if ($this->user instanceof CustomValue) {

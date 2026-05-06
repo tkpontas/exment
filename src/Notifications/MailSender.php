@@ -73,7 +73,6 @@ class MailSender extends SenderBase
      * @param mixed $to
      * @return MailSender
      */
-    // @phpstan-ignore-next-line
     public static function make($mail_template, $to)
     {
         $sender = new MailSender($mail_template, $to);
@@ -276,7 +275,6 @@ class MailSender extends SenderBase
      *
      * @return void
      */
-    // @phpstan-ignore-next-line
     public function send()
     {
         $this->sendMail();
@@ -286,7 +284,6 @@ class MailSender extends SenderBase
     /**
      * @return void
      */
-    // @phpstan-ignore-next-line
     protected function sendMail()
     {
         // get subject
@@ -319,7 +316,6 @@ class MailSender extends SenderBase
     /**
      * @return void
      */
-    // @phpstan-ignore-next-line
     protected function sendPasswordMail()
     {
         if (!boolval($this->getUsePassword())) {
@@ -370,7 +366,6 @@ class MailSender extends SenderBase
      * @param array<string, mixed> $replaceOptions
      * @return array<int, string> offset 0 : $body, 1 : Type(PLAIN, HTML)
      */
-    // @phpstan-ignore-next-line
     protected function getBodyAndBodyType($body, array $prms = [], array $replaceOptions = [])
     {
         $body = NotifyService::replaceWord($body, $this->getCustomValue(), $prms, $replaceOptions);

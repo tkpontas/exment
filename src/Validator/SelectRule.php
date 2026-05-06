@@ -58,7 +58,6 @@ class SelectRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return trans('validation.in', ['values' => implode(exmtrans('common.separate_word'), $this->keys)]);
     }
 }

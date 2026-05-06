@@ -23,7 +23,6 @@ class FaviconRule extends FileRule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return trans('validation.image');
     }
 }

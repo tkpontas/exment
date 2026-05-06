@@ -32,7 +32,6 @@ class MicrosoftTeamsChannel
      * @param  Notification  $notification
      * @return void
      */
-    // @phpstan-ignore-next-line
     public function send($notifiable, Notification $notification)
     {
         if (! $url = $notifiable->routeNotificationFor('microsoft_teams', $notification)) {
@@ -51,7 +50,6 @@ class MicrosoftTeamsChannel
      * @param mixed $message
      * @return array<string, mixed>
      */
-    // @phpstan-ignore-next-line
     protected function buildJsonPayload($message)
     {
         return [

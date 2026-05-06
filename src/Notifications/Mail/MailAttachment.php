@@ -46,7 +46,6 @@ class MailAttachment
      *
      * @return string|null
      */
-    // @phpstan-ignore-next-line
     public function getFile()
     {
         return \Storage::disk(Define::DISKNAME_ADMIN)->get($this->path);
@@ -58,7 +57,6 @@ class MailAttachment
      * @param File|array<string, mixed>|mixed $attachment
      * @return MailAttachment|null
      */
-    // @phpstan-ignore-next-line
     public static function make($attachment)
     {
         if ($attachment instanceof File) {

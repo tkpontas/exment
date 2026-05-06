@@ -62,7 +62,6 @@ class PasswordHistoryRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return exmtrans('validation.password_history');
     }
 }

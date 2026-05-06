@@ -118,7 +118,6 @@ class CustomValueRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return exmtrans('validation.not_has_custom_value', [
             'table_view_name' => $this->custom_table->table_view_name,
             'value' => null,

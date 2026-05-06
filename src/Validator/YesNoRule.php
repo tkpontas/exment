@@ -41,7 +41,6 @@ class YesNoRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return trans('validation.in', [
             'values' => '0,1,YES,NO,yes,no,true,false'
         ]);

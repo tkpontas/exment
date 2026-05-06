@@ -70,7 +70,6 @@ class SlackSender extends SenderBase
     /**
      * @return string|null
      */
-    // @phpstan-ignore-next-line
     protected function routeNotificationForSlack()
     {
         return $this->webhook_url;
@@ -81,7 +80,6 @@ class SlackSender extends SenderBase
      *
      * @return void
      */
-    // @phpstan-ignore-next-line
     public function send()
     {
         // replace word
@@ -95,7 +93,6 @@ class SlackSender extends SenderBase
      *
      * @return string
      */
-    // @phpstan-ignore-next-line
     protected function editContent()
     {
         $content = $this->subject . "\n*************************\n" . $this->body;

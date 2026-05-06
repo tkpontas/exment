@@ -84,7 +84,6 @@ class PluginNamespaceRule implements Rule
     public function message()
     {
         $classes = implode(exmtrans('common.separate_word'), $this->errors);
-        // @phpstan-ignore-next-line
         return exmtrans('plugin.error.class_wrongnamespace', ['classes' => $classes]);
     }
 }

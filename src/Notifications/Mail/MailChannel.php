@@ -19,7 +19,6 @@ class MailChannel
      * @param  \Illuminate\Notifications\Notification  $notification
      * @return void
      */
-    // @phpstan-ignore-next-line
     public function send($notifiable, Notification $notification)
     {
         /** @var MailSendJob $notification */
@@ -34,7 +33,6 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return void
      */
-    // @phpstan-ignore-next-line
     protected function sendMail(MailMessage $mailMessage)
     {
         // if use archive attachments, after sending, removing file
@@ -75,7 +73,6 @@ class MailChannel
      * @param string|null $tmpZipPath
      * @return void
      */
-    // @phpstan-ignore-next-line
     protected function setAttachments(Message $message, MailMessage $mailMessage, &$tmpZipPath)
     {
         if (collect($mailMessage->getAttachments())->count() == 0) {
@@ -102,7 +99,6 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return array<int, string> offset 0 : zip path, offset 1 : filename
      */
-    // @phpstan-ignore-next-line
     protected function archiveAttachments(MailMessage $mailMessage)
     {
         $password = $mailMessage->getPassword();
@@ -126,7 +122,6 @@ class MailChannel
      * @param MailMessage $mailMessage
      * @return void
      */
-    // @phpstan-ignore-next-line
     protected function saveHistory(MailMessage $mailMessage)
     {
         if (!$mailMessage->isSetHistory()) {

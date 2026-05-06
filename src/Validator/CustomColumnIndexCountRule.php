@@ -58,7 +58,6 @@ class CustomColumnIndexCountRule implements Rule
      */
     public function message()
     {
-        // @phpstan-ignore-next-line
         return exmtrans('validation.max_table_index', [
             'count' => config('exment.column_index_enabled_count', 20),
         ]);
