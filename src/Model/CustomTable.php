@@ -1320,6 +1320,16 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 array_set($json, $suuidKey, $customForm->suuid);
             }
         }
+
+        // If refer_column holds a numeric column ID, also export the column name so it can
+        // be resolved correctly when imported into another environment where IDs differ.
+        $referColumn = array_get($json, 'options.refer_column');
+        if (isset($referColumn) && is_numeric($referColumn)) {
+            $column = CustomColumn::getEloquent((int)$referColumn);
+            if ($column) {
+                array_set($json, 'options.refer_column_name', $column->column_name);
+            }
+        }
     }
 
     protected static function importReplaceJson(&$json, $options = [])
@@ -1328,6 +1338,9 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         foreach (static::$templateFormOptionMap as $optionKey) {
             array_forget($json, 'options.' . $optionKey . '_suuid');
         }
+
+        // refer_column_name is a helper key added during export; strip it so it is never stored in options.
+        array_forget($json, 'options.refer_column_name');
     }
 
     protected function importSetValue(&$json, $options = [])
@@ -1370,6 +1383,20 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 $this->setOption($optionKey, strval($customForm->id));
             }
         }
+
+        // Resolve refer_column: if a helper column name was exported, find the matching column
+        // in this environment and update refer_column to that column's ID.
+        $referColumnName = array_get($json, 'options.refer_column_name');
+        if (!is_nullorempty($referColumnName)) {
+            $column = $this->custom_columns()
+                ->where('column_name', $referColumnName)
+                ->first();
+            if ($column) {
+                $this->setOption('refer_column', strval($column->id));
+                $updated = true;
+            }
+        }
+
         if ($updated) {
             $this->save();
         }

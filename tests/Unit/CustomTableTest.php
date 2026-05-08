@@ -459,8 +459,9 @@ class CustomTableTest extends UnitTestBase
             });
         $this->assertNotNull($sourceColumn);
 
+        // Use the numeric column ID, which is what the UI stores in refer_column.
         $sourceTable->setOption('active_qr_flg', true);
-        $sourceTable->setOption('refer_column', $sourceColumn->column_name);
+        $sourceTable->setOption('refer_column', strval($sourceColumn->id));
         $sourceTable->setOption('form_after_read', $sourceForm->id);
         $sourceTable->setOption('active_jan_flg', true);
         $sourceTable->setOption('form_after_create_jan_code', $sourceForm->id);
@@ -469,6 +470,12 @@ class CustomTableTest extends UnitTestBase
 
         $export = $this->createTableOnlyTemplateExportData($tableName);
 
+        // Verify the export contains the helper column name alongside the numeric ID.
+        $exportedTableJson = $export['custom_tables'][0];
+        $this->assertEquals($sourceColumn->column_name, array_get($exportedTableJson, 'options.refer_column_name'),
+            'Export should include refer_column_name as a helper field');
+
+        $sourceColumnName = $sourceColumn->column_name;
         $sourceTable->delete();
 
         $importer = new TemplateImporter();
@@ -477,7 +484,21 @@ class CustomTableTest extends UnitTestBase
         $importedTable = CustomTable::getEloquent($tableName);
         $this->assertInstanceOf(CustomTable::class, $importedTable);
 
-        $this->assertEquals($sourceColumn->column_name, $importedTable->getOption('refer_column'));
+        // After import, refer_column should be the new column's numeric ID (not the old ID),
+        // and refer_column_name must NOT be persisted as an option.
+        $this->assertNull($importedTable->getOption('refer_column_name'),
+            'refer_column_name helper field must not be persisted after import');
+
+        $importedColumn = $importedTable->custom_columns_cache
+            ->first(function ($column) use ($sourceColumnName) {
+                return $column->column_name === $sourceColumnName;
+            });
+        $this->assertNotNull($importedColumn, "Imported table should have a column named '{$sourceColumnName}'");
+        $this->assertEquals(
+            strval($importedColumn->id),
+            strval($importedTable->getOption('refer_column')),
+            'refer_column should be remapped to the correct column ID in the imported environment'
+        );
 
         $importedFormIds = CustomForm::where('custom_table_id', $importedTable->id)
             ->pluck('id')
