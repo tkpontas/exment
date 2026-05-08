@@ -11,6 +11,7 @@ class DashboardBoxSystemPage extends EnumBase
     public const EDITOR = 3;
     public const HTML = 4;
     public const NOTIFY_NAVBAR = 4;
+    public const BARCODE = 6;
 
     protected static $options = [
         'guideline' => ['id' => 1, 'name' => 'guideline', 'class' => SystemItems\Guideline::class],
