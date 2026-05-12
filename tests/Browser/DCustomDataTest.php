@@ -199,8 +199,7 @@ class DCustomDataTest extends ExmentKitTestCase
         ;
         // Check custom data
         $this->visit(admin_url('data/exmenttest_data/'. $row->id . '/edit'))
-                // ->seeIsSelected('value[select2value]', 'value1')
-                ->see('value1')
+                ->seeInField('value[select2value]', 'value1')
             /** @phpstan-ignore-next-line */
                 ->seeInField('value[yesno]', 1)
         ;
@@ -300,12 +299,9 @@ class DCustomDataTest extends ExmentKitTestCase
             ->seeInElement('h1', 'unicode_data_table')
             ->seeInElement('th', 'select_multiple')
             ->seeInElement('th', 'select_valtext_multiple')
-            // ->seeInElement('td.column-select_multiple', '日本')
-            // ->seeInElement('td.column-select_valtext_multiple', '北海道')
-            // ->seeInElement('td.column-select_valtext_multiple', '四国')
-            ->see('日本')
-            ->see('北海道')
-            ->see('四国')
+            ->seeInElement('td.column-select_multiple', '日本')
+            ->seeInElement('td.column-select_valtext_multiple', '北海道')
+            ->seeInElement('td.column-select_valtext_multiple', '四国')
         ;
     }
 
@@ -324,12 +320,9 @@ class DCustomDataTest extends ExmentKitTestCase
             ->seeInElement('h1', 'unicode_data_table')
             ->seeInElement('th', 'select_multiple')
             ->seeInElement('th', 'select_valtext_multiple')
-            // ->seeInElement('td.column-select_multiple', '日本')
-            // ->seeInElement('td.column-select_valtext_multiple', '北海道')
-            // ->seeInElement('td.column-select_valtext_multiple', '四国')
-            ->see('日本')
-            ->see('北海道')
-            ->see('四国')
+            ->seeInElement('td.column-select_multiple', '日本')
+            ->seeInElement('td.column-select_valtext_multiple', '北海道')
+            ->seeInElement('td.column-select_valtext_multiple', '四国')
         ;
     }
 
@@ -344,21 +337,18 @@ class DCustomDataTest extends ExmentKitTestCase
         $table_name = \getDBTableName('custom_value_view_all');
         $colname1 = CustomColumn::getEloquent('index_text', 'custom_value_view_all')->getIndexColumnName();
         $sort_str = "_sort%5Bcolumn%5D={$table_name}.{$colname1}&_sort%5Btype%5D=-1&_sort%5Bdirect%5D=1";
-        // $row = \DB::table($table_name)->whereNull('deleted_at')->orderBy('value->index_text', 'desc')->first();
-        // $row = json_decode($row->value);
-        $row = \DB::table($table_name)->whereNull('deleted_at')->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(value, '$.index_text')) DESC")->first();
+        $row = \DB::table($table_name)->whereNull('deleted_at')->orderBy('value->index_text', 'desc')->first();
         $row = json_decode($row->value);
 
         // Check custom view data
         $this->visit(admin_url("data/custom_value_view_all?$sort_str"))
-             ->see($row->index_text)
+            ->seeInElement('td.column-index_text', $row->index_text)
         ;
 
         $sort_str = "_sort%5Bcolumn%5D={$table_name}.id&_sort%5Btype%5D=1&_sort%5Bdirect%5D=1";
         // Check custom view data
         $this->visit(admin_url("data/custom_value_view_all?$sort_str"))
-            // ->seeInElement('td.column-id', '1')
-            ->seeInElement('th', 'id')
+            ->seeInElement('td.column-id', '1')
         ;
     }
 
@@ -390,9 +380,8 @@ class DCustomDataTest extends ExmentKitTestCase
 
         // Check custom view data
         $this->visit(admin_url("data/all_columns_table_fortest?$group_str"))
-            ->see($group_key)
-            // ->seeInElement('div.box-footer.table-footer', "全 <b>$count</b>")
-            ->see($count)
+            ->seeInElement('td.column-date', $group_key)
+            ->seeInElement('div.box-footer.table-footer', "全 <b>$count</b>")
         ;
     }
 
@@ -421,9 +410,8 @@ class DCustomDataTest extends ExmentKitTestCase
 
         // Check custom view data
         $this->visit(admin_url("data/all_columns_table_fortest?$group_str"))
-            // ->seeInElement('td.column-date', '-')
-            // ->seeInElement('div.box-footer.table-footer', "全 <b>$count</b>")
-            ->see($count)
+            ->seeInElement('td.column-date', '')
+            ->seeInElement('div.box-footer.table-footer', "全 <b>$count</b>")
         ;
     }
 }

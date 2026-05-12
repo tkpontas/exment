@@ -741,7 +741,6 @@ class CustomViewFilterTest extends UnitTestBase
                 return false;
             }
             $date = \Carbon\Carbon::parse($date);
-            $date = \Carbon\Carbon::create($date->year, $date->month, $date->day);
             $diff = \Carbon\Carbon::today()->diffInDays($date, false);
             return $diff <= 0;
         });
