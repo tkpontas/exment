@@ -39,13 +39,18 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
                         'replacedName' => [
                             'table_name' => 'from_custom_table_name',
                         ]
-                    ],
+                    ]
+                ],
+                'uniqueKeyClassName' => CustomTable::class,
+            ],
+            [
+                'replaceNames' => [
                     [
                         'replacingName' => 'to_custom_table_id',
                         'replacedName' => [
                             'table_name' => 'to_custom_table_name',
                         ]
-                    ],
+                    ]
                 ],
                 'uniqueKeyClassName' => CustomTable::class,
             ],
