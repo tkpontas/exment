@@ -411,6 +411,8 @@ class Define
         'data',
     ];
 
+
+    // @phpstan-ignore-next-line
     public static function FILE_OPTION()
     {
         // get max size
