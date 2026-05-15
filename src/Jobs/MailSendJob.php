@@ -33,6 +33,14 @@ class MailSendJob extends Notification implements ShouldQueue
 
 
     public function __construct($target_user_id = null, $notifyUserOnEmailFailureFlag = false)
+    // @phpstan-ignore-next-line
+    protected $userId;
+    // @phpstan-ignore-next-line
+    protected $finalUser;
+
+
+    // @phpstan-ignore-next-line
+    public function __construct($userId = null, $finalUser = false)
     {
         $this->target_user_id = $target_user_id;
         $this->notifyUserOnEmailFailureFlag = $notifyUserOnEmailFailureFlag;
@@ -44,6 +52,7 @@ class MailSendJob extends Notification implements ShouldQueue
      * @param  mixed  $notifiable
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function via($notifiable)
     {
         return [MailChannel::class];
@@ -93,6 +102,7 @@ class MailSendJob extends Notification implements ShouldQueue
     /**
      * Handle a job failure.
      */
+    // @phpstan-ignore-next-line
     public function failed($exception)
     {
         if ($this->notifyUserOnEmailFailureFlag) {
