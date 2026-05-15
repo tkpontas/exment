@@ -890,7 +890,7 @@ class DefaultGrid extends GridBase
     /**
      * Get the previous filter, sort order, page, etc. of the list from the session
      */
-    protected function loadGridParameters()
+    protected function loadGridParameters(): void
     {
         if (!boolval(config('exment.keep_grid_parameters', false))) {
             return;
