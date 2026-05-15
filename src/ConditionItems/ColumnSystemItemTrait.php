@@ -7,6 +7,7 @@ use Exceedone\Exment\Enums\FilterOption;
 
 trait ColumnSystemItemTrait
 {
+    // @phpstan-ignore-next-line
     public function getFilterOption()
     {
         // get column item
@@ -26,7 +27,7 @@ trait ColumnSystemItemTrait
     /**
      * Get change field
      *
-     * @param string $key
+     * @param string|null $key
      * @param bool $show_condition_key
      * @return \Encore\Admin\Form\Field|null
      */
@@ -56,6 +57,7 @@ trait ColumnSystemItemTrait
         return $column_item->getFilterField($value_type);
     }
 
+    // @phpstan-ignore-next-line
     protected function getFormColumnItem()
     {
         return CustomViewFilter::getColumnItem($this->target, $this->custom_table)

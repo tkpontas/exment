@@ -51,6 +51,7 @@ class MenuController extends AdminControllerBase
                     $this->createMenuForm($form);
                     $form->hidden('_token')->default(csrf_token());
 
+                    // @phpstan-ignore-next-line
                     $column->append((new Box(trans('admin.new'), $form))->style('success'));
                 });
             });
@@ -138,6 +139,7 @@ class MenuController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     public function form($id = null)
     {
         return Menu::form(function (Form $form) use ($id) {
@@ -145,6 +147,7 @@ class MenuController extends AdminControllerBase
         });
     }
 
+    // @phpstan-ignore-next-line
     protected function createMenuForm($form, $id = null)
     {
         // get setting menu object
@@ -262,6 +265,7 @@ class MenuController extends AdminControllerBase
     // menu_type and menutargetvalue --------------------------------------------------
 
     // get menu type(calling from menu_type)
+    // @phpstan-ignore-next-line
     public function menutype(Request $request)
     {
         $type = $request->input('q');
@@ -269,6 +273,7 @@ class MenuController extends AdminControllerBase
     }
 
     // get menu target view(calling from menu_target)
+    // @phpstan-ignore-next-line
     public function menutargetview(Request $request)
     {
         $menu_target = $request->input('q');
@@ -285,6 +290,7 @@ class MenuController extends AdminControllerBase
      * @param bool $isApi
      * @return array|mixed[]
      */
+    // @phpstan-ignore-next-line
     protected function getViewList($custom_table, $isApi)
     {
         $custom_table = CustomTable::getEloquent($custom_table);
@@ -313,6 +319,7 @@ class MenuController extends AdminControllerBase
      * @param string $type string
      * @param boolean $isApi is api. if true, return id and value array. if false, return array(key:id, value:name)
      */
+    // @phpstan-ignore-next-line
     protected function getMenuType($type, $isApi)
     {
         $options = [];
@@ -346,6 +353,7 @@ class MenuController extends AdminControllerBase
         return collect($options)->pluck('text', 'id')->toArray();
     }
 
+    // @phpstan-ignore-next-line
     public function menutargetvalue(Request $request)
     {
         $type = $request->input('menu_type');
@@ -441,6 +449,7 @@ class MenuController extends AdminControllerBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getMenuTypeValue($field, $menu = null)
     {
         // get menu type

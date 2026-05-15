@@ -14,6 +14,10 @@ class BootstrapPublicForm
 {
     use BootstrapTrait;
 
+    /**
+     * @param \Closure(Request): mixed $next
+     * @return mixed
+     */
     public function handle(Request $request, \Closure $next)
     {
         $this->setCssJs($request, $next);
@@ -43,10 +47,6 @@ class BootstrapPublicForm
         Ad::js(asset('lib/js/bignumber.min.js'));
 
         static::setCssJsList([
-            'vendor/exment/fullcalendar/core/main.min.css',
-            'vendor/exment/fullcalendar/daygrid/main.min.css',
-            'vendor/exment/fullcalendar/list/main.min.css',
-            'vendor/exment/fullcalendar/timegrid/main.min.css',
             'vendor/exment/css/common.css',
             // move to publicform
             //'vendor/exment/css/publicform.css',
@@ -67,15 +67,13 @@ class BootstrapPublicForm
             'vendor/exment/jquery/jquery.color.min.js',
             'vendor/exment/mathjs/math.min.js',
             'vendor/exment/js/numberformat.js',
-            'vendor/exment/fullcalendar/core/main.min.js',
-            'vendor/exment/fullcalendar/core/locales-all.min.js',
-            'vendor/exment/fullcalendar/interaction/main.min.js',
-            'vendor/exment/fullcalendar/daygrid/main.min.js',
-            'vendor/exment/fullcalendar/list/main.min.js',
-            'vendor/exment/fullcalendar/timegrid/main.min.js',
+            'vendor/exment/fullcalendar/index.global.min.js',
+            'vendor/exment/fullcalendar/locales-all.global.min.js',
+            'vendor/exment/fullcalendar/UltraDate.min.js',
             'vendor/exment/jstree/jstree.min.js',
             'vendor/exment/js/common_all.js',
             'vendor/exment/js/common.js',
+            'vendor/exment/js/file-required.js',
             'vendor/exment/js/calc.js',
             'vendor/exment/js/modal.js',
             'vendor/exment/js/changefield.js',
@@ -91,6 +89,9 @@ class BootstrapPublicForm
     }
 
 
+    /**
+     * @return void
+     */
     public static function setPublicFormCssJs(?PublicForm $public_form)
     {
         if ($public_form) {

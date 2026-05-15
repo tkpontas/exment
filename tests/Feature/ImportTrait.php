@@ -7,9 +7,13 @@ use PhpOffice\PhpSpreadsheet\Reader\Csv;
 
 trait ImportTrait
 {
+    /**
+     * @param mixed $file
+     * @return mixed
+     */
     protected function _getCsvArray($file)
     {
-        $original_locale = setlocale(LC_CTYPE, 0);
+        $original_locale = setlocale(LC_CTYPE, "0");
 
         // set C locale
         if (0 === strpos(PHP_OS, 'WIN')) {
@@ -24,11 +28,16 @@ trait ImportTrait
         $array = $spreadsheet->getActiveSheet()->toArray();
 
         // revert to original locale
+        // @phpstan-ignore-next-line
         setlocale(LC_CTYPE, $original_locale);
 
         return $array;
     }
 
+    /**
+     * @param string $file_path
+     * @return array<mixed>
+     */
     protected function _getXlsxArray($file_path)
     {
         $reader = IOFactory::createReader('Xlsx');

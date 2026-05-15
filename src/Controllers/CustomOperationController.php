@@ -17,6 +17,7 @@ use Exceedone\Exment\Enums\CustomOperationType;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Form\Field\ChangeField;
 use Exceedone\Exment\ConditionItems\ConditionItemBase;
+use Exceedone\Exment\Enums\OperationUpdateType;
 
 class CustomOperationController extends AdminControllerTableBase
 {
@@ -118,6 +119,7 @@ class CustomOperationController extends AdminControllerTableBase
         });
 
         $grid->tools(function (Grid\Tools $tools) {
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomTableMenuButton('operation', $this->custom_table));
         });
 
@@ -225,6 +227,10 @@ class CustomOperationController extends AdminControllerTableBase
                     ->removeRules(\Encore\Admin\Validator\HasOptionRule::class);
             },
             'valueCallback' => function ($data, $field) use ($custom_table) {
+                $operation_update_type = array_get($data, 'operation_update_type');
+                if ($operation_update_type == OperationUpdateType::DEFAULT && $field instanceof ChangeField) {
+                    $field->allowNull();
+                }
                 $item = ConditionItemBase::getItemByRequest($custom_table, array_get($data, 'view_column_target'));
                 if (is_null($item)) {
                     return null;
@@ -296,6 +302,7 @@ class CustomOperationController extends AdminControllerTableBase
         });
 
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('operation', $custom_table));
         });
         $form->disableEditingCheck(false);
@@ -303,6 +310,7 @@ class CustomOperationController extends AdminControllerTableBase
         return $form;
     }
 
+    // @phpstan-ignore-next-line
     protected function hasSystemPermission()
     {
         return $this->custom_table->hasPermission([Permission::CUSTOM_TABLE, Permission::CUSTOM_VIEW]);
@@ -311,6 +319,7 @@ class CustomOperationController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getFilterValue(Request $request)
     {
         if ($request->has('target_name') && $request->has('target_val')) {
@@ -333,6 +342,7 @@ class CustomOperationController extends AdminControllerTableBase
         $field->setElementName($element_name);
 
         $view = $field->render();
+        // @phpstan-ignore-next-line
         return \json_encode(['html' => $view->render(), 'script' => $field->getScript()]);
     }
 }

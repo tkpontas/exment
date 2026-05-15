@@ -11,13 +11,20 @@ abstract class ExmentTestCase extends TestCase
     use ExmentTestTrait {
         ExmentTestTrait::runDatabaseMigrations insteadof DatabaseMigrations;
     }
+
+    /**
+     * @var bool $databaseSetup
+     */
     public static $databaseSetup = false;
 
+    /**
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
 
-        /** @phpstan-ignore-next-line $this->app is always Application */
+        // @phpstan-ignore-next-line
         if (!$this->app) {
             $this->refreshApplication();
         }

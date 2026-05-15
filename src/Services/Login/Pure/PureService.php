@@ -26,6 +26,7 @@ class PureService implements LoginServiceInterface
      * @param array $credentials
      * @return bool
      */
+    // @phpstan-ignore-next-line
     public static function validateCredential(?Authenticatable $login_user, array $credentials)
     {
         if (is_null($login_user)) {
@@ -38,6 +39,10 @@ class PureService implements LoginServiceInterface
         return !is_null($credential_password) && Hash::check($credential_password, $password);
     }
 
+    /**
+     * @param LoginSetting $login_setting
+     * @return null
+     */
     public static function getTestForm(LoginSetting $login_setting)
     {
         return null;

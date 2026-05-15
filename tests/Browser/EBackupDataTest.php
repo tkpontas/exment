@@ -11,6 +11,8 @@ class EBackupDataTest extends ExmentKitTestCase
 {
     /**
      * pre-excecute process before test.
+     *
+     * @return void
      */
     protected function setUp(): void
     {
@@ -20,6 +22,8 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Initialize backup config.
+     *
+     * @return void
      */
     public function testInitializeBackupConfig()
     {
@@ -33,7 +37,7 @@ class EBackupDataTest extends ExmentKitTestCase
 
         try {
             !\ExmentDB::checkBackup();
-            /** @phpstan-ignore-next-line Dead catch - Exceedone\Exment\Exceptions\BackupRestoreCheckException is never thrown in the try block. */
+        // @phpstan-ignore-next-line
         } catch (BackupRestoreCheckException $ex) {
             $this->assertTrue(true);
             return;
@@ -53,12 +57,14 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * display backup page.
+     *
+     * @return void
      */
     public function testDisplayBackupData()
     {
         try {
             !\ExmentDB::checkBackup();
-            /** @phpstan-ignore-next-line Dead catch - Exceedone\Exment\Exceptions\BackupRestoreCheckException is never thrown in the try block. */
+        // @phpstan-ignore-next-line
         } catch (BackupRestoreCheckException $ex) {
             $this->assertTrue(true);
             return;
@@ -92,6 +98,8 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Backup data.
+     *
+     * @return void
      */
     public function testBackupDataSuccess1()
     {
@@ -100,6 +108,8 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Restore data.
+     *
+     * @return void
      */
     public function testRestoreDataSuccess1()
     {
@@ -108,12 +118,14 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Save backup config.
+     *
+     * @return void
      */
     public function testBackupConfigSave()
     {
         try {
             !\ExmentDB::checkBackup();
-            /** @phpstan-ignore-next-line Dead catch - Exceedone\Exment\Exceptions\BackupRestoreCheckException is never thrown in the try block. */
+        // @phpstan-ignore-next-line
         } catch (BackupRestoreCheckException $ex) {
             $this->assertTrue(true);
             return;
@@ -145,6 +157,8 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Backup data. --after setting change--
+     *
+     * @return void
      */
     public function testBackupDataSuccess2()
     {
@@ -153,6 +167,8 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Restore data. --after setting change--
+     *
+     * @return void
      */
     public function testRestoreDataSuccess2()
     {
@@ -161,12 +177,14 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Backup when config target is not selected.
+     *
+     * @return void
      */
     public function testBackupNoTarget()
     {
         try {
             !\ExmentDB::checkBackup();
-            /** @phpstan-ignore-next-line Dead catch - Exceedone\Exment\Exceptions\BackupRestoreCheckException is never thrown in the try block. */
+        // @phpstan-ignore-next-line
         } catch (BackupRestoreCheckException $ex) {
             $this->assertTrue(true);
             return;
@@ -184,6 +202,7 @@ class EBackupDataTest extends ExmentKitTestCase
         // check config no change
         $this->visit(admin_url('backup'))
                 ->seePageIs(admin_url('backup'))
+                // @phpstan-ignore-next-line
                 ->seeInField('backup_enable_automatic', $backup_enable_automatic ? 1 : 0);
 
         // loop target
@@ -194,11 +213,14 @@ class EBackupDataTest extends ExmentKitTestCase
         }
     }
 
+    /**
+     * @return void
+     */
     protected function backupData()
     {
         try {
             !\ExmentDB::checkBackup();
-            /** @phpstan-ignore-next-line Dead catch - Exceedone\Exment\Exceptions\BackupRestoreCheckException is never thrown in the try block. */
+        // @phpstan-ignore-next-line
         } catch (BackupRestoreCheckException $ex) {
             $this->assertTrue(true);
             return;
@@ -220,11 +242,14 @@ class EBackupDataTest extends ExmentKitTestCase
         ;
     }
 
+    /**
+     * @return void
+     */
     protected function restoreData()
     {
         try {
             !\ExmentDB::checkBackup();
-            /** @phpstan-ignore-next-line Dead catch - Exceedone\Exment\Exceptions\BackupRestoreCheckException is never thrown in the try block. */
+        // @phpstan-ignore-next-line
         } catch (BackupRestoreCheckException $ex) {
             $this->assertTrue(true);
             return;
@@ -246,6 +271,8 @@ class EBackupDataTest extends ExmentKitTestCase
 
     /**
      * Get all archive file path.
+     *
+     * @return array<mixed>
      */
     protected function getArchiveFiles()
     {

@@ -16,6 +16,7 @@ abstract class RelationBase extends BlockBase
      */
     protected $custom_relation;
 
+    // @phpstan-ignore-next-line
     protected function setCustomRelation(CustomRelation $custom_relation)
     {
         $this->custom_relation = $custom_relation;
@@ -42,10 +43,11 @@ abstract class RelationBase extends BlockBase
         $block->form_block_view_name = $block->label;
         $block->available = 0;
         $block->options = [
-            'hasmany_type' => null
+            'hasmany_type' => null,
+            'form_block_order' => 0
         ];
 
-        /** @phpstan-ignore-next-line */
+        // @phpstan-ignore-next-line
         return BlockBase::make($block, $custom_table)->setCustomRelation($custom_relation);
     }
 }

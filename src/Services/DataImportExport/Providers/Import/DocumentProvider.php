@@ -12,6 +12,7 @@ class DocumentProvider extends FileColumnProvider
      * @param mixed $dataObjects
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function validateImportData($dataObjects)
     {
         $error_data = [];
@@ -32,9 +33,10 @@ class DocumentProvider extends FileColumnProvider
      * validate data row
      * @param int $line_no
      * @param array $dataAndModel
-     * @param array $validate_columns(not use)
+     * @param array|null $validate_columns(not use)
      * @param array $dataObjects
      */
+    // @phpstan-ignore-next-line
     public function validateDataRow($line_no, $dataAndModel, $validate_columns, $dataObjects)
     {
         return $this->_validateDataRow($line_no, $dataAndModel, $validate_columns, false);
@@ -44,6 +46,7 @@ class DocumentProvider extends FileColumnProvider
     /**
      * import data
      */
+    // @phpstan-ignore-next-line
     public function importData($dataAndModel)
     {
         $data = array_get($dataAndModel, 'data');

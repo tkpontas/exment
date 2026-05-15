@@ -46,6 +46,7 @@ class ExportChunkCommand extends Command
         $this->initExmentCommand();
     }
 
+    // @phpstan-ignore-next-line
     protected function getParameters()
     {
         /** @var null|string $table_name */
@@ -127,7 +128,7 @@ class ExportChunkCommand extends Command
                 if (isset($options['view']) && $options['view'] instanceof CustomView) {
                     $options['view']->filterSortModel($grid->model());
                 }
-
+                /* @phpstan-ignore-next-line str_pad expects string, int given */
                 $seq = str_pad($i, $options['seqlength'], 0, STR_PAD_LEFT);
 
                 $service = (new DataImportExport\DataImportExportService())

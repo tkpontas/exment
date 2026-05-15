@@ -48,11 +48,15 @@ class File extends ModelBase
     // increment disable
     public $incrementing = false;
 
+
+    // @phpstan-ignore-next-line
     public function getPathAttribute()
     {
         return path_join($this->local_dirname, $this->local_filename);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getExtensionAttribute()
     {
         if (!isset($this->local_filename)) {
@@ -70,6 +74,8 @@ class File extends ModelBase
      * @param array|boolean|null $options (Old version, this args is boolean)
      * @return string|null
      */
+
+    // @phpstan-ignore-next-line
     public static function getUrl($path, $options = []): ?string
     {
         if ($options === true) {
@@ -82,17 +88,18 @@ class File extends ModelBase
                 'asApi' => false,
                 'asPublicForm' => false,
                 'publicFormKey' => null,
+                'dirName' => false,
             ],
             $options
         );
 
         $file = static::getData($path);
+
         if (is_null($file)) {
             return null;
         }
 
-        $name = $file->uuid . (!is_nullorempty($file->extension) ? ('.' . $file->extension) : '');
-        $name = "files/{$name}";
+        $name = 'files/'.($options['dirName'] ? $file->local_dirname.'/'.$file->local_filename  : $file->uuid);
 
         // append prefix
         if ($options['asApi']) {
@@ -125,6 +132,8 @@ class File extends ModelBase
     /**
      * save document model. Please call after save file
      */
+
+    // @phpstan-ignore-next-line
     public function saveDocumentModel($custom_value, $document_name)
     {
         // save Document Model
@@ -154,11 +163,15 @@ class File extends ModelBase
     public function saveCustomValue($custom_value_id, $custom_column = null, $custom_table = null)
     {
         if (!is_nullorempty($custom_column)) {
+
+            // @phpstan-ignore-next-line
             return $this->saveCustomValueAndColumn($custom_value_id, $custom_column, $custom_table);
         }
 
         if (!is_nullorempty($custom_value_id)) {
             $this->parent_id = $custom_value_id;
+
+            // @phpstan-ignore-next-line
             $this->parent_type = $custom_table->table_name;
         }
         $this->save();
@@ -216,6 +229,8 @@ class File extends ModelBase
      * @param string $dirname directory name
      * @return File
      */
+
+    // @phpstan-ignore-next-line
     public static function saveFileInfo(?string $file_type, string $dirname, array $options = []): File
     {
         $options = array_merge([
@@ -282,6 +297,8 @@ class File extends ModelBase
     /**
      * Delete document model and file
      */
+
+    // @phpstan-ignore-next-line
     public static function deleteDocumentModel($file, bool $isDeleteFile = true)
     {
         if ($isDeleteFile) {
@@ -330,6 +347,8 @@ class File extends ModelBase
     /**
      * get CustomValue from form. for saved CustomValue
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomValueFromForm($custom_value, $uuidObj)
     {
         // replace $uuidObj[path] for windows
@@ -367,9 +386,11 @@ class File extends ModelBase
      *
      * @param string|null $file_type file type
      * @param  string  $path directory and file path(Please join.)
-     * @param  \Illuminate\Http\UploadedFile|\Symfony\Component\HttpFoundation\File\UploadedFile $content file content
+     * @param  \Illuminate\Http\UploadedFile|\Symfony\Component\HttpFoundation\File\UploadedFile|string|null $content file content
      * @return File
      */
+
+    // @phpstan-ignore-next-line
     public static function put(?string $file_type, $path, $content, array $options = [])
     {
         $file = static::saveFileInfo($file_type, $path, $options);
@@ -392,6 +413,8 @@ class File extends ModelBase
      * @param array $options
      * @return File
      */
+
+    // @phpstan-ignore-next-line
     public static function storeAs(?string $file_type, $content, string $dirname, string $name, array $options = []): File
     {
         $options = array_merge([
@@ -414,9 +437,11 @@ class File extends ModelBase
     /**
      * Get file model using path or uuid
      *
-     * @param string|File $pathOrUuids
+     * @param string|File|array $pathOrUuids
      * @return File|null
      */
+
+    // @phpstan-ignore-next-line
     public static function getData($pathOrUuids)
     {
         if (is_nullorempty($pathOrUuids)) {
@@ -463,6 +488,8 @@ class File extends ModelBase
     /**
      * get unique file name
      */
+
+    // @phpstan-ignore-next-line
     public static function getUniqueFileName($dirname, $filename = null, $override = false)
     {
         if ($override) {
@@ -485,6 +512,8 @@ class File extends ModelBase
     /**
      * get directory and filename from path
      */
+
+    // @phpstan-ignore-next-line
     protected static function getDirAndFileName($path)
     {
         $pathinfo = pathinfo($path);

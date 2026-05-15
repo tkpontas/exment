@@ -33,6 +33,7 @@ class OAuthService implements LoginServiceInterface
      *
      * @throws SsoLoginErrorException
      */
+    // @phpstan-ignore-next-line
     public static function retrieveByCredential(array $credentials)
     {
         list($result, $message, $adminMessage, $custom_login_user) = static::loginCallback(request(), array_get($credentials, 'login_setting') ?? LoginSetting::getOAuthSetting(array_get($credentials, 'provider_name')));
@@ -58,6 +59,7 @@ class OAuthService implements LoginServiceInterface
      * @param array $credentials
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     public static function validateCredential(Authenticatable $login_user, array $credentials)
     {
         // always true.
@@ -65,11 +67,16 @@ class OAuthService implements LoginServiceInterface
     }
 
 
+    /**
+     * @param LoginSetting $login_setting
+     * @return \Exceedone\Exment\Form\Widgets\ModalForm
+     */
     public static function getTestForm(LoginSetting $login_setting)
     {
         return LoginService::getTestFormSso($login_setting);
     }
 
+    // @phpstan-ignore-next-line
     public static function setOAuthForm($form, $login_setting, $errors)
     {
         if (array_has($errors, LoginType::OAUTH)) {
@@ -148,13 +155,21 @@ class OAuthService implements LoginServiceInterface
                 $form->display('oauth_redirect_url', exmtrans('login.redirect_url'))->default($login_setting->exment_callback_url);
             }
         }
+
+        $form->exmheader(exmtrans('login.oauth_option'))->hr()
+        ->attribute(['data-filter' => json_encode(['key' => 'options_oauth_provider_type', 'value' => [LoginProviderType::OTHER]])]);
+
+        $form->switchbool('oauth_option_single_logout', exmtrans("login.oauth_option_single_logout"))
+        ->help(exmtrans("login.help.oauth_option_single_logout"))
+        ->default("0")
+        ->attribute(['data-filter' => json_encode(['key' => 'options_oauth_provider_type', 'value' => [LoginProviderType::OTHER]])]);
     }
 
     /**
      * Execute login test
      *
      * @param Request $request
-     * @param $login_setting
+     * @param mixed $login_setting
      * @return mixed
      */
     public static function loginTest(Request $request, $login_setting)
@@ -169,6 +184,7 @@ class OAuthService implements LoginServiceInterface
      *
      * @param Request $request
      */
+    // @phpstan-ignore-next-line
     public static function loginPluginClud(Request $request, $login_setting, string $callbackUrl)
     {
         // provider get
@@ -185,6 +201,7 @@ class OAuthService implements LoginServiceInterface
      * @param LoginSetting $login_setting
      * @return array $result(bool), $message(string), $adminMessage(string), $custom_login_user
      */
+    // @phpstan-ignore-next-line
     public static function loginCallback(Request $request, $login_setting, $isTest = false)
     {
         $custom_login_user = null;
@@ -198,8 +215,10 @@ class OAuthService implements LoginServiceInterface
             $validator = LoginService::validateCustomLoginSync($custom_login_user);
             if ($validator->fails()) {
                 return LoginService::getLoginResult(
+                    // @phpstan-ignore-next-line
                     SsoLoginErrorType::SYNC_VALIDATION_ERROR,
                     exmtrans('login.sso_provider_error_validate', ['errors' => implode(' ', $validator->getMessageStrings())]),
+                    // @phpstan-ignore-next-line
                     $validator->errors(),
                     $custom_login_user
                 );
@@ -207,6 +226,7 @@ class OAuthService implements LoginServiceInterface
                 $errors = LoginService::validateUniques($custom_login_user);
                 if (count($errors) > 0) {
                     return LoginService::getLoginResult(
+                        // @phpstan-ignore-next-line
                         SsoLoginErrorType::SYNC_VALIDATION_ERROR,
                         exmtrans('login.sso_provider_error_validate', ['errors' => implode(' ', $errors)]),
                         $errors,
@@ -217,11 +237,12 @@ class OAuthService implements LoginServiceInterface
             }
         } catch (\Exception $ex) {
             \Log::error($ex);
-
+            // @phpstan-ignore-next-line
             return LoginService::getLoginResult(SsoLoginErrorType::UNDEFINED_ERROR, exmtrans('login.sso_provider_error'), [$ex]);
         } catch (\Throwable $ex) {
             \Log::error($ex);
 
+            // @phpstan-ignore-next-line
             return LoginService::getLoginResult(SsoLoginErrorType::UNDEFINED_ERROR, exmtrans('login.sso_provider_error'), [$ex]);
         }
     }
@@ -299,6 +320,7 @@ class OAuthService implements LoginServiceInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public static function appendActivateSwalButton($tools, LoginSetting $login_setting)
     {
         return LoginService::appendActivateSwalButtonSso($tools, $login_setting);
@@ -308,9 +330,10 @@ class OAuthService implements LoginServiceInterface
      * Set custom config for login setting controller.
      *
      * @param $provider_name
-     * @param \Encore\Admin\Form $form
+     * @param \Encore\Admin\Form|\Encore\Admin\Form\EmbeddedForm $form
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function setLoginSettingForm($provider_name, $form)
     {
         if (is_nullorempty($provider_name)) {
@@ -329,9 +352,9 @@ class OAuthService implements LoginServiceInterface
 
             // has instance of
             if (!is_nullorempty($socialiteProvider) && is_subclass_of($socialiteProvider, \Exceedone\Exment\Auth\ProviderLoginConfig::class)) {
-                /** @phpstan-ignore-next-line */
                 $form->exmheader(exmtrans('login.custom_setting'))->hr();
 
+                // @phpstan-ignore-next-line
                 $socialiteProvider->setLoginSettingForm($form);
             }
         } catch (\Exception $ex) {

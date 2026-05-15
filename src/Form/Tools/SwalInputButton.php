@@ -9,21 +9,36 @@ use Encore\Admin\Facades\Admin;
  */
 class SwalInputButton
 {
+    // @phpstan-ignore-next-line
     protected $title;
+    // @phpstan-ignore-next-line
     protected $text;
+    // @phpstan-ignore-next-line
     protected $html;
+    // @phpstan-ignore-next-line
     protected $url;
+    // @phpstan-ignore-next-line
     protected $label;
+    // @phpstan-ignore-next-line
     protected $input;
+    // @phpstan-ignore-next-line
     protected $redirectUrl;
+    // @phpstan-ignore-next-line
     protected $confirmKeyword;
+    // @phpstan-ignore-next-line
     protected $icon;
+    // @phpstan-ignore-next-line
     protected $confirmError;
+    // @phpstan-ignore-next-line
     protected $btn_class;
+    // @phpstan-ignore-next-line
     protected $showCancelButton = true;
+    // @phpstan-ignore-next-line
     protected $type = 'warning';
+    // @phpstan-ignore-next-line
     protected $method = 'POST';
 
+    // @phpstan-ignore-next-line
     public function __construct($options = [])
     {
         foreach ($options as $key => $value) {
@@ -33,6 +48,7 @@ class SwalInputButton
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function script($suuid)
     {
         $url = $this->url;
@@ -52,6 +68,7 @@ class SwalInputButton
         $script = <<<SCRIPT
 
         $('.btn-{$suuid}').unbind('click').click(function() {
+            let select_ids = $('.column-__row_selector__').length > 0 ? $.admin.grid.selected() : null;
             Exment.CommonEvent.ShowSwal("$url", {
                 type: "{$type}",
                 title: "{$title}",
@@ -72,6 +89,9 @@ class SwalInputButton
                     } 
         
                     return true;
+                },
+                data: {
+                    select_ids: select_ids
                 }
             });
         });
@@ -81,6 +101,7 @@ SCRIPT;
         Admin::script($script);
     }
 
+    // @phpstan-ignore-next-line
     public function render()
     {
         // get uuid

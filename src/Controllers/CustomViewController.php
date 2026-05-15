@@ -118,6 +118,9 @@ class CustomViewController extends AdminControllerTableBase
         $grid->column('view_kind_type', exmtrans("custom_view.view_kind_type"))->sortable()->display(function ($view_kind_type) {
             return ViewKindType::getEnum($view_kind_type)->transKey("custom_view.custom_view_kind_type_options");
         });
+        if (config('exment.sort_custom_view_options', 0) > 0) {
+            $grid->column('order', exmtrans("custom_view.order"))->sortable()->editable();
+        }
 
         $grid->model()->where('custom_table_id', $this->custom_table->id);
         $custom_table = $this->custom_table;
@@ -125,7 +128,7 @@ class CustomViewController extends AdminControllerTableBase
         $grid->disableExport();
         $grid->actions(function (Grid\Displayers\Actions $actions) use ($custom_table) {
             $table_name = $custom_table->table_name;
-            /** @phpstan-ignore-next-line fix laravel-admin documentation */
+            // @phpstan-ignore-next-line
             if (boolval($actions->row->hasEditPermission())) {
                 if (boolval($actions->row->disabled_delete)) {
                     $actions->disableDelete();
@@ -167,7 +170,9 @@ class CustomViewController extends AdminControllerTableBase
 
         $grid->disableCreateButton();
         $grid->tools(function (Grid\Tools $tools) {
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomViewMenuButton($this->custom_table, null, false));
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomTableMenuButton('view', $this->custom_table));
         });
 
@@ -191,6 +196,7 @@ class CustomViewController extends AdminControllerTableBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null, $copy_id = null)
     {
         // get request
@@ -238,6 +244,7 @@ class CustomViewController extends AdminControllerTableBase
         if ($request->has('plugin')) {
             $plugin = $request->get('plugin');
         } elseif (isset($model) && $view_kind_type == ViewKindType::PLUGIN) {
+            // @phpstan-ignore-next-line
             $plugin = Plugin::find($model->getOption('plugin_id'))->uuid;
         }
 
@@ -277,6 +284,12 @@ class CustomViewController extends AdminControllerTableBase
             $form->switchbool('default_flg', exmtrans("common.default"))->default(false);
         }
 
+        if (config('exment.sort_custom_view_options', 0) > 0) {
+            $form->number('order', exmtrans("custom_view.order"))->rules("integer")
+                ->addElementClass(['order', 'view_order'])
+                ->help(sprintf(exmtrans("custom_view.help.order")));
+        }
+
         // set column' s form
         $classname = ViewKindType::getGridItemClassName($view_kind_type);
         $classname::setViewForm($view_kind_type, $form, $this->custom_table, [
@@ -314,7 +327,7 @@ class CustomViewController extends AdminControllerTableBase
             if (request()->has('plugin') && !is_null($plugin = request()->get('plugin'))) {
                 $plugin = Plugin::getPluginByUUID($plugin);
                 if (isset($plugin)) {
-                    /** @phpstan-ignore-next-line fix laravel-admin documentation */
+                    // @phpstan-ignore-next-line
                     $form->model()->setOption('plugin_id', $plugin->id);
                 }
             }
@@ -336,6 +349,7 @@ class CustomViewController extends AdminControllerTableBase
         });
 
         $form->tools(function (Form\Tools $tools) use ($id, $suuid, $custom_table, $view_type, $view_kind_type) {
+            // @phpstan-ignore-next-line
             $tools->add((new Tools\CustomTableMenuButton('view', $custom_table)));
 
             if ($view_type == Enums\ViewType::USER) {
@@ -363,6 +377,7 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getSummaryCondition(Request $request)
     {
         $view_column_target = $request->get('q');
@@ -386,6 +401,7 @@ class CustomViewController extends AdminControllerTableBase
         });
     }
 
+    // @phpstan-ignore-next-line
     public function getGroupCondition(Request $request)
     {
         return DataGrid\SummaryGrid::getGroupCondition($request->get('q'));
@@ -395,6 +411,7 @@ class CustomViewController extends AdminControllerTableBase
      * validation table
      * @param mixed $table id or customtable
      */
+    // @phpstan-ignore-next-line
     protected function validateTable($table, $role_name)
     {
         if (!$this->custom_table->hasViewPermission()) {
@@ -407,6 +424,7 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getFilterCondition(Request $request)
     {
         $item = $this->getConditionItem($request, $request->get('q'));
@@ -416,6 +434,7 @@ class CustomViewController extends AdminControllerTableBase
         return $item->getFilterCondition();
     }
 
+    // @phpstan-ignore-next-line
     protected function getConditionItem(Request $request, $target)
     {
         $item = ConditionItemBase::getItemByRequest($this->custom_table, $target);
@@ -435,6 +454,7 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * create share form
      */
+    // @phpstan-ignore-next-line
     public function shareClick(Request $request, $tableKey, $id)
     {
         // get custom view
@@ -452,6 +472,7 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * set share users organizations
      */
+    // @phpstan-ignore-next-line
     public function sendShares(Request $request, $tableKey, $id)
     {
         // get custom view
@@ -463,6 +484,7 @@ class CustomViewController extends AdminControllerTableBase
      * validate before delete.
      * @param int|string $id
      */
+    // @phpstan-ignore-next-line
     protected function validateDestroy($id)
     {
         return CustomView::validateDestroy($id);

@@ -3,7 +3,7 @@ includes:
 parameters:
     paths:
         - vendor/exceedone/exment
-    level: 4
+    level: 7
     stubFiles:
         - exment/stubs/laravel/passport/Client.stub
     universalObjectCratesClasses:
@@ -23,10 +23,6 @@ parameters:
 
         -
             message: "#^Access to an undefined property Encore\\\\Admin.#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Result of method Encore\\\\Admin.#"
             path: vendor/exceedone/exment/src/*
 
         -
@@ -51,66 +47,6 @@ parameters:
 
         -
             message: "#^Return type \\(Illuminate\\\\View\\\\View\\) of method Exceedone\\\\Exment\\\\Form\\\\Field\\\\NestedEmbeds::render\\(\\) should be compatible with return type \\(string\\) of method Illuminate\\\\Contracts\\\\Support\\\\Renderable::render\\(\\)#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Static call to instance method Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterSftp::getMergeConfigKeys\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Argument of an invalid type Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterSftp supplied for foreach, only iterables are supported.#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Argument of an invalid type Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterS3 supplied for foreach, only iterables are supported.#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Static call to instance method Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterS3::getMergeConfigKeys\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Argument of an invalid type Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterLocal supplied for foreach, only iterables are supported.#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Static call to instance method Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterLocal::getMergeConfigKeys\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Argument of an invalid type Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterFtp supplied for foreach, only iterables are supported.#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Static call to instance method Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterFtp::getMergeConfigKeys\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Argument of an invalid type Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterAzure supplied for foreach, only iterables are supported.#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Static call to instance method Exceedone\\\\Exment\\\\Storage\\\\Adapter\\\\ExmentAdapterAzure::getMergeConfigKeys\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Call to an undefined method Illuminate\\\\Contracts\\\\Auth\\\\Authenticatable::visible\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Call to an undefined method Illuminate\\\\Contracts\\\\Auth\\\\Authenticatable::save\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Call to an undefined method Illuminate\\\\Contracts\\\\Auth\\\\Authenticatable::setSettingValue\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Call to an undefined method Illuminate\\\\Contracts\\\\Auth\\\\Authenticatable::hasPermission\\(\\).#"
-            path: vendor/exceedone/exment/src/*
-
-        -
-            message: "#^Call to an undefined method Illuminate\\\\Contracts\\\\Auth\\\\Authenticatable::getSettingValue\\(\\).#"
             path: vendor/exceedone/exment/src/*
 
         -
@@ -159,4 +95,12 @@ parameters:
 
         -
             message: "#^Argument of an invalid type Exceedone\\\\Exment\\\\Enums\\\\SystemColumn supplied for foreach, only iterables are supported.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Call to an undefined method Illuminate\\\\Contracts\\\\Auth\\\\Authenticatable::#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Part .* of encapsed string cannot be cast to string\\.#"
             path: vendor/exceedone/exment/src/*

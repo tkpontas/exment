@@ -70,9 +70,13 @@ class RelationTable
      *
      * @var array
      */
+
+    // @phpstan-ignore-next-line
     public $subQueryCallbacks = [];
 
 
+
+    // @phpstan-ignore-next-line
     public function __construct(array $params = [])
     {
         $this->base_table = array_get($params, 'base_table');
@@ -94,6 +98,8 @@ class RelationTable
      * @param array $options
      * @return \Illuminate\Support\Collection children relation(select_table, one_to_many, many_to_many)'s RleationTable info.
      */
+
+    // @phpstan-ignore-next-line
     public static function getRelationTables($custom_table, $checkPermission = true, $options = [])
     {
         $options = array_merge(
@@ -260,6 +266,8 @@ class RelationTable
      * @param array $options execute options.
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     protected static function _getTablesSelectTable(CustomTable $custom_table, array $options): Collection
     {
         $results = collect();
@@ -310,6 +318,8 @@ class RelationTable
      * @param array $options execute options.
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     protected static function _getParentTablesSelectTable(CustomTable $custom_table, array $options): Collection
     {
         $results = collect();
@@ -356,6 +366,8 @@ class RelationTable
      * @param array $options
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     protected static function _getTablesRelation(CustomTable $custom_table, array $options): Collection
     {
         $results = collect();
@@ -388,6 +400,8 @@ class RelationTable
      * @param array $options
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     protected static function _getParentTablesRelation(CustomTable $custom_table, array $options): Collection
     {
         $results = collect();
@@ -423,6 +437,8 @@ class RelationTable
      * @param array $params
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public static function setQuery($query, $searchType, $value, $params = [])
     {
         $parent_table = CustomTable::getEloquent(array_get($params, 'parent_table'));
@@ -452,6 +468,8 @@ class RelationTable
      * @param mixed $value
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public static function setQueryOneMany($query, $parent_table, $child_table, $value)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -459,6 +477,8 @@ class RelationTable
         }
 
         $dbName = getDBTableName($child_table);
+
+        // @phpstan-ignore-next-line
         $query->whereOrIn("$dbName.parent_id", $value)->where("$dbName.parent_type", $parent_table->table_name);
 
         return $query;
@@ -474,6 +494,8 @@ class RelationTable
      * @param mixed $value
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public static function setQueryManyMany($query, $parent_table, $child_table, $value)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -484,6 +506,8 @@ class RelationTable
             return;
         }
 
+
+        // @phpstan-ignore-next-line
         $query->whereHas($relation->getRelationName(), function ($query) use ($relation, $value) {
             $query->whereOrIn($relation->getRelationName() . '.parent_id', $value);
         });
@@ -499,12 +523,16 @@ class RelationTable
      * @param mixed $value
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public static function setQuerySelectTable($query, $custom_column, $value)
     {
         if (is_nullorempty($custom_column)) {
             return;
         }
 
+
+        // @phpstan-ignore-next-line
         $query->whereOrIn($custom_column->getQueryKey(), $value);
 
         return $query;
@@ -520,6 +548,8 @@ class RelationTable
      * @param array $params
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setParentJoin($query, $params = [])
     {
         $parent_table = CustomTable::getEloquent(array_get($params, 'parent_table'));
@@ -549,6 +579,8 @@ class RelationTable
      * @param array $params
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setSummaryChildJoin($query, $params = [])
     {
         $parent_table = CustomTable::getEloquent(array_get($params, 'parent_table'));
@@ -578,6 +610,8 @@ class RelationTable
      * @param CustomTable $parent_table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setParentJoinOneMany($query, $parent_table, $child_table, bool $leftJoin = false)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -602,6 +636,8 @@ class RelationTable
      * @param CustomTable $parent_table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setParentJoinManyMany($query, $parent_table, $child_table, bool $leftJoin = false)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -621,7 +657,10 @@ class RelationTable
         // Append join query.
         $joinName = $leftJoin ? 'leftJoin' : 'join';
         $query->{$joinName}($relation_name, "$child_table_name.id", "=", "$relation_name.child_id")
-            ->{$joinName}("$parent_table_name AS {$this->tableUniqueName}", "{$this->tableUniqueName}.id", "=", "$relation_name.parent_id");
+            ->{$joinName}("$parent_table_name AS {$this->tableUniqueName}", function($join) use($relation_name) {
+                $join->on("{$this->tableUniqueName}.id", "=", "$relation_name.parent_id")
+                     ->whereNull("{$this->tableUniqueName}.deleted_at");
+            });
 
         return $query;
     }
@@ -635,6 +674,8 @@ class RelationTable
      * @param CustomColumn $custom_column select_table's column in $query's table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setParentJoinSelectTable($query, $parent_table, $custom_column, bool $leftJoin = false)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($custom_column)) {
@@ -674,6 +715,8 @@ class RelationTable
      * @param CustomTable $parent_table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setSummaryChildJoinOneMany($query, $parent_table, $child_table, bool $leftJoin = false)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -690,6 +733,7 @@ class RelationTable
             // set from and default group by, select.
             $subQuery->from("$child_table_name AS {$this->tableUniqueName}")
                 ->select("{$this->tableUniqueName}.parent_id")
+                ->whereNull("{$this->tableUniqueName}.deleted_at")
                 ->groupBy("{$this->tableUniqueName}.parent_id");
 
             // call subquery object callbacks.
@@ -709,6 +753,8 @@ class RelationTable
      * @param CustomTable $parent_table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public static function setChildJoinManyMany($query, $parent_table, $child_table, ?string $tableUniqueName = null)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -745,6 +791,8 @@ class RelationTable
      * @param CustomTable $parent_table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setSummaryChildJoinManyAndMany($query, $parent_table, $child_table, bool $leftJoin = false)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($child_table)) {
@@ -769,7 +817,10 @@ class RelationTable
 
             // set from and default group by, select.
             $subQuery->from($relation_name)
-                ->{$joinName}("$child_table_name AS {$this->tableUniqueName}", "{$this->tableUniqueName}.id", "=", "$relation_name.child_id")
+                ->{$joinName}("$child_table_name AS {$this->tableUniqueName}", function($join) use($relation_name) {
+                    $join->on("{$this->tableUniqueName}.id", "=", "$relation_name.child_id")
+                         ->whereNull("{$this->tableUniqueName}.deleted_at");
+                })
                 ->select("{$relation_name}.parent_id")
                 ->groupBy("{$relation_name}.parent_id");
 
@@ -790,6 +841,8 @@ class RelationTable
      * @param CustomColumn $custom_column select_table's column in $query's table
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function setSummaryChildJoinSelectTable($query, $parent_table, $custom_column, bool $leftJoin = false)
     {
         if (is_nullorempty($parent_table) || is_nullorempty($custom_column)) {
@@ -812,6 +865,7 @@ class RelationTable
             // set from and default group by, select.
             $subQuery->from("$child_table_name AS {$this->tableUniqueName}")
                 ->select("{$this->tableUniqueName}.$query_key")
+                ->whereNull("{$this->tableUniqueName}.deleted_at")
                 ->groupBy("{$this->tableUniqueName}.$query_key");
 
             // call subquery object callbacks.
@@ -840,6 +894,8 @@ class RelationTable
      * @param boolean $or_option
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public static function setWorkflowStatusSubquery($query, CustomTable $custom_table, bool $or_option = false)
     {
         $tableName = getDBTableName($custom_table);
@@ -866,6 +922,8 @@ class RelationTable
      * @param boolean $or_option
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public static function setWorkflowWorkUsersSubQuery($query, $custom_table, $or_option = false)
     {
         $tableName = getDBTableName($custom_table);

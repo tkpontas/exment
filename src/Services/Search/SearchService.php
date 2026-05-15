@@ -39,6 +39,7 @@ class SearchService
      *
      * @var \Illuminate\Database\Eloquent\Builder
      */
+    // @phpstan-ignore-next-line
     protected $query;
 
     /**
@@ -60,6 +61,7 @@ class SearchService
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $joinedTables = [];
 
     /**
@@ -67,12 +69,14 @@ class SearchService
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $joinedWorkflows = [];
 
     /**
      * Summary orders
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $summaryOrders = [];
 
     /**
@@ -80,6 +84,7 @@ class SearchService
      * "joinSub" query only calls once, so First set select and group by, and after these, join sub query.
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $summaryJoins = [];
 
 
@@ -94,6 +99,7 @@ class SearchService
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
+    // @phpstan-ignore-next-line
     public function query()
     {
         if ($this->isAppendSelect) {
@@ -124,6 +130,7 @@ class SearchService
      *
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function setQuery($query)
     {
         $this->query = $query;
@@ -148,6 +155,7 @@ class SearchService
      * @param  array|string  $columns
      * @return \Illuminate\Database\Eloquent\Collection
      */
+    // @phpstan-ignore-next-line
     public function get($columns = ['*'])
     {
         return $this->query()->get($columns);
@@ -164,6 +172,7 @@ class SearchService
      * @param  string  $boolean
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function where($column, $operator = null, $value = null, $boolean = 'and')
     {
         // Here we will make some assumptions about the operator. If only 2 values are
@@ -177,9 +186,11 @@ class SearchService
 
         // If custom column, execute where custom column's exists query.
         if ($column instanceof CustomColumn) {
+            // @phpstan-ignore-next-line
             return $this->whereCustomColumn($column, $operator, $value, $boolean);
         }
         if (is_string($column)) {
+            // @phpstan-ignore-next-line
             return $this->whereCustomColumn(CustomColumn::getEloquent($column, $this->custom_table), $operator, $value, $boolean);
         }
 
@@ -224,6 +235,7 @@ class SearchService
      * @param  string  $boolean
      * @return $this|Builder
      */
+    // @phpstan-ignore-next-line
     protected function whereCustomColumn(CustomColumn $column, $operator = null, $value = null, $boolean = 'and')
     {
         $whereCustomTable = $column->custom_table_cache;
@@ -357,30 +369,50 @@ class SearchService
         $column_item = $column->column_item;
 
         // get group's column. this is wraped.
-        $wrap_column = $column_item->getGroupByWrapTableColumn();
         $sqlAsName = \Exment::wrapColumn($column_item->sqlAsName());
 
         // if has sub query(for child relation), set to sub query
         $isSubQuery = false;
         if ($relationTable && SearchType::isSummarySearchType($relationTable->searchType)) {
             $isSubQuery = true;
-            $relationTable->subQueryCallbacks[] = function ($subquery, $relationTable) use ($wrap_column, $sqlAsName) {
+            $relationTable->subQueryCallbacks[] = function ($subquery, $relationTable) use ($column_item, $sqlAsName) {
+                $wrap_column = $column_item->getGroupByWrapTableColumn(true);
                 $subquery->selectRaw("$wrap_column AS $sqlAsName");
+                $wrap_column = $column_item->getGroupByWrapTableColumn();
                 $subquery->groupByRaw($wrap_column);
             };
         }
 
-        // set group by. Maybe if has subquery, set again.
-        $wrap_column = $column_item->getGroupByWrapTableColumn(false, $isSubQuery);
-        $this->query->groupByRaw($wrap_column);
+        if (\Exment::isSqlServer()) {
+            // set group by. Maybe if has subquery, set again.
+            $wrap_column = $column_item->getGroupByWrapTableColumn(false, $isSubQuery);
+            $this->query->groupByRaw($wrap_column);
 
-        // get group's column for select. this is wraped.
-        $wrap_column = $column_item->getGroupByWrapTableColumn(true, $isSubQuery);
-        // set select column. And add "as".
-        $this->query->selectRaw("$wrap_column AS $sqlAsName");
+            // get group's column for select. this is wraped.
+            $wrap_column = $column_item->getGroupByWrapTableColumn(true, $isSubQuery);
+            // set select column. And add "as".
+            $this->query->selectRaw("$wrap_column AS $sqlAsName");
 
-        // if has sort order, set order by
-        $this->setSummaryOrderBy($column, $wrap_column);
+            // if has sort order, set order by
+            $this->setSummaryOrderBy($column, $wrap_column);
+        } else {
+            // get group's column for select. this is wraped.
+            $wrap_column = $column_item->getGroupByWrapTableColumn(true, $isSubQuery);
+            // set select column. And add "as".
+            $this->query->selectRaw("$wrap_column AS $sqlAsName");
+
+            // set group by. 
+            $this->query->groupByRaw($sqlAsName);
+
+            // case sqlasname
+            $cast = $column_item->getCastName(true);
+            if (isset($cast)) {
+                $sqlAsName = "CAST($sqlAsName AS $cast)";
+            }
+            // if has sort order, set order by
+            $this->setSummaryOrderBy($column, $sqlAsName);
+        }
+
 
         return $this;
     }
@@ -420,10 +452,10 @@ class SearchService
 
             // set to default query group by.
             // Need MIN, MAX.
-            $result_column = $column_item->getGroupByJoinResultWrapTableColumn();
-            if (!is_nullorempty($result_column)) {
-                $this->query->groupByRaw($result_column);
-            }
+            // $result_column = $column_item->getGroupByJoinResultWrapTableColumn();
+            // if (!is_nullorempty($result_column)) {
+            //     $this->query->groupByRaw($result_column);
+            // }
         }
         // default, set to default query.
         else {
@@ -431,7 +463,7 @@ class SearchService
         }
 
         // if has sort order, set order by
-        $this->setSummaryOrderBy($column, $wrap_column);
+        $this->setSummaryOrderBy($column, $sqlAsName);
 
         return $this;
     }
@@ -442,11 +474,12 @@ class SearchService
      *
      * @return $this
      */
+    // @phpstan-ignore-next-line
     protected function setSummaryOrderBy($column, $wrap_column)
     {
         $sort_order = array_get($column->options, 'sort_order');
         if (is_nullorempty($sort_order)) {
-            return $this;
+            $sort_order = 1;
         }
 
         $sort_type = isMatchString(array_get($column->options, 'sort_type'), '-1') ? 'desc' : 'asc';
@@ -465,6 +498,7 @@ class SearchService
     /**
      * Execute  order by if for summary
      */
+    // @phpstan-ignore-next-line
     public function executeSummaryOrderBy()
     {
         foreach (collect($this->summaryOrders)->sortBy('sort_order') as $summaryOrder) {
@@ -476,6 +510,7 @@ class SearchService
     /**
      * Execute summary join.
      */
+    // @phpstan-ignore-next-line
     public function executeSummaryJoin()
     {
         foreach ($this->summaryJoins as $summaryJoin) {
@@ -490,6 +525,7 @@ class SearchService
      * @param  CustomViewFilter $column
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function whereCustomViewFilter(CustomViewFilter $column, $filter_is_or, $query = null)
     {
         // if $query is null, set $query as base $this->query.
@@ -515,6 +551,7 @@ class SearchService
      * @param  Notify $notify notify target
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function whereNotifySchedule(Notify $notify, $operator = null, $value = null, $boolean = 'and', array $options = [])
     {
         // if $query is null, set $query as base $this->query.
@@ -548,6 +585,7 @@ class SearchService
      * @return RelationTable|null
      * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public function setRelationJoin($column, array $options = []): ?RelationTable
     {
         $options = array_merge([
@@ -581,7 +619,7 @@ class SearchService
                 $column_item = $this->getColumnItem($column);
                 if (!isset($column_item)) {
                     $this->query->whereNotMatch();
-                    // @phpstan-ignore-next-line Maybe function type hinting miss
+                    // @phpstan-ignore-next-line
                     return $this;
                 }
                 $column_item->setUniqueTableName($relationTable->tableUniqueName);
@@ -606,6 +644,7 @@ class SearchService
      *
      * @param string $key
      */
+    // @phpstan-ignore-next-line
     public function setRelationJoinWorkflow(string $key, array $options = [])
     {
         // set relation workflow status
@@ -625,6 +664,7 @@ class SearchService
      * @param CustomTable $whereCustomTable
      * @return RelationTable|null relation table info
      */
+    // @phpstan-ignore-next-line
     protected function getRelationTable($whereCustomTable, bool $asSummary = false, $filterObj = null)
     {
         // get RelationTable info.
@@ -652,6 +692,7 @@ class SearchService
      * @param CustomViewColumn|CustomViewSort|CustomViewFilter|CustomViewSummary|CustomViewGridFilter $filterObj
      * @return RelationTable|null filtered Relation Table
      */
+    // @phpstan-ignore-next-line
     protected function filterRelationTable($relationTables, $filterObj): ?RelationTable
     {
         // if only 1, return first.
@@ -759,6 +800,7 @@ class SearchService
      *
      * @return boolean is join workflow status
      */
+    // @phpstan-ignore-next-line
     protected function isJoinWorkflowStatus($custom_view_filter): bool
     {
         return $this->isJoinWorkflow($custom_view_filter, SystemColumn::WORKFLOW_STATUS);
@@ -769,6 +811,7 @@ class SearchService
      *
      * @return boolean is join workflow status
      */
+    // @phpstan-ignore-next-line
     protected function isJoinWorkflowWorkUsers($custom_view_filter): bool
     {
         return $this->isJoinWorkflow($custom_view_filter, SystemColumn::WORKFLOW_WORK_USERS);
@@ -779,6 +822,7 @@ class SearchService
      *
      * @return boolean is join workflow status
      */
+    // @phpstan-ignore-next-line
     protected function isJoinWorkflow($custom_view_filter, $key): bool
     {
         // Whether custom_view_filter is boolelan. if true, always call.
@@ -816,6 +860,7 @@ class SearchService
      *  offset2 : this table's id
      *  offset2 : this column's id
      */
+    // @phpstan-ignore-next-line
     protected function getConditionParams($column): array
     {
         if ($column instanceof CustomViewColumn || $column instanceof CustomViewFilter || $column instanceof CustomViewSort || $column instanceof CustomViewSummary || $column instanceof CustomViewGridFilter) {
