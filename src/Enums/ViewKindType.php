@@ -39,6 +39,7 @@ class ViewKindType extends EnumBase
         return static::acceptApi($view_kind_type, [static::DEFAULT, static::ALLDATA]);
     }
 
+    // @phpstan-ignore-next-line
     protected static function acceptApi($view_kind_type, array $acceptTypes)
     {
         $enum = static::getEnum($view_kind_type);
@@ -50,6 +51,7 @@ class ViewKindType extends EnumBase
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getGridItemClassName($view_kind_type)
     {
         switch ($view_kind_type) {
