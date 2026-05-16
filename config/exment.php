@@ -1137,6 +1137,16 @@ return [
     |
     */
     'search_keep_default_view' => env('EXMENT_SEARCH_KEEP_DEFAULT_VIEW', false),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | keep grid parameter
+    |--------------------------------------------------------------------------
+    |
+    | If true, keep grid filter, sort, page.
+    |
+    */
+    'keep_grid_parameters' => env('EXMENT_KEEP_GRID_PARAMETERS', false),
 
     /*
     |--------------------------------------------------------------------------
