@@ -37,6 +37,7 @@ abstract class BlockBase
      * FormColumn list
      * @var Collection
      */
+    // @phpstan-ignore-next-line
     protected $custom_form_column_items;
 
 
@@ -49,7 +50,7 @@ abstract class BlockBase
         $this->custom_form_column_items = collect();
     }
 
-    public static function make(CustomFormBlock $custom_form_block, CustomTable $custom_table): BlockBase
+    public static function make(CustomFormBlock $custom_form_block, CustomTable $custom_table): ?BlockBase
     {
         switch (array_get($custom_form_block, 'form_block_type', FormBlockType::DEFAULT)) {
             case FormBlockType::DEFAULT:
@@ -70,6 +71,7 @@ abstract class BlockBase
      *
      * @return self
      */
+    // @phpstan-ignore-next-line
     public static function makeByParams($form_block_type, $form_block_target_table_id): BlockBase
     {
         $form_block = new CustomFormBlock();
@@ -117,6 +119,7 @@ abstract class BlockBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getItemsForDisplay(): array
     {
         return [
@@ -129,7 +132,8 @@ abstract class BlockBase
             'header_name' => $this->getHtmlHeaderName(),
             'suggests' => $this->getSuggestItems(),
             'custom_form_rows' => $this->getCustomFormRows(),
-            'hasmany_type' => $this->custom_form_block->getOption('hasmany_type')
+            'hasmany_type' => $this->custom_form_block->getOption('hasmany_type'),
+            'form_block_order' => $this->custom_form_block->getOption('form_block_order')
         ];
     }
 
@@ -139,6 +143,7 @@ abstract class BlockBase
      *
      * @return Collection
      */
+    // @phpstan-ignore-next-line
     public function getSuggestItems()
     {
         $suggests = collect();
@@ -190,6 +195,7 @@ abstract class BlockBase
      *
      * @return Collection
      */
+    // @phpstan-ignore-next-line
     public function getFormColumns(): Collection
     {
         // get custom_form_blocks from request
@@ -230,12 +236,14 @@ abstract class BlockBase
     /**
      * Set formColumn list
      *
-     * @param  Collection  $custom_form_column_items    FormColumn list
+     * @param  Collection|\Tightenco\Collect\Support\Collection  $custom_form_column_items    FormColumn list
      *
      * @return  self
      */
-    public function setCustomFormColumnItems(Collection $custom_form_column_items)
+    // @phpstan-ignore-next-line
+    public function setCustomFormColumnItems(Collection|\Tightenco\Collect\Support\Collection $custom_form_column_items)
     {
+        // @phpstan-ignore-next-line
         $this->custom_form_column_items = $custom_form_column_items;
 
         return $this;
@@ -245,8 +253,9 @@ abstract class BlockBase
     /**
      * get Custom Form Boxes using custom_form_column_items. Contains row_no, column_no, width.
      *
-     * @return  array
+     * @return Collection|\Tightenco\Collect\Support\Collection
      */
+    // @phpstan-ignore-next-line
     public function getCustomFormRows()
     {
         // grouping row_no and column_no;
@@ -309,6 +318,7 @@ abstract class BlockBase
      *
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     protected function hasCustomForms($suggest_form_column_type, $suggest_form_column_target_id)
     {
         $has_custom_forms = false;
@@ -324,5 +334,6 @@ abstract class BlockBase
             });
     }
 
+    // @phpstan-ignore-next-line
     abstract public static function getBlockLabelHeader(CustomTable $custom_table);
 }

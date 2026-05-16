@@ -15,6 +15,7 @@ class OrganizationItem extends ConditionDetailBase implements ConditionItemInter
 {
     use UserOrganizationItemTrait;
 
+    // @phpstan-ignore-next-line
     public function getFilterOption()
     {
         return $this->getFilterOptionConditon();
@@ -50,13 +51,14 @@ class OrganizationItem extends ConditionDetailBase implements ConditionItemInter
      * @param string $key
      * @param string $value
      * @param bool $showFilter
-     * @return string
+     * @return string|null
      */
     public function getText($key, $value, $showFilter = true)
     {
         $model = getModelName(SystemTableName::ORGANIZATION)::find($value);
         if ($model instanceof \Illuminate\Database\Eloquent\Collection) {
             $result = $model->filter()->map(function ($row) {
+                /** @var CustomValue $row */
                 return $row->getValue('organization_name');
             })->implode(',');
         } else {
@@ -85,6 +87,7 @@ class OrganizationItem extends ConditionDetailBase implements ConditionItemInter
         return in_array($workflow_authority->related_id, $ids);
     }
 
+    // @phpstan-ignore-next-line
     public static function setWorkflowConditionQuery($query, $tableName, $custom_table)
     {
         $ids = \Exment::user()->base_user->belong_organizations->pluck('id')->toArray();

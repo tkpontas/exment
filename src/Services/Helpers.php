@@ -13,6 +13,7 @@ use Exceedone\Exment\Model\LoginUser;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\CurrencySymbol;
 use Exceedone\Exment\Enums\ErrorCode;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Webpatser\Uuid\Uuid;
@@ -23,6 +24,7 @@ if (!function_exists('exmDebugLog')) {
     /**
      * Debug log
      */
+    // @phpstan-ignore-next-line
     function exmDebugLog($log)
     {
         $now = Carbon::now();
@@ -34,6 +36,7 @@ if (!function_exists('exmDebugLog')) {
 }
 
 if (!function_exists('exmtrans')) {
+    // @phpstan-ignore-next-line
     function exmtrans($key, ...$args)
     {
         if (count($args) > 0 && is_array($args[0])) {
@@ -49,6 +52,7 @@ if (!function_exists('exmtrans')) {
 }
 
 if (!function_exists('getManualUrl')) {
+    // @phpstan-ignore-next-line
     function getManualUrl($uri = null)
     {
         return \Exment::getManualUrl($uri);
@@ -56,6 +60,7 @@ if (!function_exists('getManualUrl')) {
 }
 
 if (!function_exists('mbTrim')) {
+    // @phpstan-ignore-next-line
     function mbTrim($pString)
     {
         if (is_null($pString)) {
@@ -69,6 +74,7 @@ if (!function_exists('esc_html')) {
     /**
      * escape html
      */
+    // @phpstan-ignore-next-line
     function esc_html($str)
     {
         return htmlspecialchars_ex($str, ENT_QUOTES|ENT_HTML5);
@@ -81,6 +87,7 @@ if (!function_exists('esc_script_tag')) {
      *
      * @deprecated Please use html_clean
      */
+    // @phpstan-ignore-next-line
     function esc_script_tag($html)
     {
         return html_clean($html);
@@ -91,6 +98,7 @@ if (!function_exists('html_clean')) {
     /**
      * clean html with HTML Purifier
      */
+    // @phpstan-ignore-next-line
     function html_clean($html)
     {
         if (is_nullorempty($html)) {
@@ -128,6 +136,7 @@ if (!function_exists('is_nullorempty')) {
      *
      * @return bool null is true, "" is true, 0 and "0" is false.
      */
+    // @phpstan-ignore-next-line
     function is_nullorempty($obj)
     {
         if (is_null($obj)) {
@@ -139,7 +148,7 @@ if (!function_exists('is_nullorempty')) {
         if (is_array($obj) && count($obj) == 0) {
             return true;
         }
-        if ($obj instanceof \Illuminate\Support\Collection && $obj->count() == 0) {
+        if ($obj instanceof Collection && $obj->count() == 0) {
             return true;
         }
         return false;
@@ -151,8 +160,9 @@ if (!function_exists('parseIntN')) {
      * parseInt
      * if cannot parse, return null.
      * TODO:common lib
+     *
      * @param mixed $str
-     * @return double|integer|null
+     * @return string|null
      */
     function parseIntN($str)
     {
@@ -168,6 +178,7 @@ if (!function_exists('parseFloat')) {
     /**
      * parseFloat
      */
+    // @phpstan-ignore-next-line
     function parseFloat($num)
     {
         if (is_null($num)) {
@@ -192,6 +203,7 @@ if (!function_exists('floorDigit')) {
         if ($digit < 0) {
             $digit = 0;
         }
+        // @phpstan-ignore-next-line
         $numPointPosition = intval(strpos($num, '.'));
 
         // if for display
@@ -199,6 +211,7 @@ if (!function_exists('floorDigit')) {
         if ($numPointPosition === 0) { //$num is an integer
             $result = $num;
         } else {
+            // @phpstan-ignore-next-line
             $result = floatval(substr($num, 0, $numPointPosition + $digit + 1));
             ;
         }
@@ -212,6 +225,7 @@ if (!function_exists('floorDigit')) {
 }
 
 if (!function_exists('hex2rgb')) {
+    // @phpstan-ignore-next-line
     function hex2rgb($hex)
     {
         if (substr($hex, 0, 1) == "#") {
@@ -228,6 +242,7 @@ if (!function_exists('rmcomma')) {
     /**
      * remove comma
      */
+    // @phpstan-ignore-next-line
     function rmcomma($value)
     {
         if (is_null($value)) {
@@ -241,6 +256,7 @@ if (!function_exists('trydecrypt')) {
     /**
      * decrypt if can, caanot return null
      */
+    // @phpstan-ignore-next-line
     function trydecrypt($value)
     {
         try {
@@ -279,6 +295,7 @@ if (!function_exists('exment_package_path')) {
     function exment_package_path($path = '')
     {
         $reflection = new \ReflectionClass(\Exceedone\Exment\ExmentServiceProvider::class);
+        // @phpstan-ignore-next-line
         $package_path = dirname(dirname($reflection->getFileName()));
 
         return path_join($package_path, $path);
@@ -289,6 +306,7 @@ if (!function_exists('admin_urls')) {
     /**
      * Join admin url paths.
      */
+    // @phpstan-ignore-next-line
     function admin_urls(...$pass_array)
     {
         return admin_url(url_join($pass_array));
@@ -299,6 +317,7 @@ if (!function_exists('admin_base_paths')) {
     /**
      * Join admin base paths.
      */
+    // @phpstan-ignore-next-line
     function admin_base_paths(...$pass_array)
     {
         return admin_base_path(url_join($pass_array));
@@ -309,6 +328,7 @@ if (!function_exists('admin_urls_query')) {
     /**
      * Join admin url paths and query. Please set last arg
      */
+    // @phpstan-ignore-next-line
     function admin_urls_query(...$pass_array)
     {
         // get last arg
@@ -329,6 +349,7 @@ if (!function_exists('asset_urls')) {
     /**
      * Join admin url paths.
      */
+    // @phpstan-ignore-next-line
     function asset_urls(...$pass_array)
     {
         return asset(url_join(...$pass_array));
@@ -339,6 +360,7 @@ if (!function_exists('assets_query')) {
     /**
      * Join url paths and query. Please set last arg
      */
+    // @phpstan-ignore-next-line
     function assets_query(...$pass_array)
     {
         // get last arg
@@ -360,6 +382,7 @@ if (!function_exists('public_form_base_path')) {
     /**
      * Join public form base path.
      */
+    // @phpstan-ignore-next-line
     function public_form_base_path()
     {
         return config('exment.publicform_route_prefix', 'publicform');
@@ -371,6 +394,7 @@ if (!function_exists('public_form_url')) {
      * Join public form urls.
      * "Cannot join path, because when you want to use public form, you have to set public form's uuid."
      */
+    // @phpstan-ignore-next-line
     function public_form_url()
     {
         return asset(public_form_base_path());
@@ -381,6 +405,7 @@ if (!function_exists('namespace_join')) {
     /**
      * Join NameSpace.
      */
+    // @phpstan-ignore-next-line
     function namespace_join(...$pass_array)
     {
         return join_paths('\\', $pass_array);
@@ -391,6 +416,7 @@ if (!function_exists('path_join')) {
     /**
      * Join FilePath.
      */
+    // @phpstan-ignore-next-line
     function path_join(...$pass_array)
     {
         return join_paths('/', $pass_array);
@@ -402,6 +428,7 @@ if (!function_exists('path_join_os')) {
     /**
      * Join FilePath. consider OS SEPARATOR.
      */
+    // @phpstan-ignore-next-line
     function path_join_os(...$pass_array)
     {
         return join_paths(DIRECTORY_SEPARATOR, $pass_array);
@@ -412,6 +439,7 @@ if (!function_exists('url_join')) {
     /**
      * Join FilePath.
      */
+    // @phpstan-ignore-next-line
     function url_join(...$pass_array)
     {
         return join_paths("/", $pass_array);
@@ -423,6 +451,7 @@ if (!function_exists('join_paths')) {
     /**
      * Join path using trim_str.
      */
+    // @phpstan-ignore-next-line
     function join_paths($trim_str, $pass_array)
     {
         $ret_pass   =   "";
@@ -447,6 +476,7 @@ if (!function_exists('join_paths')) {
 }
 
 if (!function_exists('storage_paths')) {
+    // @phpstan-ignore-next-line
     function storage_paths(...$pass_array)
     {
         return path_join(storage_path(), ...$pass_array);
@@ -454,6 +484,7 @@ if (!function_exists('storage_paths')) {
 }
 
 if (!function_exists('app_paths')) {
+    // @phpstan-ignore-next-line
     function app_paths(...$pass_array)
     {
         return path_join(app_path(), ...$pass_array);
@@ -529,6 +560,7 @@ if (!function_exists('path_rtrim')) {
 }
 
 if (!function_exists('getFullpath')) {
+    // @phpstan-ignore-next-line
     function getFullpath($filename, $disk, $mkdir = false)
     {
         if (is_string($disk)) {
@@ -539,6 +571,7 @@ if (!function_exists('getFullpath')) {
         $path = \Exment::getPathPrefix($adapter, $filename);
 
         if ($mkdir) {
+            // @phpstan-ignore-next-line
             $dirPath = pathinfo($path)['dirname'];
             \Exment::makeDirectory($dirPath);
         }
@@ -548,9 +581,11 @@ if (!function_exists('getFullpath')) {
 
 
 if (!function_exists('mb_basename')) {
+    // @phpstan-ignore-next-line
     function mb_basename($str, $suffix=null)
     {
         $tmp = preg_split('/[\/\\\\]/', $str);
+        // @phpstan-ignore-next-line
         $res = end($tmp);
         if (strlen_ex($suffix)) {
             $suffix = preg_quote($suffix);
@@ -563,6 +598,7 @@ if (!function_exists('file_ext')) {
     /**
      * get file extension
      */
+    // @phpstan-ignore-next-line
     function file_ext($filename)
     {
         return preg_match('/\./', $filename) ? preg_replace('/^.*\./', '', $filename) : '';
@@ -572,6 +608,7 @@ if (!function_exists('file_ext_strip')) {
     /**
      * Returns the file name, less the extension.
      */
+    // @phpstan-ignore-next-line
     function file_ext_strip($filename)
     {
         return preg_replace('/.[^.]*$/', '', $filename);
@@ -579,6 +616,7 @@ if (!function_exists('file_ext_strip')) {
 }
 
 if (!function_exists('bytesToHuman')) {
+    // @phpstan-ignore-next-line
     function bytesToHuman($bytes, $default = null)
     {
         if (is_null($bytes)) {
@@ -602,6 +640,7 @@ if (!function_exists('isMatchRequest')) {
      * @param array|string $uris
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     function isMatchRequest($uris = null)
     {
         $request = app('request');
@@ -626,6 +665,7 @@ if (!function_exists('deleteDirectory')) {
     /**
      * delete target directory
      */
+    // @phpstan-ignore-next-line
     function deleteDirectory($disk, $path)
     {
         if (is_nullorempty($path)) {
@@ -653,9 +693,10 @@ if (!function_exists('hasDuplicateDate')) {
     /**
      * Check dates Duplicate
      *
-     * @param array $dates array of between ['start':Carbon, 'end':Carbon]
+     * @param array|Collection $dates array of between ['start':Carbon, 'end':Carbon]
      * @return boolean Duplicate:true
      */
+    // @phpstan-ignore-next-line
     function hasDuplicateDate($dates)
     {
         $dates = collect($dates);
@@ -682,6 +723,7 @@ if (!function_exists('array_boolval')) {
      * get array_get and return boolval
      * @return bool
      */
+    // @phpstan-ignore-next-line
     function array_boolval($array, $key, $default = false): bool
     {
         if (is_string($array)) {
@@ -696,8 +738,8 @@ if (!function_exists('array_keys_exists')) {
     /**
      * array_keys_exists
      * $keys contains $array, return true.
-     * @param array $keys
-     * @param array $array
+     * @param mixed $keys
+     * @param mixed $array
      * @return bool
      */
     function array_keys_exists($keys, $array)
@@ -724,7 +766,7 @@ if (!function_exists('array_key_value_exists')) {
     /**
      * whether has array_key and array_get
      * @param mixed $key
-     * @param array|\Illuminate\Support\Collection $array
+     * @param mixed $array
      * @return bool
      */
     function array_key_value_exists($key, $array)
@@ -749,10 +791,12 @@ if (!function_exists('array_key_value_exists')) {
 }
 
 if (!function_exists('array_value_exists')) {
+
     /**
      * whether has array_value
-     * @param mixed $key
-     * @param array|\Illuminate\Support\Collection $array
+     *
+     * @param mixed $value
+     * @param mixed $array
      * @return bool
      */
     function array_value_exists($value, $array): bool
@@ -773,8 +817,11 @@ if (!function_exists('array_value_exists')) {
 if (!function_exists('array_dot_reverse')) {
     /**
      * convert dotted_array to array
-     * @return array
+     *
+     * @param $array
+     * @return array|null
      */
+    // @phpstan-ignore-next-line
     function array_dot_reverse($array)
     {
         if (is_null($array)) {
@@ -793,6 +840,7 @@ if (!function_exists('array_dot_only')) {
      * arrayonly with dot
      * @return array
      */
+    // @phpstan-ignore-next-line
     function array_dot_only($array, $keys)
     {
         $newArray = [];
@@ -806,8 +854,8 @@ if (!function_exists('array_dot_only')) {
 if (!function_exists('array_remove')) {
     /**
      * array remove as "array_forget"
-     * @return array|string $keys
      */
+    // @phpstan-ignore-next-line
     function array_remove(array $array, $keys)
     {
         $result = array_diff($array, toArray($keys));
@@ -821,7 +869,7 @@ if (!function_exists('jsonToArray')) {
      * json to array
      *
      * @param mixed $value
-     * @return array
+     * @return mixed
      */
     function jsonToArray($value)
     {
@@ -834,6 +882,7 @@ if (!function_exists('jsonToArray')) {
             return $value;
         }
         // convert json to array
+        // @phpstan-ignore-next-line
         if (!is_array($value) && is_json($value)) {
             return json_decode_ex($value, true);
         }
@@ -849,6 +898,7 @@ if (!function_exists('stringToArray')) {
      * @param mixed $value
      * @return array
      */
+    // @phpstan-ignore-next-line
     function stringToArray($value)
     {
         if (is_nullorempty($value)) {
@@ -860,7 +910,7 @@ if (!function_exists('stringToArray')) {
             return $value;
         }
 
-        if ($value instanceof \Illuminate\Support\Collection) {
+        if ($value instanceof Collection) {
             return $value->toArray();
         }
 
@@ -880,6 +930,7 @@ if (!function_exists('breakCommaToArray')) {
      * @param mixed $value
      * @return array
      */
+    // @phpstan-ignore-next-line
     function breakCommaToArray($value)
     {
         if (is_nullorempty($value)) {
@@ -891,7 +942,7 @@ if (!function_exists('breakCommaToArray')) {
             return $value;
         }
 
-        if ($value instanceof \Illuminate\Support\Collection) {
+        if ($value instanceof Collection) {
             return $value->toArray();
         }
 
@@ -913,6 +964,7 @@ if (!function_exists('toArray')) {
      * @param mixed $value
      * @return ?array
      */
+    // @phpstan-ignore-next-line
     function toArray($value): ?array
     {
         if (is_null($value)) {
@@ -923,7 +975,7 @@ if (!function_exists('toArray')) {
             return $value;
         }
 
-        if ($value instanceof \Illuminate\Support\Collection) {
+        if ($value instanceof Collection) {
             return $value->all();
         }
 
@@ -940,9 +992,10 @@ if (!function_exists('arrayToString')) {
     /**
      * array to string(comma) string
      *
-     * @param mixed $value
-     * @return string
+     * @param $value
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     function arrayToString($value)
     {
         if (is_null($value)) {
@@ -953,7 +1006,7 @@ if (!function_exists('arrayToString')) {
         if (is_array($value)) {
             return implode(',', $value);
         }
-        if ($value instanceof \Illuminate\Support\Collection) {
+        if ($value instanceof Collection) {
             return $value->implode(',');
         }
 
@@ -962,6 +1015,7 @@ if (!function_exists('arrayToString')) {
 }
 
 if (!function_exists('is_json')) {
+    // @phpstan-ignore-next-line
     function is_json($string)
     {
         return is_string($string) && is_array(json_decode_ex($string, true)) && (json_last_error() == JSON_ERROR_NONE) ? true : false;
@@ -979,6 +1033,7 @@ if (!function_exists('is_vector')) {
      * false: ['foo' => 0, 'bar' => 1]
      * false: [0 => 'foo', 1 => 'bar']
      */
+    // @phpstan-ignore-next-line
     function is_vector(array $arr)
     {
         // foreach($arr as $key => $value){
@@ -1006,7 +1061,7 @@ if (!function_exists('is_list')) {
             return false;
         }
 
-        return is_array($value) || $value instanceof \Illuminate\Support\Collection;
+        return is_array($value) || $value instanceof Collection;
     }
 }
 
@@ -1051,6 +1106,7 @@ if (!function_exists('isMatchArray')) {
      * @param array $v2
      * @return bool
      */
+    // @phpstan-ignore-next-line
     function isMatchArray(array $v1, array $v2): bool
     {
         if (count($v1) == count($v2)) {
@@ -1087,6 +1143,7 @@ if (!function_exists('rstrpos')) {
 }
 
 if (!function_exists('make_password')) {
+    // @phpstan-ignore-next-line
     function make_password($length = 16, $options = [])
     {
         $options = array_merge(
@@ -1121,6 +1178,7 @@ if (!function_exists('make_password')) {
 }
 
 if (!function_exists('make_randomstr')) {
+    // @phpstan-ignore-next-line
     function make_randomstr($length, bool $useAlphabet = true, bool $useNumber = true)
     {
         $chars = '';
@@ -1140,6 +1198,7 @@ if (!function_exists('make_randomstr')) {
 }
 
 if (!function_exists('make_uuid')) {
+    // @phpstan-ignore-next-line
     function make_uuid()
     {
         return Uuid::generate()->string;
@@ -1158,6 +1217,7 @@ if (!function_exists('short_uuid')) {
 }
 
 if (!function_exists('is_uuid')) {
+    // @phpstan-ignore-next-line
     function is_uuid($uuid): bool
     {
         return Uuid::validate($uuid);
@@ -1165,6 +1225,7 @@ if (!function_exists('is_uuid')) {
 }
 
 if (!function_exists('make_licensecode')) {
+    // @phpstan-ignore-next-line
     function make_licensecode()
     {
         return make_randomstr(5).'-'.make_randomstr(5).'-'.make_randomstr(5).'-'.make_randomstr(5).'-'.make_randomstr(5);
@@ -1172,6 +1233,7 @@ if (!function_exists('make_licensecode')) {
 }
 
 if (!function_exists('pascalize')) {
+    // @phpstan-ignore-next-line
     function pascalize($string)
     {
         // replace A to _a
@@ -1190,8 +1252,9 @@ if (!function_exists('pascalize')) {
 if (!function_exists('get_password_rule')) {
     /**
      * get_password_rule(for validation)
-     * @return string
+     * @return array
      */
+    // @phpstan-ignore-next-line
     function get_password_rule($required = true, ?LoginUser $login_user = null)
     {
         return \Exment::get_password_rule($required, $login_user);
@@ -1201,8 +1264,12 @@ if (!function_exists('get_password_rule')) {
 if (!function_exists('get_omitted_string')) {
     /**
      * if over string length. remove text, add "..."
-     * @return string
+     *
+     * @param $text
+     * @param $length
+     * @return mixed|string|null
      */
+    // @phpstan-ignore-next-line
     function get_omitted_string($text, $length = null)
     {
         if (is_null($length)) {
@@ -1230,6 +1297,7 @@ if (!function_exists('replaceBreak')) {
      * replace new line code to <br />
      * @return string
      */
+    // @phpstan-ignore-next-line
     function replaceBreak($text, $isescape = true)
     {
         return preg_replace("/\\\\r\\\\n|\\\\r|\\\\n|\\r\\n|\\r|\\n/", "<br/>", $isescape ? esc_html($text) : $text);
@@ -1241,6 +1309,7 @@ if (!function_exists('replaceBreakEsc')) {
      * replace and new line code to <br />
      * @return string
      */
+    // @phpstan-ignore-next-line
     function replaceBreakEsc($text)
     {
         return preg_replace("/\\\\r\\\\n|\\\\r|\\\\n|\\r\\n|\\r|\\n/", "<br/>", esc_html($text));
@@ -1252,6 +1321,7 @@ if (!function_exists('replaceBrTag')) {
      * replace <br /> to new line code
      * @return string
      */
+    // @phpstan-ignore-next-line
     function replaceBrTag($text)
     {
         return preg_replace("/<br *\/>/u", "\n", $text);
@@ -1263,6 +1333,7 @@ if (!function_exists('explodeBreak')) {
      * explode new line code
      * @return array
      */
+    // @phpstan-ignore-next-line
     function explodeBreak($text)
     {
         return explode_ex("\r\n", preg_replace("/\\\\r\\\\n|\\\\r|\\\\n|\\r\\n|\\r|\\n/", "\r\n", $text));
@@ -1274,6 +1345,7 @@ if (!function_exists('getYesNo')) {
      * get yes no label
      * @return string
      */
+    // @phpstan-ignore-next-line
     function getYesNo($value): string
     {
         return boolval($value) ? 'YES' : 'NO';
@@ -1285,9 +1357,12 @@ if (!function_exists('getModelName')) {
     /**
      * Get custom_value's model fullpath.
      * this function contains flow creating eloquent class dynamically.
-     * @param string|CustomTable|CustomValue $obj
-     * @return string
+     *
+     * @param $obj
+     * @param $get_name_only
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     function getModelName($obj, $get_name_only = false)
     {
         if ($obj instanceof CustomValue) {
@@ -1357,7 +1432,7 @@ if (!function_exists('hasTable')) {
      * whether database has table
      * *CANNOT USE if create table dynamic (ex. install)
      * @param string $table_name *only table name
-     * @return string
+     * @return bool
      */
     function hasTable($table_name)
     {
@@ -1373,9 +1448,10 @@ if (!function_exists('hasTable')) {
 if (!function_exists('hasColumn')) {
     /**
      * whether database has column using table
+     *
      * @param string $table_name *only table name string. not object
      * @param string $column_name *only column name string. not object
-     * @return string
+     * @return bool
      */
     function hasColumn($table_name, $column_name)
     {
@@ -1392,10 +1468,13 @@ if (!function_exists('hasColumn')) {
 if (!function_exists('getDBTableName')) {
     /**
      * Get database table name.
+     *
      * @param string|CustomTable|array $obj
      * @param bool $isThrow if true and not has database, throwing
      * @return string
+     * @throws Exception
      */
+    // @phpstan-ignore-next-line
     function getDBTableName($obj, $isThrow = true)
     {
         $obj = CustomTable::getEloquent($obj);
@@ -1409,8 +1488,9 @@ if (!function_exists('getDBTableName')) {
 if (!function_exists('getEndpointName')) {
     /**
      * get endpoint name.
+     *
      * @param mixed $obj
-     * @return string
+     * @return string|null
      */
     function getEndpointName($obj)
     {
@@ -1427,6 +1507,7 @@ if (!function_exists('getCurrencySymbolLabel')) {
     /**
      * Get Currency Sybmol. ex. $, ￥, ...
      */
+    // @phpstan-ignore-next-line
     function getCurrencySymbolLabel($currencySymbol, $html = false, $value = null)
     {
         $currencySymbol = CurrencySymbol::getEnum($currencySymbol);
@@ -1456,6 +1537,7 @@ if (!function_exists('replaceTextFromFormat')) {
      *
      * @deprecated Please use ReplaceFormatService::replaceTextFromFormat
      */
+    // @phpstan-ignore-next-line
     function replaceTextFromFormat($format, $custom_value = null, $options = [])
     {
         return ReplaceFormatService::replaceTextFromFormat($format, $custom_value, $options);
@@ -1464,6 +1546,7 @@ if (!function_exists('replaceTextFromFormat')) {
 
 // Database Difinition --------------------------------------------------
 if (!function_exists('shouldPassThrough')) {
+    // @phpstan-ignore-next-line
     function shouldPassThrough($initialize = false)
     {
         if ($initialize) {
@@ -1493,6 +1576,7 @@ if (!function_exists('getTransArray')) {
     /**
      * Create Associative array translated
      */
+    // @phpstan-ignore-next-line
     function getTransArray($array, $base_key, $isExment = true)
     {
         if ($array instanceof \MyCLabs\Enum\Enum) {
@@ -1510,6 +1594,7 @@ if (!function_exists('getTransArrayValue')) {
     /**
      * Create Associative array translated
      */
+    // @phpstan-ignore-next-line
     function getTransArrayValue($array, $base_key, $isExment = true)
     {
         $associative_array = [];
@@ -1532,6 +1617,7 @@ if (! function_exists('abortJson')) {
      * @param  ErrorCode  $errorCode
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     function abortJson($code, $message = null, $errorCode = null)
     {
         $result = [];
@@ -1550,6 +1636,7 @@ if (! function_exists('abortJson')) {
             $result['code'] = $errorCode->getValue();
         }
 
+        // @phpstan-ignore-next-line
         return response()->json($result, $code);
     }
 }
@@ -1561,6 +1648,7 @@ if (!function_exists('getAjaxResponse')) {
      *
      * @return \Symfony\Component\HttpFoundation\Response Response for ajax json
      */
+    // @phpstan-ignore-next-line
     function getAjaxResponse($results)
     {
         if ($results instanceof \Illuminate\Http\Response) {
@@ -1596,6 +1684,7 @@ if (!function_exists('downloadFile')) {
      * download file.
      * Support large file
      */
+    // @phpstan-ignore-next-line
     function downloadFile($path, $disk)
     {
         $driver = $disk->getDriver();
@@ -1625,6 +1714,7 @@ if (!function_exists('getPagerOptions')) {
     /**
      * get pager select options
      */
+    // @phpstan-ignore-next-line
     function getPagerOptions($addEmpty = false, $counts = Define::PAGER_GRID_COUNTS)
     {
         $options = [];
@@ -1645,6 +1735,7 @@ if (!function_exists('getDataFromSheet')) {
     /**
      * get Data from excel sheet
      */
+    // @phpstan-ignore-next-line
     function getDataFromSheet($sheet, $keyvalue = false, $isGetMerge = false)
     {
         return \Exment::getDataFromSheet($sheet, $keyvalue, $isGetMerge);
@@ -1655,6 +1746,7 @@ if (!function_exists('getCellValue')) {
     /**
      * get cell value
      */
+    // @phpstan-ignore-next-line
     function getCellValue($cell, $sheet, $isGetMerge = false)
     {
         return \Exment::getCellValue($cell, $sheet, $isGetMerge);
@@ -1664,6 +1756,7 @@ if (!function_exists('getCellValue')) {
 if (!function_exists('getCellAlphabet')) {
     /**
      */
+    // @phpstan-ignore-next-line
     function getCellAlphabet($no)
     {
         $alphabet = "ZABCDEFGHIJKLMNOPQRSTUVWXY";
@@ -1684,9 +1777,13 @@ if (!function_exists('getCellAlphabet')) {
 if (!function_exists('getUserName')) {
     /**
      * Get database user name.
-     * @param string $id
-     * @return string user name
+     *
+     * @param string|CustomValue $id
+     * @param $link
+     * @param $addAvatar
+     * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Translation\Translator|mixed|string|null
      */
+    // @phpstan-ignore-next-line
     function getUserName($id, $link = false, $addAvatar = false)
     {
         if (is_nullorempty($id)) {
@@ -1742,13 +1839,13 @@ if (!function_exists('admin_exclusion_path')) {
     }
 
     if (!function_exists('unicode_decode')) {
+
         /**
          * Get admin exclusion url.
          * Ex. admin/data/testtable to data/testtable
          *
-         * @param string $path
-         *
-         * @return string
+         * @param string $str
+         * @return string|null
          */
         function unicode_decode($str)
         {
@@ -1764,9 +1861,8 @@ if (!function_exists('admin_exclusion_path')) {
          * Get admin exclusion url.
          * Ex. admin/data/testtable to data/testtable
          *
-         * @param string $path
-         *
-         * @return string
+         * @param string $str
+         * @return string|null
          */
         function unicode_encode($str)
         {
@@ -1785,7 +1881,7 @@ if (!function_exists('admin_exclusion_path')) {
         /**
          * Wrapper for json_decode that throws when an error occurs.
          *
-         * @param array|string $json    JSON data to parse
+         * @param array|string|null $json    JSON data to parse
          * @param bool   $assoc   When true, returned objects will be converted
          *                        into associative arrays.
          * @param int    $depth   User specified recursion depth.
@@ -1793,13 +1889,42 @@ if (!function_exists('admin_exclusion_path')) {
          *
          * @return object|array|string|int|float|bool|null
          */
+        // @phpstan-ignore-next-line
         function json_decode_ex($json, bool $assoc = false, int $depth = 512, int $options = 0)
         {
             if (is_null($json) || is_array($json)) {
                 return $json;
             }
 
+            // @phpstan-ignore-next-line
             return json_decode($json, $assoc, $depth, $options);
+        }
+    }
+
+    if (!function_exists('convert_to_valid_filename')) {
+        /**
+         * Replace characters that cannot be used in filename
+         *
+         * @param string $filename The filename to be sanitized
+         * @return string The sanitized filename
+         */
+        function convert_to_valid_filename(string $filename): string
+        {
+            $from = ['/', ':', '*', '?', '"', '<', '>', '|'];
+            $to = ['_', '_', '_', '_', '_', '[', ']', '_'];
+    
+            $patterns = array_map(function($val) {
+                return '#\\'.$val.'#';
+            }, $from);
+    
+            // Replace characters that cannot be used in filename
+            $validName = preg_replace($patterns, $to, $filename);
+            
+            // Truncate the filename if it exceeds 255 characters
+            if (strlen($validName) > 255) {
+                $validName = substr($validName, 0, 255);
+            }
+            return $validName;
         }
     }
 }

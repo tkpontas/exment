@@ -3,10 +3,12 @@
 namespace Exceedone\Exment\Model;
 
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 
 /**
  * For API auth "api_key"
+ * @property Client $client
  */
 class ApiKey extends Model
 {
@@ -16,6 +18,8 @@ class ApiKey extends Model
 
     public $timestamps = false;
 
+
+    // @phpstan-ignore-next-line
     protected $primary_key = 'key';
 
     protected $keyType = 'string';
@@ -28,6 +32,8 @@ class ApiKey extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+
+    // @phpstan-ignore-next-line
     public function client()
     {
         return $this->belongsTo(Passport::clientModel());

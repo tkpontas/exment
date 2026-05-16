@@ -8,6 +8,9 @@ use Exceedone\Exment\Tests\TestDefine;
 
 class AccessibleUserTest extends UnitTestBase
 {
+    /**
+     * @return void
+     */
     public function testFuncCustomValueEdit()
     {
         $custom_table = CustomTable::getEloquent(TestDefine::TESTDATA_TABLE_NAME_EDIT);
@@ -17,11 +20,14 @@ class AccessibleUserTest extends UnitTestBase
         })->toArray();
 
         $target_users = CustomTable::getEloquent(SystemTableName::USER)->getValueModel()
-            ->where('value->user_code', '<>', 'company2-userF')->get()->pluck('id')->toArray();
+            ->where('value->user_code', '<>', 'company2-userF')->pluck('id')->toArray();
 
         $this->_compareArray($users, $target_users);
     }
 
+    /**
+     * @return void
+     */
     public function testFuncInformationTable()
     {
         $custom_table = CustomTable::getEloquent('information');
@@ -35,6 +41,9 @@ class AccessibleUserTest extends UnitTestBase
         $this->_compareArray($users, $target_users);
     }
 
+    /**
+     * @return void
+     */
     public function testFuncNoPermission()
     {
         $custom_table = CustomTable::getEloquent(TestDefine::TESTDATA_TABLE_NO_PERMISSION);
@@ -47,11 +56,14 @@ class AccessibleUserTest extends UnitTestBase
             ->where(function ($query) {
                 $query->orWhere('value->user_code', 'admin')
                       ->orWhere('value->user_code', 'user1');
-            })->get()->pluck('id')->toArray();
+            })->pluck('id')->toArray();
 
         $this->_compareArray($users, $target_users);
     }
 
+    /**
+     * @return void
+     */
     public function testFuncCustomValueEditValue()
     {
         $this->initAllTest();
@@ -70,11 +82,14 @@ class AccessibleUserTest extends UnitTestBase
                 $query->orWhere('value->user_code', 'admin')
                       ->orWhere('value->user_code', 'user1')
                       ->orWhere('value->user_code', 'dev1-userD');
-            })->get()->pluck('id')->toArray();
+            })->pluck('id')->toArray();
 
         $this->_compareArray($users, $target_users);
     }
 
+    /**
+     * @return void
+     */
     public function testFuncCustomValueEditValue2()
     {
         $this->initAllTest();
@@ -93,11 +108,16 @@ class AccessibleUserTest extends UnitTestBase
                 $query->orWhere('value->user_code', 'admin')
                       ->orWhere('value->user_code', 'user1')
                       ->orWhere('value->user_code', 'dev1-userC');
-            })->get()->pluck('id')->toArray();
+            })->pluck('id')->toArray();
 
         $this->_compareArray($users, $target_users);
     }
 
+    /**
+     * @param array<mixed> $array1
+     * @param array<mixed> $array2
+     * @return void
+     */
     protected function _compareArray(array $array1, array $array2)
     {
         $result = array_diff($array1, $array2);

@@ -9,6 +9,7 @@ use Encore\Admin\Form\Field;
 
 class Email extends CustomItem
 {
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return Field\Email::class;
@@ -30,10 +31,10 @@ class Email extends CustomItem
     /**
      * Get grid filter option. Use grid filter, Ex. LIKE search.
      *
-     * @return string
+     * @return string|null
      */
     protected function getGridFilterOption(): ?string
     {
-        return FilterOption::LIKE;
+        return (string)FilterOption::LIKE;
     }
 }

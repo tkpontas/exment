@@ -39,10 +39,12 @@ use Exceedone\Exment\Enums\ShowGridType;
 use Exceedone\Exment\Enums\ShowPositionType;
 use Exceedone\Exment\Services\PartialCrudService;
 use Exceedone\Exment\ColumnItems\ItemInterface;
+use Illuminate\Support\Str;
 
 /** @phpstan-consistent-constructor */
 class DefaultShow extends ShowBase
 {
+    // @phpstan-ignore-next-line
     protected static $showClassName = \Exceedone\Exment\Form\Show::class;
 
     /**
@@ -52,6 +54,7 @@ class DefaultShow extends ShowBase
      */
     protected $rowCount = 0;
 
+    // @phpstan-ignore-next-line
     public function __construct($custom_table, $custom_form)
     {
         $this->custom_table = $custom_table;
@@ -63,6 +66,7 @@ class DefaultShow extends ShowBase
      * set option boxes.
      * contains file uploads, revisions
      */
+    // @phpstan-ignore-next-line
     public function setOptionBoxes($row)
     {
         $this->setChildBlockBox($row);
@@ -76,12 +80,17 @@ class DefaultShow extends ShowBase
 
     /**
      * set system values
-     * @param Show $show
+     *
+     * @param $show
+     * @return void
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function setSystemValues($show)
     {
         $trashed = boolval(request()->get('trashed'));
-
+        // @phpstan-ignore-next-line
         $field = (new ShowField(null, null))->system_values([
             'withTrashed' => $trashed])->setWidth(12, 0);
 
@@ -97,6 +106,7 @@ class DefaultShow extends ShowBase
     /**
      * create show form list
      */
+    // @phpstan-ignore-next-line
     public function createShowForm()
     {
         return new static::$showClassName($this->custom_value, function ($show) {
@@ -119,6 +129,7 @@ class DefaultShow extends ShowBase
 
                     $field = new ShowField($item->name(), $item->label());
                     $field->as(function ($v) use ($item) {
+                        // @phpstan-ignore-next-line
                         if (is_null($this)) {
                             return '';
                         }
@@ -165,9 +176,16 @@ class DefaultShow extends ShowBase
                     $tools->disableList();
                 }
 
-                if (!is_null($parent_value = $this->custom_value->getParentValue()) && $parent_value->enableEdit(true) !== true) {
-                    $tools->disableEdit();
-                    $tools->disableDelete();
+                if (!is_null($parent_value = $this->custom_value->getParentValue(null, true))) {
+                    if (boolval($this->custom_table->getOption('editable_with_parent')??1)) {
+                        if ($parent_value->enableEdit(true) !== true) {
+                            $tools->disableEdit();
+                            $tools->disableDelete();
+                        }
+                    } elseif ($parent_value->enableAccess() !== true)  {
+                        $tools->disableEdit();
+                        $tools->disableDelete();
+                    }
                 }
 
                 if ($this->modal) {
@@ -233,9 +251,12 @@ class DefaultShow extends ShowBase
                                 $tools->append(new Tools\NotifyButton($notify, $this->custom_table, $this->custom_value->id));
                             }
                         }
-                        foreach ($operations as $operation) {
-                            if ($operation->isOperationTarget($this->custom_value, CustomOperationType::BUTTON)) {
-                                $tools->append(new Tools\OperationButton($operation, $this->custom_table, $this->custom_value->id));
+
+                        if ($enableEdit === true) {
+                            foreach ($operations as $operation) {
+                                if ($operation->active_flg && $operation->isOperationTarget($this->custom_value, CustomOperationType::BUTTON)) {
+                                    $tools->append(new Tools\OperationButton($operation, $this->custom_table, $this->custom_value->id));
+                                }
                             }
                         }
 
@@ -264,15 +285,18 @@ class DefaultShow extends ShowBase
                                 'redirectUrl' => admin_urls("data", $this->custom_table->table_name),
                             ]));
 
-                            // add restore button
-                            $tools->prepend(new Tools\SwalInputButton([
-                                'url' => admin_urls("data", $this->custom_table->table_name, $this->custom_value->id, "restoreClick"),
-                                'label' => exmtrans('custom_value.restore'),
-                                'icon' => 'fa-undo',
-                                'btn_class' => 'btn-warning',
-                                'title' => exmtrans('custom_value.message.restore'),
-                                'method' => 'get',
-                            ]));
+                            // if parent data does not exist or has not been deleted 
+                            if (!$parent_value || !$parent_value->trashed()) {
+                                // add restore button
+                                $tools->prepend(new Tools\SwalInputButton([
+                                    'url' => admin_urls("data", $this->custom_table->table_name, $this->custom_value->id, "restoreClick"),
+                                    'label' => exmtrans('custom_value.restore'),
+                                    'icon' => 'fa-undo',
+                                    'btn_class' => 'btn-warning',
+                                    'title' => exmtrans('custom_value.message.restore'),
+                                    'method' => 'get',
+                                ]));
+                            }
                         }
                     }
 
@@ -332,15 +356,13 @@ class DefaultShow extends ShowBase
         }
     }
 
-
     /**
      * Append child block box.
      *
      * @param Row $row
-     * @param CustomValue $this->custom_value
-     * @param int $id
-     * @param boolean $modal
      * @return void
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     protected function setChildBlockBox($row)
     {
@@ -351,8 +373,11 @@ class DefaultShow extends ShowBase
 
         $trashed = boolval(request()->get('trashed'));
 
+        $custom_form_blocks = $this->custom_form->custom_form_blocks->sortBy(function ($item, $key) {
+            return $item->getOption('form_block_order')?? -1;
+        });
         // loop for custom form blocks
-        foreach ($this->custom_form->custom_form_blocks as $custom_form_block) {
+        foreach ($custom_form_blocks as $custom_form_block) {
             // if available is false, continue
             if (!$custom_form_block->available) {
                 continue;
@@ -376,6 +401,8 @@ class DefaultShow extends ShowBase
                 $classname = getModelName($target_table);
                 $grid = new Grid(new $classname());
                 $grid->setTitle($block_label);
+                $grid->setName($target_table->table_name);
+                $grid->model()->setSortName($target_table->table_name . '_sort');
 
                 // one to many
                 if ($custom_form_block->form_block_type == FormBlockType::ONE_TO_MANY) {
@@ -434,7 +461,7 @@ class DefaultShow extends ShowBase
                         'add_id' => true,
                     ]));
                 });
-
+                // @phpstan-ignore-next-line
                 $row->column(['xs' => 12, 'sm' => 12], $grid->render());
             }
         }
@@ -443,6 +470,7 @@ class DefaultShow extends ShowBase
     /**
      * get revision compare.
      */
+    // @phpstan-ignore-next-line
     public function getRevisionCompare($revision_suuid = null, $pjax = false)
     {
         $table_name = $this->custom_table->table_name;
@@ -521,6 +549,7 @@ EOT;
         return view("exment::custom-value.revision-compare", $prms);
     }
 
+    // @phpstan-ignore-next-line
     protected function setRevisionBox($row)
     {
         $revisions = $this->getRevisions();
@@ -544,12 +573,14 @@ EOT;
                 'No.'.($revision->revision_no)
             )->setWidth(9, 2);
         }
+        // @phpstan-ignore-next-line
         $row->column(['xs' => 12, 'sm' => 6], (new Box(exmtrans('revision.update_history'), $form))->style('info'));
     }
 
     /**
      * whether file upload field
      */
+    // @phpstan-ignore-next-line
     protected function useFileUpload()
     {
         // if no permission, return
@@ -563,11 +594,13 @@ EOT;
     /**
      * whether comment field
      */
+    // @phpstan-ignore-next-line
     protected function useComment()
     {
         return !$this->modal && boolval($this->custom_table->getOption('comment_flg') ?? true);
     }
 
+    // @phpstan-ignore-next-line
     protected function getDocuments()
     {
         if ($this->modal) {
@@ -576,6 +609,7 @@ EOT;
         return $this->custom_value->getDocuments();
     }
 
+    // @phpstan-ignore-next-line
     protected function setDocumentBox($row)
     {
         $documents = $this->getDocuments();
@@ -592,10 +626,11 @@ EOT;
         // show document list
         if (count($documents) > 0) {
             $html = [];
+            $allow_delete = config('exment.allow_delete_attachment', false);
             foreach ($documents as $index => $d) {
                 $html[] = "<p>" . view('exment::form.field.documentlink', [
                     'document' => $d,
-                    'candelete' => $this->custom_value->enableDelete(true) === true,
+                    'candelete' => $this->custom_value->enableDelete(!$allow_delete) === true,
                 ])->render() . "</p>";
             }
             // loop and add as link
@@ -645,10 +680,11 @@ EOT;
 
             Admin::script($script);
         }
-
+        // @phpstan-ignore-next-line
         $row->column(['xs' => 12, 'sm' => 6], (new Box(exmtrans("common.attachment"), $form))->style('info'));
     }
 
+    // @phpstan-ignore-next-line
     protected function getComments()
     {
         if ($this->modal) {
@@ -659,6 +695,7 @@ EOT;
             ->get();
     }
 
+    // @phpstan-ignore-next-line
     protected function setCommentBox($row)
     {
         $useComment = $this->useComment();
@@ -697,10 +734,11 @@ EOT;
             ->setLabelClass(['d-none'])
             ->setWidth(12, 0);
         }
-
+        // @phpstan-ignore-next-line
         $row->column(['xs' => 12, 'sm' => 6], (new Box(exmtrans("common.comment"), $form))->style('info'));
     }
 
+    // @phpstan-ignore-next-line
     public function getWorkflowHistory()
     {
         $workflows = $this->custom_value->getWorkflowHistories(true)->toArray();
@@ -736,6 +774,7 @@ EOT;
     /**
      * restore data
      */
+    // @phpstan-ignore-next-line
     public function restoreRevision($revision_suuid)
     {
         $this->custom_value->setRevision($revision_suuid)->restore_revision()->save();
@@ -745,6 +784,7 @@ EOT;
     /**
      * get target data revisions
      */
+    // @phpstan-ignore-next-line
     protected function getRevisions($all = false)
     {
         if ($this->modal || !boolval($this->custom_table->getOption('revision_flg', true))) {
@@ -775,6 +815,7 @@ EOT;
     /**
      * for file upload function.
      */
+    // @phpstan-ignore-next-line
     public function fileupload($httpfiles)
     {
         if (is_nullorempty($httpfiles)) {
@@ -808,6 +849,7 @@ EOT;
     /**
      * file delete custom column.
      */
+    // @phpstan-ignore-next-line
     public function filedelete(Request $request, $form)
     {
         // get file delete flg column name
@@ -817,26 +859,40 @@ EOT;
 
         // get custom column and item
         $custom_column = CustomColumn::getEloquent($del_column_name, $this->custom_table);
+        /** @var ColumnItems\CustomItem|null $custom_item */
         $custom_item = $custom_column ? $custom_column->column_item : null;
         if ($custom_item && method_exists($custom_item, 'deleteFile')) {
             $custom_item->setCustomValue($this->custom_value)->deleteFile($del_key);
         }
 
-        // reget custom value
-        $updated_value = getModelName($this->custom_table)::find($this->custom_value->id);
+        // Reget custom value and updated_at
+        $updated_at = null;
+        $parent_value = $this->custom_value->getParentValue();
+        $referer = $request->header('referer');
+        
+        if ($parent_value && $referer && Str::contains($referer, '/' . $parent_value->custom_table->table_name . '/')) {
+            $updated_value = $parent_value->custom_table->getValueQuery()
+                ->select(['updated_at'])
+                ->find($parent_value->id);
+            $updated_at = $updated_value->updated_at ?? null;
+        } else {
+            $updated_value = getModelName($this->custom_table)::find($this->custom_value->id);
+            $updated_at = $updated_value->updated_at ?? null;
+        }
+
         return getAjaxResponse([
             'result'  => true,
             'message' => trans('admin.delete_succeeded'),
             'reload' => false,
             'updateValue' => [
-                'updated_at' => $updated_value->updated_at->format('Y-m-d H:i:s'),
+                'updated_at' => $updated_at ? $updated_at->format('Y-m-d H:i:s') : null,
             ],
         ]);
     }
-
     /**
      * add comment.
      */
+    // @phpstan-ignore-next-line
     public function addComment($comment)
     {
         if (!empty($comment)) {
@@ -864,6 +920,7 @@ EOT;
     /**
      * delete comment.
      */
+    // @phpstan-ignore-next-line
     public function deleteComment($id, $suuid)
     {
         if (!empty($suuid)) {
@@ -880,12 +937,11 @@ EOT;
         ]);
     }
 
-
-
     /**
      * Set ColumnItem's option to column item
      *
      * @param ItemInterface $column_item
+     * @param CustomFormColumn|null $form_column
      * @return void
      */
     protected function setColumnItemOption(ItemInterface $column_item, ?CustomFormColumn $form_column = null)
@@ -899,7 +955,7 @@ EOT;
     /**
      * Whether this form is publicform
      *
-     * @return boolean
+     * @return bool
      */
     protected function isPublicForm(): bool
     {

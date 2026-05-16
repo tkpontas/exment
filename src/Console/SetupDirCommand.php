@@ -74,6 +74,7 @@ class SetupDirCommand extends AdminInstallCommand
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getGroup()
     {
         $group = $this->option('group');
@@ -81,6 +82,7 @@ class SetupDirCommand extends AdminInstallCommand
             // get current group
             $current_group = null;
             if (function_exists('posix_getgrgid')) {
+                // @phpstan-ignore-next-line
                 $current_group = array_get(posix_getgrgid(filegroup(base_path(path_join('public', 'index.php')))), 'name');
             }
 
@@ -135,8 +137,6 @@ class SetupDirCommand extends AdminInstallCommand
     /**
      * Revert permission
      *
-     * @param string|null $user
-     * @param string|null $group
      * @return void
      */
     public static function revertEasyInstall()
@@ -195,9 +195,6 @@ class SetupDirCommand extends AdminInstallCommand
      * Set all permission
      *
      * @param string $path
-     * @param string|null $user
-     * @param string|null $group
-     * @param bool $isMod is execute chmod
      * @return void
      */
     protected static function revertPermission(string $path)

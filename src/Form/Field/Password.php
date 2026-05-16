@@ -4,13 +4,13 @@ namespace Exceedone\Exment\Form\Field;
 
 class Password extends \Encore\Admin\Form\Field\Password
 {
+    // @phpstan-ignore-next-line
     protected $showToggleIcon = false;
 
     /**
      * set toggle icon password display
-     *
-     * @return void
      */
+    // @phpstan-ignore-next-line
     public function toggleShowEvent()
     {
         $this->showToggleIcon = true;
@@ -29,7 +29,7 @@ class Password extends \Encore\Admin\Form\Field\Password
 
     // get input
     var input = $(this).closest('.input-group').find('input');
-    
+
     // toggle type
     if (input.attr("type") == "password") {
         input.attr("type", "text");

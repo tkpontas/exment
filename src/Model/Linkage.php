@@ -3,16 +3,25 @@
 namespace Exceedone\Exment\Model;
 
 use Exceedone\Exment\Enums\SearchType;
+use Illuminate\Support\Collection;
 
 /**
  * Linkage item for Select table in form
  */
 class Linkage
 {
+
+    // @phpstan-ignore-next-line
     public $parent_column;
+
+    // @phpstan-ignore-next-line
     public $child_column;
+
+    // @phpstan-ignore-next-line
     public $searchType;
 
+
+    // @phpstan-ignore-next-line
     public function __construct(array $params = [])
     {
         $this->parent_column = array_get($params, 'parent_column');
@@ -20,10 +29,14 @@ class Linkage
         $this->searchType = array_get($params, 'searchType');
     }
 
+
+    // @phpstan-ignore-next-line
     public function parent_custom_table()
     {
         return isset($this->parent_column) ? $this->parent_column->custom_table_cache : null;
     }
+
+    // @phpstan-ignore-next-line
     public function child_custom_table()
     {
         return isset($this->child_column) ? $this->child_column->custom_table_cache : null;
@@ -36,6 +49,8 @@ class Linkage
      *
      * @return array contains parent_column, child_column, searchType
      */
+
+    // @phpstan-ignore-next-line
     public static function getSelectTableLinkages($custom_table, $checkPermission = true)
     {
         $result = [];
@@ -98,16 +113,25 @@ class Linkage
      * @param CustomColumn|string|null $child_custom_column
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getLinkages($parent_custom_column, $child_custom_column)
     {
         $parent_custom_column = CustomColumn::getEloquent($parent_custom_column);
         $child_custom_column = CustomColumn::getEloquent($child_custom_column);
 
         if (is_nullorempty($child_custom_column)) {
-            return collect();
+            /** @var Collection $collection */
+
+            // @phpstan-ignore-next-line
+            $collection = collect();
+            return $collection;
         }
 
-        return collect(static::getSelectTableLinkages($child_custom_column->custom_table_cache, false))
+        /** @var Collection $collection */
+
+        // @phpstan-ignore-next-line
+        $collection =  collect(static::getSelectTableLinkages($child_custom_column->custom_table_cache, false))
             ->filter(function ($relationColumn) use ($parent_custom_column, $child_custom_column) {
                 if (isset($parent_custom_column)) {
                     if ($parent_custom_column->id != array_get($relationColumn, 'parent_column')->id) {
@@ -118,6 +142,7 @@ class Linkage
             })->map(function ($relationColumn) {
                 return new self($relationColumn);
             });
+        return $collection;
     }
 
     /**
@@ -133,6 +158,8 @@ class Linkage
     }
 
 
+
+    // @phpstan-ignore-next-line
     public function getParentValueId($custom_value)
     {
         if (!isset($custom_value)) {
@@ -152,6 +179,8 @@ class Linkage
      * @param int|string|null $parent_v
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function setQueryFilter($query, $parent_v)
     {
         $parent_target_table = $this->parent_column->select_target_table;

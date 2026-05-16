@@ -10,12 +10,14 @@ use Exceedone\Exment\Form\Tools;
 
 class CalendarGrid extends GridBase
 {
+    // @phpstan-ignore-next-line
     public function __construct($custom_table, $custom_view)
     {
         $this->custom_table = $custom_table;
         $this->custom_view = $custom_view;
     }
 
+    // @phpstan-ignore-next-line
     public function grid()
     {
         $table_name = $this->custom_table->table_name;
@@ -51,6 +53,7 @@ class CalendarGrid extends GridBase
      * @param CustomTable $custom_table
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function setViewForm($view_kind_type, $form, $custom_table, array $options = [])
     {
         static::setViewInfoboxFields($form);
@@ -75,5 +78,21 @@ class CalendarGrid extends GridBase
 
         // filter setting
         static::setFilterFields($form, $custom_table);
+    }
+
+    /**
+     * Set filter fileds form
+     *
+     * @param Form $form
+     * @param CustomTable $custom_table
+     * @param boolean $is_aggregate
+     * @return void
+     */
+    public static function setFilterFields(&$form, $custom_table, $is_aggregate = false)
+    {
+        parent::setFilterFields($form, $custom_table, $is_aggregate);
+
+        $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
+            ->option(exmtrans("condition.condition_reverse_options"));
     }
 }

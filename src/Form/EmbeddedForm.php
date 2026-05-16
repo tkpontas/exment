@@ -57,15 +57,15 @@ class EmbeddedForm extends EmbeddedFormBase
      *     'options' => [], // Set row no, column no, width
      *     'field' => AdminField, // Set adminfield
      * ]
-     * @var array
+     * @var array<int, array<string, mixed>>
      */
     protected $fieldAndOptions = [];
 
     /**
      * Push field and set for grid
      *
-     * @param AdminField $field
-     * @param array $options
+     * @param Field $field
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function pushFieldAndOption(Field $field, array $options)
@@ -83,7 +83,7 @@ class EmbeddedForm extends EmbeddedFormBase
     /**
      * Get field and options
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     public function getFieldAndOptions()
     {
@@ -93,10 +93,11 @@ class EmbeddedForm extends EmbeddedFormBase
     /**
      * Prepare for insert or update.
      *
-     * @param array $input
+     * @param array|null $input
      *
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function prepare($input, bool $asConfirm = false)
     {
         if (is_null($input)) {

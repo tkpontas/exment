@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Tests\Unit;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use Exceedone\Exment\Enums\NotifyTrigger;
 use Exceedone\Exment\Enums\NotifyActionTarget;
@@ -21,6 +22,10 @@ class NotifyTest extends UnitTestBase
 {
     use TestTrait;
 
+    /**
+     * @param bool $fake
+     * @return void
+     */
     protected function init(bool $fake)
     {
         $this->initAllTest();
@@ -33,6 +38,9 @@ class NotifyTest extends UnitTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testNotifyMail()
     {
         $subject = 'テスト';
@@ -50,8 +58,12 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMailTemplate()
     {
+        /** @var mixed $mail_template */
         $mail_template = CustomTable::getEloquent('mail_template')->getValueModel()->where('value->mail_key_name', 'test_template_1')->first();
 
         $subject = $mail_template->getValue('mail_subject');
@@ -68,6 +80,9 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMailTemplateParams()
     {
         $mail_template = CustomTable::getEloquent('mail_template')->getValueModel()->where('value->mail_key_name', 'test_template_2')->first();
@@ -90,6 +105,9 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMail3()
     {
         $subject = 'テスト';
@@ -107,6 +125,9 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMail4()
     {
         $subject = 'テスト';
@@ -124,6 +145,9 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMail5()
     {
         $subject = 'テスト';
@@ -141,6 +165,9 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMail6()
     {
         $subject = 'テスト';
@@ -158,6 +185,9 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMail7()
     {
         $subject = 'テスト';
@@ -175,8 +205,12 @@ class NotifyTest extends UnitTestBase
         });
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyMailDisdableHistory()
     {
+        /** @var mixed $mail_template */
         $mail_template = CustomTable::getEloquent('mail_template')->getValueModel()->where('value->mail_key_name', 'test_template_1')->first();
 
         $subject = $mail_template->getValue('mail_subject');
@@ -196,6 +230,9 @@ class NotifyTest extends UnitTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testNotifyMailAttachment()
     {
         $subject = 'テスト';
@@ -229,6 +266,9 @@ class NotifyTest extends UnitTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testNotifySlack()
     {
         $this->init(true);
@@ -255,6 +295,9 @@ class NotifyTest extends UnitTestBase
     }
 
 
+    /**
+     * @return void
+     */
     public function testNotifyTeams()
     {
         $this->init(true);
@@ -280,10 +323,14 @@ class NotifyTest extends UnitTestBase
         );
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyNavbar()
     {
         $this->init(false);
 
+        /** @var User $user */
         $user = CustomTable::getEloquent('user')->getValueModel()->first();
         $subject = 'テスト';
         $body = '本文です';
@@ -300,6 +347,9 @@ class NotifyTest extends UnitTestBase
         $this->assertEquals(array_get($data, 'target_user_id'), $user->id);
     }
 
+    /**
+     * @return void
+     */
     public function testNotifyUpdate()
     {
         sleep(1);
@@ -309,6 +359,7 @@ class NotifyTest extends UnitTestBase
 
         $table_name = 'custom_value_edit_all';
         $user_id = \Exment::user()->base_user_id;
+        /** @var mixed $model */
         $model = CustomTable::getEloquent($table_name)->getValueModel()
             ->where('created_user_id', '<>', $user_id)->first();
         $model->update([
@@ -327,6 +378,10 @@ class NotifyTest extends UnitTestBase
     }
 
     // Test as executeNotifyAction ----------------------------------------------------
+
+    /**
+     * @return void
+     */
     public function testNotifyUpdateAction()
     {
         $this->init(false);
@@ -334,8 +389,11 @@ class NotifyTest extends UnitTestBase
         // Login user.
         $user = \Exment::user()->base_user;
 
+        /** @var Notify $notify */
         $notify = Notify::where('notify_trigger', NotifyTrigger::CREATE_UPDATE_DATA)->first();
+        /** @var CustomTable $custom_table */
         $custom_table = CustomTable::find($notify->target_id);
+        /** @var Model\CustomValue $custom_value */
         $custom_value = $custom_table->getValueModel()
             ->where('created_user_id', '<>', $user->id)->first();
         $target_user = CustomTable::getEloquent('user')->getValueModel(TestDefine::TESTDATA_USER_LOGINID_USER2);
@@ -386,7 +444,11 @@ class NotifyTest extends UnitTestBase
     }
 
 
-
+    /**
+     * @param array<mixed> $params
+     * @param \Closure $checkCallback
+     * @return void
+     */
     protected function _testNotifyMail(array $params, \Closure $checkCallback)
     {
         $this->init(true);
@@ -574,6 +636,8 @@ class NotifyTest extends UnitTestBase
 
 
     /**
+     * @param array<string>|string $target_emails
+     * @param array<mixed>  $exceptUsers
      * @return void
      */
     protected function _testNotifyTargetFixedEmail($target_emails, array $exceptUsers)
@@ -596,9 +660,11 @@ class NotifyTest extends UnitTestBase
     }
 
 
-
-
     /**
+     * @param CustomTable $custom_table
+     * @param mixed $notify_action_target
+     * @param \Closure $checkCallback
+     * @param array<mixed> $action_setting
      * @return void
      */
     protected function _testNotifyTarget(CustomTable $custom_table, $notify_action_target, \Closure $checkCallback, array $action_setting = [])

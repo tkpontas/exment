@@ -11,7 +11,7 @@ use Encore\Admin\Widgets\Form as WidgetForm;
  */
 abstract class OtherBase extends ColumnBase
 {
-    public static function make(CustomFormColumn $custom_form_column): ColumnBase
+    public static function make(CustomFormColumn $custom_form_column): ?ColumnBase
     {
         $column_form_column_name = FormColumnType::getOption(['id' => array_get($custom_form_column, 'form_column_target_id')])['column_name'] ?? null;
         switch ($column_form_column_name) {
@@ -31,12 +31,13 @@ abstract class OtherBase extends ColumnBase
         return null;
     }
 
-
     /**
      * Get object for suggest
      *
-     * @return self
+     * @param $form_column_type_id
+     * @return ColumnBase
      */
+    // @phpstan-ignore-next-line
     public static function makeBySuggest($form_column_type_id): ColumnBase
     {
         $form_column = new CustomFormColumn();
@@ -69,13 +70,15 @@ abstract class OtherBase extends ColumnBase
         return false;
     }
 
-
     /**
      * Get setting modal form
      *
-     * @return WidgetForm
+     * @param BlockBase $block_item
+     * @param array $parameters
+     * @return WidgetForm|null
      */
-    public function getSettingModalForm(BlockBase $block_item, array $parameters): WidgetForm
+    // @phpstan-ignore-next-line
+    public function getSettingModalForm(BlockBase $block_item, array $parameters): ?WidgetForm
     {
         $form = new WidgetForm($parameters);
         return $form;
@@ -87,6 +90,7 @@ abstract class OtherBase extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function prepareSavingOptions(array $options): array
     {
         return $options;
@@ -98,6 +102,7 @@ abstract class OtherBase extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getOptionLabels(): array
     {
         $options = $this->custom_form_column->options ?? [];
@@ -120,6 +125,7 @@ abstract class OtherBase extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getOptionLabelsDefinitions(): array
     {
         $result = [];

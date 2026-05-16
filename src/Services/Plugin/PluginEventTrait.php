@@ -8,25 +8,27 @@ use Exceedone\Exment\Model\CustomValue;
 /**
  * Plugin (Event) trait
  *
- * @property boolean $isDelete
  */
 trait PluginEventTrait
 {
     // workflow action(if call as workflow)
+    // @phpstan-ignore-next-line
     public $workflow_action;
 
     // notify(if call as notify)
+    // @phpstan-ignore-next-line
     public $notify;
 
     /**
      * Init event
      *
      * @param Model\Plugin $plugin
-     * @param Model\CustomTable $custom_table
-     * @param Model\CustomValue $custom_value
+     * @param Model\CustomTable|null $custom_table
+     * @param Model\CustomValue|null $custom_value
      * @param array $options
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function _initEvent($plugin, $custom_table, $custom_value, $options = [])
     {
         $this->plugin = $plugin;
@@ -47,5 +49,6 @@ trait PluginEventTrait
         $this->isCreate = is_nullorempty($this->custom_value) || $this->custom_value->wasRecentlyCreated;
         $this->isDelete = !is_nullorempty($this->custom_value) &&
             (isset($this->custom_value->deleted_user_id) || isset($this->custom_value->deleted_at));
+        $this->isForceDelete = isset($options['force_delete'])? $options['force_delete']: false;
     }
 }

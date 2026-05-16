@@ -8,6 +8,7 @@ use Exceedone\Exment\Services\DataImportExport;
 use Encore\Admin\Grid;
 use Encore\Admin\Show;
 use Illuminate\Support\Arr;
+use Carbon\Carbon;
 
 class LogController extends AdminControllerBase
 {
@@ -50,6 +51,14 @@ class LogController extends AdminControllerBase
             $filter->equal('method', exmtrans('operation_log.method'))->select(array_combine(OperationLog::$methods, OperationLog::$methods));
             $filter->like('path', exmtrans('operation_log.path'));
             $filter->equal('ip', exmtrans('operation_log.ip'));
+            $filter->betweendatetime(function ($query, $input) {
+                if (array_key_value_exists('start', $input)) {
+                    $query->whereDateMarkExment('created_at', Carbon::parse($input['start']), '>=', true);
+                }
+                if (array_key_value_exists('end', $input)) {
+                    $query->whereDateMarkExment('created_at', Carbon::parse($input['end']), '<=', true);
+                }
+            }, exmtrans('common.created_at'))->date();
         });
 
         // create exporter
@@ -59,6 +68,7 @@ class LogController extends AdminControllerBase
         $grid->tools(function (Grid\Tools $tools) use ($grid) {
             $button = new Tools\ExportImportButton(admin_url('loginuser'), $grid, false, true, false);
             $button->setBaseKey('common');
+            // @phpstan-ignore-next-line
             $tools->append($button);
         });
 
@@ -74,6 +84,7 @@ class LogController extends AdminControllerBase
     protected function detail($id)
     {
         $model = OperationLog::findOrFail($id);
+        // @phpstan-ignore-next-line
         return new Show($model, function (Show $show) {
             $show->field('user.user_name', exmtrans('operation_log.user_name'))->as(function ($foo, $model) {
                 return ($model->user ? $model->user->user_name : null);
@@ -83,6 +94,7 @@ class LogController extends AdminControllerBase
             $show->field('ip', exmtrans('operation_log.ip'));
             $show->field('input', exmtrans('operation_log.input'))->as(function ($input) {
                 $input = json_decode_ex($input, true);
+                // @phpstan-ignore-next-line
                 $input = Arr::except($input, ['_pjax', '_token', '_method', '_previous_']);
                 if (empty($input)) {
                     return '{}';
@@ -122,6 +134,7 @@ class LogController extends AdminControllerBase
         return response()->json($data);
     }
 
+    // @phpstan-ignore-next-line
     protected function getImportExportService($grid = null)
     {
         // create exporter

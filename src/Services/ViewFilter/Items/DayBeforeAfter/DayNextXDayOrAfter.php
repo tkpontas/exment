@@ -12,10 +12,11 @@ class DayNextXDayOrAfter extends DayBeforeAfterBase
         return FilterOption::DAY_NEXT_X_DAY_OR_AFTER;
     }
 
+    // @phpstan-ignore-next-line
     protected function getTargetDay($query_value)
     {
         $today =  Carbon::today();
-        return $today->addDay(intval($query_value));
+        return $today->addDays(intval($query_value));
     }
 
     protected function getMark(): string
@@ -34,7 +35,7 @@ class DayNextXDayOrAfter extends DayBeforeAfterBase
     protected function _compareValue($value, $conditionValue): bool
     {
         $today = \Carbon\Carbon::today();
-        $target_day = $today->addDay(intval($conditionValue));
+        $target_day = $today->addDays(intval($conditionValue));
         return \Exment::getCarbonOnlyDay($value)->gte($target_day);
     }
 }

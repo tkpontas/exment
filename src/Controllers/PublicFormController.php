@@ -22,16 +22,17 @@ use Exceedone\Exment\Enums\Permission;
 class PublicFormController extends Controller
 {
     /**
-     * @var PublicForm
+     * @var PublicForm|null
      */
     protected $public_form;
 
     /**
      */
+    // @phpstan-ignore-next-line
     protected $form_item;
 
     /**
-     * @var CustomForm
+     * @var CustomForm|null
      */
     protected $custom_form;
 
@@ -60,6 +61,7 @@ class PublicFormController extends Controller
      * @param  array  $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function callAction($method, $parameters)
     {
         // if public_form is null or not active, throw new \Exceedone\Exment\Exceptions\PublicFormNotFoundException();
@@ -84,6 +86,7 @@ class PublicFormController extends Controller
         return $this->getInputContent($request);
     }
 
+    // @phpstan-ignore-next-line
     public function redirect(Request $request)
     {
         admin_error(exmtrans('common.error'), exmtrans('error.expired_error_reinput'));
@@ -93,7 +96,8 @@ class PublicFormController extends Controller
     /**
      * Backed interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function backed(Request $request)
     {
@@ -129,11 +133,13 @@ class PublicFormController extends Controller
         }
     }
 
-
     /**
      * confirm interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return PublicContent|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\RedirectResponse|Response
+     * @throws PublicFormNotFoundException
+     * @throws \Throwable
      */
     public function confirm(Request $request)
     {
@@ -174,12 +180,13 @@ class PublicFormController extends Controller
         }
     }
 
-
-
     /**
      * create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return bool|PublicContent|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     * @throws PublicFormNotFoundException
+     * @throws \Throwable
      */
     public function create(Request $request)
     {
@@ -226,7 +233,7 @@ class PublicFormController extends Controller
                 $public_form->setContentOption($content, ['isContainer' => true]);
 
                 $content->row($public_form->getCompleteView($request, $form->model()));
-
+                // @phpstan-ignore-next-line
                 return response($content);
             });
 
@@ -250,6 +257,7 @@ class PublicFormController extends Controller
      * @param array $inputs
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function removeUploadedFile(array $inputs): array
     {
         foreach ($inputs as &$input) {

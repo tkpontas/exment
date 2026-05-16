@@ -99,6 +99,9 @@ class PatchDataCommand extends Command
             case '2factor':
                 $this->import2factorTemplate();
                 return 0;
+            case 'error_sendmail':
+                $this->importErrorSendMailTemplate();
+                return 0;
             case 'zip_password':
                 $this->importZipPasswordTemplate();
                 return 0;
@@ -246,6 +249,7 @@ class PatchDataCommand extends Command
     /**
      * patch mail template
      *
+     * @param array<int, string> $mail_key_names
      * @return void
      */
     protected function patchMailTemplate($mail_key_names = [])
@@ -316,12 +320,14 @@ class PatchDataCommand extends Command
                             }
 
                             // Check already exists, if already setted, continue
+                            /** @var CustomColumn|null $obj_column */
                             $obj_column = CustomColumn::getEloquent($column_name, $obj_table);
                             if (isset($obj_column)) {
                                 continue;
                             }
 
                             // Import column
+                            /** @var CustomColumn|null $obj_column */
                             $obj_column = CustomColumn::importTemplate($column, false, [
                                 'system_flg' => true,
                                 'parent' => $obj_table,
@@ -519,6 +525,7 @@ class PatchDataCommand extends Command
         $this->reAlterIndex($index_custom_columns);
     }
 
+    // @phpstan-ignore-next-line
     protected function reAlterIndex($index_custom_columns)
     {
         foreach ($index_custom_columns as  $index_custom_column) {
@@ -627,6 +634,7 @@ class PatchDataCommand extends Command
         $json = json_decode_ex(\File::get($configPath), true);
 
         // re-loop columns. because we have to get other column id --------------------------------------------------
+        // @phpstan-ignore-next-line
         foreach (array_get($json, "custom_tables", []) as $table) {
             // find tables. --------------------------------------------------
             $obj_table = CustomTable::getEloquent(array_get($table, 'table_name'));
@@ -747,6 +755,7 @@ class PatchDataCommand extends Command
 
 
 
+    // @phpstan-ignore-next-line
     protected function patchSystemAuthoritable()
     {
         if (!\Schema::hasTable('system_authoritable')) {
@@ -783,6 +792,7 @@ class PatchDataCommand extends Command
         System::system_admin_users(array_unique($system_admin_users));
     }
 
+    // @phpstan-ignore-next-line
     protected function patchValueAuthoritable()
     {
         if (!\Schema::hasTable('roles') || !\Schema::hasTable('value_authoritable') || !\Schema::hasTable(CustomValueAuthoritable::getTableName())) {
@@ -800,6 +810,7 @@ class PatchDataCommand extends Command
         foreach ($valueRoles as $valueRole) {
             $val = (array)$valueRole;
             $permissions = json_decode_ex($val['permissions'], true);
+            // @phpstan-ignore-next-line
             if (array_has($permissions, 'custom_value_edit')) {
                 $editRoles[] = $val['id'];
             } else {
@@ -883,6 +894,7 @@ class PatchDataCommand extends Command
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function removeDeletedTableNotify($mail_key_names = [])
     {
         // get custom table id
@@ -915,6 +927,7 @@ class PatchDataCommand extends Command
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function moveAppToStorageFolder($pathName, $diskName)
     {
         // get app/$pathName folder
@@ -999,6 +1012,7 @@ class PatchDataCommand extends Command
         $parent_organization->save();
     }
 
+    // @phpstan-ignore-next-line
     protected function removeDeletedColumn()
     {
         $classes = [
@@ -1011,6 +1025,11 @@ class PatchDataCommand extends Command
             Model\CustomFormColumn::class => ['type' => 'form_column_type', 'column' => 'form_column_target_id', 'whereval' => Enums\FormColumnType::COLUMN],
         ];
 
+        /**
+         * @var Model\CustomViewColumn|Model\CustomViewSort|Model\CustomViewFilter|Model\CustomViewSummary|Model\CustomOperationColumn|Model\Condition|Model\CustomFormColumn $class
+         * @var array $val
+         */
+        // @phpstan-ignore-next-line
         foreach ($classes as $class => $val) {
             $items = $class::where($val['type'], $val['whereval'])
                 ->get();
@@ -1428,6 +1447,7 @@ class PatchDataCommand extends Command
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function patchViewSuuid(array $classes)
     {
         if (!canConnection() || !hasTable('custom_view_columns')) {
@@ -1536,6 +1556,7 @@ class PatchDataCommand extends Command
     }
 
 
+    // @phpstan-ignore-next-line
     protected function updateNotifyDifinition()
     {
         Model\Notify::get()
@@ -1674,6 +1695,7 @@ class PatchDataCommand extends Command
         });
     }
 
+    // @phpstan-ignore-next-line
     protected function patchFormColumnRowNo()
     {
         $columns = CustomFormColumn::all();
@@ -1831,6 +1853,7 @@ class PatchDataCommand extends Command
         Model\File::where('parent_type', $custom_table->table_name)
             ->chunk(1000, function ($files) use ($custom_table) {
                 foreach ($files as $file) {
+                    // @phpstan-ignore-next-line
                     $exists = $custom_table->getValueModel()->query()
                         ->where('id', $file->parent_id)
                         ->withoutGlobalScopes()
@@ -1878,6 +1901,18 @@ class PatchDataCommand extends Command
     }
 
     /**
+     * import mail template for error sending mail
+     *
+     * @return void
+     */
+    protected function importErrorSendMailTemplate()
+    {
+        $this->patchMailTemplate([
+            MailKeyName::SENDMAIL_ERROR,
+        ]);
+    }
+
+    /**
      * appendColumnMailFromViewName
      *
      * @return void
@@ -1907,6 +1942,7 @@ class PatchDataCommand extends Command
         $this->appendCustomColumn('mail_template', 'custom_attachments');
     }
 
+    // @phpstan-ignore-next-line
     public function notifyTargetId()
     {
         Model\Notify::get()
@@ -2009,7 +2045,9 @@ class PatchDataCommand extends Command
                 // get all CustomViewSummary
                 $className::with('custom_view')->get()
                 ->each(function ($custom_view_summary) {
+                    /** @var CustomViewSummary|CustomViewColumn $custom_view_summary */
                     // get view and table info
+                    /** @var CustomView|null $custom_view */
                     $custom_view = $custom_view_summary->custom_view;
                     // If not has custom view, continue
                     if (!$custom_view) {
@@ -2066,6 +2104,7 @@ class PatchDataCommand extends Command
             Notify::where('notify_trigger', Enums\NotifyTrigger::TIME)
             ->get()
             ->each(function ($notify) {
+                /** @var Notify $notify */
                 // get view and table info
                 $custom_table = $notify->custom_table;
                 $custom_table_id = $notify->target_id;
@@ -2098,14 +2137,17 @@ class PatchDataCommand extends Command
                 }
 
                 // Set view pivot info
+                // @phpstan-ignore-next-line
                 $notify->setOption('view_pivot_table_id', $custom_table_id);
 
                 // If select table, set pivot column info
                 if (isMatchString($relation_table->searchType, Enums\SearchType::SELECT_TABLE)) {
+                    // @phpstan-ignore-next-line
                     $notify->setOption('view_pivot_column_id', $relation_table->selectTablePivotColumn->id);
                 }
                 // relation, set "parent_id".
                 else {
+                    // @phpstan-ignore-next-line
                     $notify->setOption('view_pivot_column_id', Define::PARENT_ID_NAME);
                 }
                 $notify->save();

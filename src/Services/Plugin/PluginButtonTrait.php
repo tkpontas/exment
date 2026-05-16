@@ -14,11 +14,12 @@ trait PluginButtonTrait
      * Init event
      *
      * @param Model\Plugin $plugin
-     * @param Model\CustomTable $custom_table
-     * @param Model\CustomValue $custom_value
+     * @param Model\CustomTable|null $custom_table
+     * @param Model\CustomValue|null $custom_value
      * @param array $options
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function _initButton($plugin, $custom_table, $custom_value, $options = [])
     {
         $this->plugin = $plugin;
@@ -31,6 +32,7 @@ trait PluginButtonTrait
         }
     }
 
+    // @phpstan-ignore-next-line
     public function getButtonLabel()
     {
         // get label

@@ -6,16 +6,23 @@ use Exceedone\Exment\ColumnItems\CustomItem;
 use Exceedone\Exment\Enums\FilterOption;
 use Encore\Admin\Form;
 use Encore\Admin\Form\Field;
+use Exceedone\Exment\Enums\FormatCalledType;
+use Exceedone\Exment\Enums\PluginType;
+use Exceedone\Exment\Model\Plugin;
+use Illuminate\Support\Str;
 
 class AutoNumber extends CustomItem
 {
+    // @phpstan-ignore-next-line
     protected $required = false;
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return Field\Display::class;
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         if (!isset($this->id)) {
@@ -26,16 +33,17 @@ class AutoNumber extends CustomItem
     /**
      * Get grid filter option. Use grid filter, Ex. LIKE search.
      *
-     * @return string
+     * @return string|null
      */
     protected function getGridFilterOption(): ?string
     {
-        return FilterOption::LIKE;
+        return (string)FilterOption::LIKE;
     }
 
     /**
      * get auto number value
      */
+    // @phpstan-ignore-next-line
     public function saved()
     {
         // already set value, break
@@ -48,16 +56,26 @@ class AutoNumber extends CustomItem
             return null;
         }
 
-        if (array_get($options, 'auto_number_type') == 'format') {
+        $auto_number_type = array_get($options, 'auto_number_type');
+        if ($auto_number_type == 'format') {
             return $this->createAutoNumberFormat($options);
         }
         // if auto_number_type is random25, set value
-        elseif (array_get($options, 'auto_number_type') == 'random25') {
+        elseif ($auto_number_type == 'random25') {
             return make_licensecode();
         }
-        // if auto_number_type is UUID, set value
-        elseif (array_get($options, 'auto_number_type') == 'random32') {
+        // if auto_number_type is random(UUID), set value
+        elseif ($auto_number_type == 'random32') {
             return make_uuid();
+        // if auto_number_type is plugin uuid, set format value
+        }elseif (Str::isUuid($auto_number_type)) {
+            $plugin = Plugin::getPluginByUUID($auto_number_type);
+            $class = $plugin->getClass(PluginType::FORMAT, [
+                'custom_table' => $this->custom_table,
+                'custom_value' => $this->custom_value,
+                'calledType' => FormatCalledType::AUTONUMBER,
+            ]);
+            return $class->format();
         }
 
         return null;
@@ -66,6 +84,7 @@ class AutoNumber extends CustomItem
     /**
      * Create Auto Number value using format.
      */
+    // @phpstan-ignore-next-line
     protected function createAutoNumberFormat($options)
     {
         // get format
@@ -85,17 +104,20 @@ class AutoNumber extends CustomItem
      */
     public function setCustomColumnOptionForm(&$form)
     {
+        $options = [
+            'format' => exmtrans("custom_column.options.auto_number_type_format"),
+            'random25' => exmtrans("custom_column.options.auto_number_type_random25"),
+            'random32' => exmtrans("custom_column.options.auto_number_type_random32"),
+            'other' => exmtrans("custom_column.options.auto_number_other"),
+        ];
+        $plugins = Plugin::getAccessableByPluginTypes(PluginType::FORMAT);
+        foreach($plugins as $plugin) {
+            $options[$plugin->uuid] = exmtrans('custom_column.options.plugin_format', $plugin->plugin_view_name);
+        }
         // auto numbering
         $form->select('auto_number_type', exmtrans("custom_column.options.auto_number_type"))
             ->required()
-            ->options(
-                [
-                'format' => exmtrans("custom_column.options.auto_number_type_format"),
-                'random25' => exmtrans("custom_column.options.auto_number_type_random25"),
-                'random32' => exmtrans("custom_column.options.auto_number_type_random32"),
-                'other' => exmtrans("custom_column.options.auto_number_other"),
-                ]
-            )
+            ->options($options)
             ->attribute(['data-filtertrigger' =>true]);
 
         // set manual

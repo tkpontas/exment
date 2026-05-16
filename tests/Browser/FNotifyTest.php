@@ -13,6 +13,8 @@ class FNotifyTest extends ExmentKitTestCase
 {
     /**
      * pre-excecute process before test.
+     *
+     * @return void
      */
     protected function setUp(): void
     {
@@ -22,11 +24,14 @@ class FNotifyTest extends ExmentKitTestCase
 
     /**
      * test notify button html
+     *
+     * @return void
      */
     public function testNotifyButtonHtml()
     {
         // get value
         $custom_table = Model\CustomTable::getEloquent(TestDefine::TESTDATA_TABLE_NAME_EDIT);
+        /** @var CustomValue $custom_value */
         $custom_value = $custom_table->getValueModel()->first();
 
         // get notify info
@@ -46,6 +51,8 @@ class FNotifyTest extends ExmentKitTestCase
 
     /**
      * test notify button test html, and attachment
+     *
+     * @return void
      */
     public function testNotifyButtonHtmlAttachment()
     {
@@ -75,6 +82,8 @@ class FNotifyTest extends ExmentKitTestCase
 
     /**
      * test notify button test post
+     *
+     * @return void
      */
     public function testNotifyButtonPost()
     {
@@ -83,12 +92,14 @@ class FNotifyTest extends ExmentKitTestCase
 
         // get value
         $custom_table = Model\CustomTable::getEloquent(TestDefine::TESTDATA_TABLE_NAME_EDIT);
+        /** @var CustomValue $custom_value */
         $custom_value = $custom_table->getValueModel()->first();
 
         // get notify info
         $notify = $this->getNotify($custom_table, '_notify_button_single');
         $url = admin_urls('data', $custom_table->table_name, $custom_value->id, 'sendMail');
 
+        /** @var CustomValue $mail_template */
         $mail_template = Model\CustomTable::getEloquent(Enums\SystemTableName::MAIL_TEMPLATE)
             ->getValueModel()
             ->where('value->mail_key_name', 'test_template_1')
@@ -112,15 +123,21 @@ class FNotifyTest extends ExmentKitTestCase
 
         $content = $response->response->getContent();
         if (is_json($content)) {
+            // @phpstan-ignore-next-line
             $json = json_decode_ex($content, true);
 
             ///// Cannot test checking whether submitting mail.
+            // @phpstan-ignore-next-line
             $this->assertTrue(array_get($json, 'result', false), 'Post submit error, message is : ' . json_encode($json['errors']));
         }
     }
 
 
-
+    /**
+     * @param CustomTable $custom_table
+     * @param string $suffix
+     * @return mixed
+     */
     protected function getNotify(CustomTable $custom_table, string $suffix)
     {
         // get notify info
@@ -131,6 +148,12 @@ class FNotifyTest extends ExmentKitTestCase
         ;
     }
 
+    /**
+     * @param CustomTable $custom_table
+     * @param CustomValue $custom_value
+     * @param Notify $notify
+     * @return string
+     */
     protected function getNotifyUrl(CustomTable $custom_table, CustomValue $custom_value, Notify $notify)
     {
         return admin_urls_query('data', $custom_table->table_name, $custom_value->id, 'notifyClick', [
@@ -140,6 +163,11 @@ class FNotifyTest extends ExmentKitTestCase
     }
 
 
+    /**
+     * @param string $url
+     * @return \DOMDocument
+     * @throws \Exception
+     */
     protected function getDomDocument(string $url): \DOMDocument
     {
         // check config update
@@ -147,11 +175,15 @@ class FNotifyTest extends ExmentKitTestCase
 
         $content = $response->response->getContent();
         if (is_json($content)) {
+            // @phpstan-ignore-next-line
             $json = json_decode_ex($content, true);
+            // @phpstan-ignore-next-line
             if (array_get($json, 'result') === false) {
+                // @phpstan-ignore-next-line
                 throw new \Exception(json_encode($json['errors']));
             }
 
+            // @phpstan-ignore-next-line
             $html = array_get($json, 'body');
         } else {
             $html = $content;
@@ -159,13 +191,19 @@ class FNotifyTest extends ExmentKitTestCase
 
         $domDocument = new \DOMDocument();
         libxml_use_internal_errors(true);
-        $domDocument->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+        $domDocument->loadHTML($html);
         libxml_clear_errors();
 
         return $domDocument;
     }
 
 
+    /**
+     * @param \DOMDocument $domDocument
+     * @param string $tagName
+     * @param \Closure $callback
+     * @return bool
+     */
     protected function hasContainsHtml(\DOMDocument $domDocument, string $tagName, \Closure $callback): bool
     {
         $selects = $domDocument->getElementsByTagName($tagName);

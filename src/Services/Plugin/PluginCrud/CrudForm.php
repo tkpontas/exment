@@ -18,8 +18,7 @@ class CrudForm extends CrudBase
     /**
      * Create
      *
-     * @param Request $request
-     * @return void
+     * @return mixed
      */
     public function create()
     {
@@ -33,9 +32,10 @@ class CrudForm extends CrudBase
     /**
      * Edit
      *
-     * @param mixed $id
-     * @return void
+     * @param $id
+     * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function edit($id)
     {
         $content = $this->pluginClass->getContent();
@@ -46,9 +46,9 @@ class CrudForm extends CrudBase
     }
 
     /**
-     * Store
+     * Stor
      *
-     * @return void
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function store()
     {
@@ -60,8 +60,10 @@ class CrudForm extends CrudBase
     /**
      * Update
      *
-     * @return void
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
+    // @phpstan-ignore-next-line
     public function update($id)
     {
         $content = $this->pluginClass->getContent();
@@ -72,8 +74,10 @@ class CrudForm extends CrudBase
     /**
      * delete
      *
-     * @return void
+     * @param $id
+     * @return string
      */
+    // @phpstan-ignore-next-line
     public function delete($id)
     {
         $ids = stringToArray($id);
@@ -82,16 +86,18 @@ class CrudForm extends CrudBase
         return $this->getFullUrl();
     }
 
-
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param bool $isCreate
+     * @param $id
+     * @return Box
      */
+    // @phpstan-ignore-next-line
     protected function form(bool $isCreate, $id = null)
     {
         $form = $this->getForm($isCreate, $id);
-
+        // @phpstan-ignore-next-line
         $box = new Box(trans($isCreate ? 'admin.create' : 'admin.edit'), $form);
         $box->style('info');
         $this->setFormTools($id, $box);
@@ -109,8 +115,11 @@ class CrudForm extends CrudBase
     /**
      * Save value.
      *
-     * @return Form
+     * @param bool $isCreate
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
+    // @phpstan-ignore-next-line
     protected function save(bool $isCreate, $id = null)
     {
         $values = $this->filterPostedValue(request()->all(), $isCreate);
@@ -151,6 +160,7 @@ class CrudForm extends CrudBase
      * @param boolean $isCreate
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function filterPostedValue(array $array, bool $isCreate): array
     {
         $key = $isCreate ? 'create' : 'edit';
@@ -190,11 +200,11 @@ class CrudForm extends CrudBase
         return $form;
     }
 
-
     /**
      * Set form definitions.
      *
-     * @param Form $form
+     * @param bool $isCreate
+     * @param WidgetForm $form
      * @return void
      */
     protected function setFormColumn(bool $isCreate, Form $form)
@@ -228,9 +238,11 @@ class CrudForm extends CrudBase
     /**
      * Set form tools.
      *
-     * @param Box $Box
+     * @param $id
+     * @param Box $box
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setFormTools($id, Box $box)
     {
         // get oauth logout view

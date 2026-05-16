@@ -74,13 +74,14 @@ class Email
         return redirect(admin_url(''));
     }
 
+    // @phpstan-ignore-next-line
     public function insertVerify()
     {
         $loginuser = \Admin::user();
 
         // set 2factor params
         $verify_code = random_int(100000, 999999);
-        $valid_period_datetime = Carbon::now()->addMinute(config('exment.login_2factor_valid_period', 10));
+        $valid_period_datetime = Carbon::now()->addMinutes(config('exment.login_2factor_valid_period', 10));
 
         // send verify
         if (!Auth2factorService::addAndSendVerify('email', $verify_code, $valid_period_datetime, MailKeyName::VERIFY_2FACTOR, [

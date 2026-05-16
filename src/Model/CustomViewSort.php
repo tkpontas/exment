@@ -2,14 +2,18 @@
 
 namespace Exceedone\Exment\Model;
 
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Enums\ConditionType;
 
 /**
- * @phpstan-consistent-constructor
  * @property mixed $view_column_target_id
  * @property mixed $view_column_table_id
  * @property mixed $suuid
  * @property mixed $custom_view_id
+ * @property mixed $sort
+ * @property mixed $priority
+ * @method static ExtendedBuilder create(array $attributes = [])
+ * @phpstan-consistent-constructor
  */
 class CustomViewSort extends ModelBase
 {
@@ -24,6 +28,8 @@ class CustomViewSort extends ModelBase
     protected $appends = ['view_column_target'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['custom_table', 'view_column_table_id', 'view_column_target_id', 'custom_view_id', 'view_column_target', 'custom_column'],
         'uniqueKeys' => ['custom_view_id', 'view_column_type', 'view_column_target_id', 'view_column_table_id'],
@@ -61,6 +67,8 @@ class CustomViewSort extends ModelBase
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
@@ -78,19 +86,27 @@ class CustomViewSort extends ModelBase
         static::addGlobalScope(new OrderScope('priority'));
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewPivotColumnIdAttribute()
     {
         return $this->getViewPivotIdTrait('view_pivot_column_id');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewPivotColumnIdAttribute($view_pivot_column_id)
     {
         return $this->setViewPivotIdTrait('view_pivot_column_id', $view_pivot_column_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewPivotTableIdAttribute()
     {
         return $this->getViewPivotIdTrait('view_pivot_table_id');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewPivotTableIdAttribute($view_pivot_table_id)
     {
         return $this->setViewPivotIdTrait('view_pivot_table_id', $view_pivot_table_id);

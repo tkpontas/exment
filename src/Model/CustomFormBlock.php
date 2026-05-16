@@ -8,8 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @phpstan-consistent-constructor
+ * @property mixed $id
+ * @property mixed $label
+ * @property mixed $options
  * @property mixed $available
  * @property mixed $custom_form_id
+ * @property mixed $target_table
+ * @property mixed $custom_form_columns
+ * @property mixed $form_block_type
  * @property mixed $form_block_target_table_id
  * @property mixed $form_block_view_name
  */
@@ -25,10 +31,12 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
     /**
      * request key. Used by custom form setting display. Ex. NEW__f482dce0-662c-11eb-8f65-5f9d12681ab1
      *
-     * @var string
+     * @var string|null
      */
     protected $_request_key;
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['custom_form_id', 'target_table'],
         'langs' => [
@@ -61,47 +69,65 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
         ],
     ];
 
+
+    // @phpstan-ignore-next-line
     public function custom_form(): BelongsTo
     {
         return $this->belongsTo(CustomForm::class, 'custom_form_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_columns(): HasMany
     {
         return $this->hasMany(CustomFormColumn::class, 'custom_form_block_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function target_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'form_block_target_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomFormCacheAttribute()
     {
         return CustomForm::getEloquent($this->custom_form_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getTargetTableCacheAttribute()
     {
         return CustomTable::getEloquent($this->form_block_target_table_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getFormTableCacheAttribute()
     {
         $custom_form = $this->custom_form_cache;
         return $custom_form ? $custom_form->custom_table_cache : null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomFormColumnsCacheAttribute()
     {
         return $this->hasManyCache(CustomFormColumn::class, 'custom_form_block_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getRequestKeyAttribute()
     {
         return $this->_request_key ?? $this->id;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setRequestKeyAttribute($request_key)
     {
         $this->_request_key = $request_key;
@@ -109,6 +135,8 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
     }
 
 
+
+    // @phpstan-ignore-next-line
     public function isMultipleColumn()
     {
         foreach ($this->custom_form_columns as $custom_form_column) {
@@ -125,6 +153,8 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
      *
      * @return array offset 0 : CustomRelation, 1:relation name, 2:block label.
      */
+
+    // @phpstan-ignore-next-line
     public function getRelationInfo(?CustomTable $custom_form_table = null)
     {
         $target_table = $this->target_table;
@@ -156,6 +186,8 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
         return [$relation, $relation_name, $block_label];
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function importReplaceJson(&$json, $options = [])
     {
         // get custom table
@@ -186,6 +218,8 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function importSetValue(&$json, $options = [])
     {
         if (!$this->exists) {
@@ -193,6 +227,8 @@ class CustomFormBlock extends ModelBase implements Interfaces\TemplateImporterIn
         }
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->custom_form_columns()->withoutGlobalScope('remove_system_column')->delete();

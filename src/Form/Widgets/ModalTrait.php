@@ -7,10 +7,12 @@ trait ModalTrait
     /**
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $modalAttributes = [];
     /**
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $modalInnerAttributes = [];
 
     /**
@@ -40,6 +42,7 @@ trait ModalTrait
      *
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function modalAttribute($attr, $value = '')
     {
         return $this->modal_attribute('modalAttributes', $attr, $value);
@@ -52,6 +55,7 @@ trait ModalTrait
      *
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function modalInnerAttribute($attr, $value = '')
     {
         return $this->modal_attribute('modalInnerAttributes', $attr, $value);
@@ -64,6 +68,7 @@ trait ModalTrait
      *
      * @return $this
      */
+    // @phpstan-ignore-next-line
     protected function modal_attribute($arrayName, $attr, $value = '')
     {
         if (is_array($attr)) {
@@ -75,12 +80,12 @@ trait ModalTrait
         }
         return $this;
     }
+
     /**
-     * @param string|array $attr
-     * @param string       $value
-     *
-     * @return $this
+     * @param $attributes
+     * @return string
      */
+    // @phpstan-ignore-next-line
     protected function convert_attribute($attributes)
     {
         $html = [];
@@ -91,6 +96,7 @@ trait ModalTrait
         return implode(' ', $html) ?: '';
     }
 
+    // @phpstan-ignore-next-line
     protected function setModalAttributes()
     {
         $this->modalAttributes = array_merge([

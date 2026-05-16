@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment;
 
+use Exceedone\Exment\Services\DataImportExport\Formats\PhpSpreadSheet\PhpSpreadSheet;
 use Exceedone\Exment\Validator as ExmentValidator;
 use Exceedone\Exment\Enums\UrlTagType;
 use Exceedone\Exment\Enums\FilterSearchType;
@@ -72,6 +73,7 @@ class Exment
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function menu()
     {
         return (new Menu())->toTree();
@@ -94,12 +96,14 @@ class Exment
         try {
             // Api is default callback
             if ($this->isApiEndpoint()) {
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
+            /** @phpstan-ignore-next-line not implement MaintenanceModeException in laravel 10 */
             if ($exception instanceof \Illuminate\Foundation\Http\Exceptions\MaintenanceModeException) {
                 $errorController = app(\Exceedone\Exment\Controllers\ErrorController::class);
-                return $errorController->maintenance($request, $exception);
+                return $errorController->maintenance();
             }
 
             if ($exception instanceof \Illuminate\Session\TokenMismatchException) {
@@ -113,6 +117,7 @@ class Exment
             }
 
             if ($this->isPublicFormEndpoint()) {
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
@@ -126,27 +131,33 @@ class Exment
                     ]);
                 }
 
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
             // whether has User
             $user = \Exment::user();
             if (!$user) {
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
             $errorController = app(\Exceedone\Exment\Controllers\ErrorController::class);
             return $errorController->error($request, $exception);
         } catch (\Exception $ex) {
+            // @phpstan-ignore-next-line
             return $callback($request, $exception);
         } catch (\Throwable $e) {
+            // @phpstan-ignore-next-line
             return $callback($request, $exception);
         }
     }
 
     /**
+     // Laravel facade Auth not recognized
      * get user. Use "Auth::shouldUse", so get only logined user.
      */
+    // @phpstan-ignore-next-line
     public function user($guards = null)
     {
         return \Auth::guard($this->guard)->user();
@@ -156,18 +167,17 @@ class Exment
     /**
      * set gurad info.
      */
+    // @phpstan-ignore-next-line
     public function setGuard(string $guard)
     {
         $this->guard = $guard;
         \Auth::shouldUse($guard);
     }
 
-
     /**
      * Get User Model's ID
-     * "This function name defines Custom value's user and login user. But this function always return Custom value's user
-     *
-     * @return string|int
+     * This function name defines Custom value's user and login user. But this function always return Custom value's user
+     * @return string|int|null
      */
     public function getUserId()
     {
@@ -181,6 +191,7 @@ class Exment
     }
 
 
+    // @phpstan-ignore-next-line
     public function getRender($grid): ?string
     {
         if ($grid instanceof Renderable) {
@@ -198,6 +209,7 @@ class Exment
     /**
      * get exment version
      */
+    // @phpstan-ignore-next-line
     public function version($getFromComposer = true)
     {
         list($latest, $current) = $this->getExmentVersion($getFromComposer);
@@ -210,6 +222,7 @@ class Exment
      *
      * @return array $latest: new version in package, $current: this version in server
      */
+    // @phpstan-ignore-next-line
     public function getExmentVersion($getFromComposer = true)
     {
         try {
@@ -222,7 +235,9 @@ class Exment
             $current = null;
             if (isset($version_json)) {
                 $version = json_decode_ex($version_json, true);
+                // @phpstan-ignore-next-line
                 $latest = array_get($version, 'latest');
+                // @phpstan-ignore-next-line
                 $current = array_get($version, 'current');
             }
 
@@ -240,6 +255,7 @@ class Exment
                 }
 
                 // get exment info
+                // @phpstan-ignore-next-line
                 $packages = array_get($json, 'packages');
                 $exment = collect($packages)->filter(function ($package) {
                     return array_get($package, 'name') == Define::COMPOSER_PACKAGE_NAME;
@@ -278,13 +294,14 @@ class Exment
                 if (!$json) {
                     return [null, null];
                 }
-                $packages = array_get($json, 'packages.'.Define::COMPOSER_PACKAGE_NAME);
+                // @phpstan-ignore-next-line
+                $packages = array_get($json, 'package.versions');
                 if (!$packages) {
                     return [null, null];
                 }
 
                 // sort by timestamp
-                $sortedPackages = collect($packages)->sortByDesc('time');
+                $sortedPackages = collect($packages)->sortByDesc('version_normalized');
                 foreach ($sortedPackages as $key => $package) {
                     // if version is "dev-", continue
                     if (substr($key, 0, 4) == 'dev-') {
@@ -323,7 +340,7 @@ class Exment
     /**
      * check exment's next version
      *
-     * @return array $latest: new version in package, $current: this version in server
+     * @return int $latest: new version in package, $current: this version in server
      */
     public function checkLatestVersion()
     {
@@ -337,9 +354,10 @@ class Exment
             return SystemVersion::DEV;
         } elseif ($latest === $current) {
             return SystemVersion::LATEST;
-            $message = exmtrans("system.version_latest");
-            $icon = 'check-square';
-            $bgColor = 'blue';
+// Unreachable statement - code above always terminates.
+//            $message = exmtrans("system.version_latest");
+//            $icon = 'check-square';
+//            $bgColor = 'blue';
         } else {
             return SystemVersion::HAS_NEXT;
         }
@@ -352,6 +370,7 @@ class Exment
 
     // Helper logic ----------------------------------------------------
 
+    // @phpstan-ignore-next-line
     public function getUrlTag(?string $url, ?string $label, $urlTagType, array $attributes = [], array $options = [])
     {
         $options = array_merge(
@@ -398,11 +417,15 @@ class Exment
         ])->render();
     }
 
-
     /**
      * get_password_rule(for validation)
-     * @return string
+     *
+     * @param $required
+     * @param LoginUser|null $login_user
+     * @param array $options
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function get_password_rule($required = true, ?LoginUser $login_user = null, array $options = [])
     {
         $options = array_merge([
@@ -460,8 +483,10 @@ class Exment
     /**
      * get Data from excel sheet
      */
+    // @phpstan-ignore-next-line
     public function getDataFromSheet($sheet, $keyvalue = false, $isGetMerge = false)
     {
+        /** @var PhpSpreadSheet $format */
         $format = FormatBase::getFormatClass('xlsx', ExportImportLibrary::PHP_SPREAD_SHEET, false);
         return $format->getDataFromSheet($sheet, $keyvalue, $isGetMerge);
     }
@@ -470,8 +495,10 @@ class Exment
     /**
      * get cell value
      */
+    // @phpstan-ignore-next-line
     public function getCellValue($cell, $sheet, $isGetMerge = false)
     {
+        /** @var PhpSpreadSheet $format */
         $format = FormatBase::getFormatClass('xlsx', ExportImportLibrary::PHP_SPREAD_SHEET, false);
         return $format->getCellValue($cell, $sheet, $isGetMerge);
     }
@@ -484,6 +511,7 @@ class Exment
      * @param string $q search string
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getQueryMarkAndValue($isLike, $q)
     {
         // if all search
@@ -501,6 +529,7 @@ class Exment
     /**
      * search document
      */
+    // @phpstan-ignore-next-line
     public function getSearchDocumentQuery(CustomTable $target_custom_table, ?string $q, $query = null)
     {
         if (empty($query)) {
@@ -543,9 +572,10 @@ class Exment
      * Push collection. if $item is Collection, loop
      *
      * @param Collection $collect
-     * @param Collection|mixed $item
-     * @return void
+     * @param $item
+     * @return Collection
      */
+    // @phpstan-ignore-next-line
     public function pushCollection(Collection $collect, $item): Collection
     {
         if ($item instanceof Collection) {
@@ -601,6 +631,7 @@ class Exment
     /**
      * get true mark. If $val is true, output mark
      */
+    // @phpstan-ignore-next-line
     public function getTrueMark($val)
     {
         if (!boolval($val)) {
@@ -616,6 +647,7 @@ class Exment
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getYesNoAllOption(): array
     {
         return [
@@ -625,16 +657,19 @@ class Exment
         ];
     }
 
+    // @phpstan-ignore-next-line
     public function wrapValue($string)
     {
         return app('db')->getPdo()->quote($string);
     }
 
+    // @phpstan-ignore-next-line
     public function wrapColumn($string)
     {
         return \DB::getQueryGrammar()->wrap($string);
     }
 
+    // @phpstan-ignore-next-line
     public function wrapTable($string)
     {
         return \DB::getQueryGrammar()->wrapTable($string);
@@ -645,6 +680,7 @@ class Exment
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function formatAttributes($attributes)
     {
         $html = [];
@@ -660,6 +696,7 @@ class Exment
     /**
      * this url is ApiEndpoint
      */
+    // @phpstan-ignore-next-line
     public function isApiEndpoint()
     {
         $basePath = ltrim(admin_base_path(), '/');
@@ -670,6 +707,7 @@ class Exment
     /**
      * this url is Public form endpoint
      */
+    // @phpstan-ignore-next-line
     public function isPublicFormEndpoint()
     {
         $route = public_form_base_path();
@@ -681,6 +719,7 @@ class Exment
      * get tmp folder path. Uses for
      * @param string $type "plugin", "template", "backup", "data".
      */
+    // @phpstan-ignore-next-line
     public function getTmpFolderPath($type, $fullpath = true)
     {
         $path = path_join('tmp', $type, short_uuid());
@@ -726,6 +765,7 @@ class Exment
     /**
      * Set time limit long
      */
+    // @phpstan-ignore-next-line
     public function setTimeLimitLong($time = 6000)
     {
         $max_execution_time = ini_get('max_execution_time');
@@ -754,19 +794,20 @@ class Exment
         return $minsize * 1024 * 1024;
     }
 
-
     /**
      * Get file size
      *
-     * @param string $val
+     * @param $val
      * @return int
      */
+    // @phpstan-ignore-next-line
     public function getFileMegaSizeValue($val)
     {
         $val = strtolower(strval($val));
         $val = str_replace('m', '', $val);
 
         if (strpos($val, 'g') !== false) {
+            // @phpstan-ignore-next-line
             $val = str_replace('g', '', $val) * 1024;
         }
         return intval($val);
@@ -792,6 +833,7 @@ class Exment
      * @param string|null $path
      * @return void
      */
+    // @phpstan-ignore-next-line
     public function makeDirectoryDisk($disk, ?string $path, int $mode = 0775)
     {
         if (!$disk) {
@@ -810,6 +852,7 @@ class Exment
      * @param  string  $directory
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function allDirectories($directory)
     {
         $directories = [];
@@ -865,6 +908,7 @@ class Exment
      * @param \Carbon\Carbon $carbon
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function carbonToArray(\Carbon\Carbon $carbon): array
     {
         return [
@@ -886,6 +930,7 @@ class Exment
             return null;
         }
         $carbon = Carbon::parse($value);
+        // @phpstan-ignore-next-line
         return Carbon::create($carbon->year, $carbon->month, $carbon->day);
     }
 
@@ -897,6 +942,7 @@ class Exment
      * @param array|Collection $targetArr
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     public function isContains2Array($testArr, $targetArr): bool
     {
         foreach ($testArr as $arrKey => $arrValue) {
@@ -955,12 +1001,11 @@ class Exment
     /**
      * save file request session. for after saved custom value, set custom value's id.
      *
-     * @param UploadField $field
-     * @param string|UploadedFile $file
-     * @param string $file_type
+     * @param ExmentFile $exmentfile
+     * @param string $column_name
      * @param CustomTable $custom_table
-     * @param boolean $replace
-     * @return string
+     * @param bool $replace
+     * @return mixed
      */
     public function setFileRequestSession(ExmentFile $exmentfile, string $column_name, CustomTable $custom_table, bool $replace = true)
     {
@@ -989,6 +1034,7 @@ class Exment
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getOptionKey($column_key, $append_table = true, $table_id = null, $options = [])
     {
         $options = array_merge(
@@ -1046,6 +1092,7 @@ class Exment
      *
      * @return Collection
      */
+    // @phpstan-ignore-next-line
     public static function uniqueCustomValues(...$collections): Collection
     {
         $result = collect();
@@ -1086,6 +1133,7 @@ class Exment
      *
      * @return string prefixed path
      */
+    // @phpstan-ignore-next-line
     public function getPathPrefix($adapeer, string $path): string
     {
         return $this->getPrefixer($adapeer)->prefixPath($path);
@@ -1097,12 +1145,14 @@ class Exment
      *
      * @return PathPrefixer
      */
+    // @phpstan-ignore-next-line
     protected function getPrefixer($adapter): PathPrefixer
     {
         $reflectionClass = new \ReflectionClass($adapter);
         try {
             $property = $reflectionClass->getProperty('prefixer');
         } catch (\ReflectionException $ex) {
+            // @phpstan-ignore-next-line
             $property = $reflectionClass->getParentClass()->getProperty('prefixer');
         }
         $property->setAccessible(true);

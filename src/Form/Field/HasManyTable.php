@@ -6,6 +6,7 @@ use Encore\Admin\Admin;
 use Encore\Admin\Form;
 use Encore\Admin\Form\Field;
 use Encore\Admin\Form\Field\Hidden;
+use Encore\Admin\Form\Field\Select;
 use Encore\Admin\Form\NestedForm;
 
 /**
@@ -13,8 +14,11 @@ use Encore\Admin\Form\NestedForm;
  */
 class HasManyTable extends HasMany
 {
+    // @phpstan-ignore-next-line
     protected $tablecolumnwidths = [];
+    // @phpstan-ignore-next-line
     protected $count = null;
+    // @phpstan-ignore-next-line
     protected $enableHeader = true;
 
     /**
@@ -44,6 +48,7 @@ class HasManyTable extends HasMany
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $options = [
         'allowCreate' => true,
         'allowDelete' => true,
@@ -55,6 +60,7 @@ class HasManyTable extends HasMany
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $tablewidth = [
         'offset' => 1,
         'width' => 10,
@@ -63,16 +69,19 @@ class HasManyTable extends HasMany
     /**
      * display description
      */
+    // @phpstan-ignore-next-line
     protected $description;
 
     /**
      * whether escape description
      */
+    // @phpstan-ignore-next-line
     protected $escapeDescription = true;
 
     /**
      * set bootstrap table width
      */
+    // @phpstan-ignore-next-line
     public function setTableWidth($width = 8, $offset = 2)
     {
         $this->tablewidth['width'] = $width;
@@ -84,18 +93,21 @@ class HasManyTable extends HasMany
     /**
      * set bootstrap table Column width
      */
+    // @phpstan-ignore-next-line
     public function setTableColumnWidth(...$width)
     {
         $this->tablecolumnwidths = $width;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function description($description)
     {
         $this->description = $description;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function descriptionHtml($description)
     {
         $this->escapeDescription = false;
@@ -117,6 +129,7 @@ class HasManyTable extends HasMany
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function disableHeader()
     {
         $this->enableHeader = false;
@@ -141,6 +154,7 @@ class HasManyTable extends HasMany
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $views = [
         'default' => 'exment::form.field.hasmanytable',
         'tab'     => 'admin::form.hasmanytable', // TODO:for tab
@@ -149,6 +163,7 @@ class HasManyTable extends HasMany
     /**
      * set table header and body from fields
      */
+    // @phpstan-ignore-next-line
     protected function getTableItem(&$form)
     {
         $tableitems = [];
@@ -174,6 +189,7 @@ class HasManyTable extends HasMany
     /**
      * set table field item to header, body, hidden
      */
+    // @phpstan-ignore-next-line
     protected function setTableFieldItem(&$field, &$tableitems, &$hiddens, &$requires, &$helps)
     {
         // if internal, skip field
@@ -181,19 +197,23 @@ class HasManyTable extends HasMany
             return;
         }
 
-        // if hidden, set $hiddens
+        // if hidden, set $hiddens (do not add header metadata like required/help)
         if ($field instanceof Hidden) {
             $hiddens[] = $field;
-        } else {
-            $tableitems[] = $field;
+            return;
         }
 
-        // if required true false
+        $tableitems[] = $field;
+
+        // if required true false (header only)
         $requires[] = is_array($field->getAttributes()) && array_has($field->getAttributes(), 'required');
 
         // set label viewclass hidden
         $field->setLabelClass(['hidden']);
-        $field->setElementClass(['w-100'])->attribute(['style' => 'max-width:999999px']);
+        $field->setElementClass(['w-100']);
+        if (!($field instanceof Select)) {
+            $field->attribute(['style' => 'max-width:999999px']);
+        }
         $field->setWidth(12, 0);
 
         // get help text
@@ -210,7 +230,7 @@ class HasManyTable extends HasMany
      *
      * @param string $templateScript
      *
-     * @return void
+     * @return string
      */
     protected function setupScriptForDefaultView($templateScript)
     {
@@ -255,7 +275,7 @@ $('#has-many-table-{$this->column}').off('click.admin_remove', '.remove').on('cl
 $('#has-many-table-{$this->column}').off('click.admin_row_remove', '.row-move').on('click.admin_row_remove', '.row-move', function(ev){
     var row = $(ev.target).closest('tr');
     var isup = $(ev.target).closest('.row-move').hasClass('row-move-up');
-    
+
     let getPrevNextRow = function(row, isup){
         while(true){
             var targetRow = isup ? row.prev() : row.next();
@@ -267,10 +287,10 @@ $('#has-many-table-{$this->column}').off('click.admin_row_remove', '.row-move').
             }
             row = targetRow;
         }
-    
+
         return null;
     };
-    
+
     var targetRow = getPrevNextRow(row, isup);
     if(!hasValue(targetRow)){
         return;
@@ -291,7 +311,7 @@ $("button[type='submit']").click(function(){
         return true;
     }
     var cnt = $('#has-many-table-{$this->column}-table tr.has-many-table-{$this->column}-row').filter(':visible').length;
-    if (cnt == 0) { 
+    if (cnt == 0) {
         swal("$title", "$message", "error");
         return false;
     };
@@ -310,7 +330,7 @@ EOT;
      * Hide delete button's row no.
      *
      * @param int $rowNo
-     * @return void
+     * @return $this
      */
     public function hideDeleteButtonRow($rowNo)
     {
@@ -349,7 +369,7 @@ EOT;
      *
      * @throws \Exception
      *
-     * @return \Illuminate\View\View
+     * @return \Illuminate\View\View|string
      */
     public function render()
     {
@@ -357,6 +377,7 @@ EOT;
         $this->view = $this->views[$this->viewMode];
 
         // set header and body info
+        // @phpstan-ignore-next-line
         $form = $this->buildNestedForm($this->column, $this->builder);
 
         list($template, $script) = $this->getTemplateHtmlAndScript($form);
@@ -400,6 +421,7 @@ EOT;
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getParentRenderClass()
     {
         return get_parent_class(get_parent_class(get_parent_class($this)));

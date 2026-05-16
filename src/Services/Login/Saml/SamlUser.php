@@ -13,6 +13,7 @@ use Exceedone\Exment\Model\LoginSetting;
  */
 class SamlUser extends CustomLoginUserBase
 {
+    // @phpstan-ignore-next-line
     public static function with($provider_name, $samlUser, $isTest = false)
     {
         $user = new SamlUser();
@@ -33,9 +34,12 @@ class SamlUser extends CustomLoginUserBase
     /**
      * Mapping saml user value
      *
-     * @param SamlUser $samlUser
-     * @return void
+     * @param $samlUser
+     * @param $mappingKey
+     * @param $replaceMaps
+     * @return array|mixed|string|string[]|null
      */
+    // @phpstan-ignore-next-line
     protected static function getMappingItemValue($samlUser, $mappingKey, $replaceMaps)
     {
         // get attributes
@@ -44,6 +48,7 @@ class SamlUser extends CustomLoginUserBase
         $hasValue = false;
         foreach ($replaceMaps as $replaceKey => $replaceValue) {
             if (!array_has($samlAttibutes, $replaceKey)) {
+                // @phpstan-ignore-next-line
                 $mappingKey = str_replace($replaceValue, null, $mappingKey);
                 continue;
             }

@@ -6,6 +6,7 @@ use Exceedone\Exment\Database\Query\Grammars\SqlServerGrammar as QueryGrammar;
 use Exceedone\Exment\Database\Schema\Grammars\SqlServerGrammar as SchemaGrammar;
 use Exceedone\Exment\Database\Schema\SqlServerBuilder;
 use Exceedone\Exment\Database\Query\Processors\SqlServerProcessor;
+use Illuminate\Database\Grammar;
 use Illuminate\Database\SqlServerConnection as BaseConnection;
 use Exceedone\Exment\Exceptions\BackupRestoreCheckException;
 use Exceedone\Exment\Exceptions\BackupRestoreNotSupportedException;
@@ -17,10 +18,11 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
     /**
      * Get a schema builder instance for the connection.
      *
-     * @return \Illuminate\Database\Schema\Builder
+     * @return SqlServerBuilder
      */
     public function getSchemaBuilder()
     {
+        // @phpstan-ignore-next-line
         if (is_null($this->schemaGrammar)) {
             $this->useDefaultSchemaGrammar();
         }
@@ -31,7 +33,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
     /**
      * Get the default schema grammar instance.
      *
-     * @return SchemaGrammar
+     * @return Grammar|SchemaGrammar
      */
     protected function getDefaultSchemaGrammar()
     {
@@ -41,7 +43,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
     /**
      * Get the default query grammar instance.
      *
-     * @return QueryGrammar
+     * @return Grammar|QueryGrammar
      */
     protected function getDefaultQueryGrammar()
     {
@@ -104,11 +106,13 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
      *
      * @param string $dirFullPath restore file path
      */
+    // @phpstan-ignore-next-line
     public function importTsv($dirFullPath)
     {
     }
 
 
+    // @phpstan-ignore-next-line
     public function createView($viewName, $query)
     {
         $viewName = $this->getQueryGrammar()->wrapTable($viewName);
@@ -123,6 +127,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public function dropView($viewName)
     {
         $viewName = $this->getQueryGrammar()->wrapTable($viewName);

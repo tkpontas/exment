@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Model;
 
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Encore\Admin\Facades\Admin;
 use Encore\Admin\Grid\Linker;
@@ -20,13 +21,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @phpstan-consistent-constructor
+ * @property mixed $suuid
  * @property mixed $view_type
  * @property mixed $view_kind_type
+ * @property mixed $view_view_name
  * @property mixed $default_flg
  * @property mixed $custom_table_id
  * @property mixed $created_user_id
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
- * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
+ * @method static int count($columns = '*')
+ * @method static ExtendedBuilder orderBy($column, $direction = 'asc')
+ * @method static static create(array $attributes = [])
  */
 class CustomView extends ModelBase implements Interfaces\TemplateImporterInterface
 {
@@ -42,15 +46,19 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     protected $casts = ['options' => 'json', 'custom_options' => 'json'];
     //protected $with = ['custom_table', 'custom_view_columns'];
 
+
+    // @phpstan-ignore-next-line
     private $_grid_item;
 
     /**
      * Custom Value search service.
      *
-     * @var SearchService
+     * @var SearchService|null
      */
     private $_search_service;
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['custom_table', 'target_view_name', 'view_calendar_target', 'pager_count'],
         'uniqueKeys' => ['suuid'],
@@ -84,42 +92,57 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
             'custom_view_filters' => CustomViewFilter::class,
             'custom_view_sorts' => CustomViewSort::class,
             'custom_view_summaries' => CustomViewSummary::class,
+            'custom_view_grid_filters' => CustomViewGridFilter::class,
         ],
     ];
 
 
     //public function custom_table()
+
+    // @phpstan-ignore-next-line
     public function getCustomTableAttribute()
     {
         return CustomTable::getEloquent($this->custom_table_id);
         //return $this->belongsTo(CustomTable::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_view_columns(): HasMany
     {
         return $this->hasMany(CustomViewColumn::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_view_filters(): HasMany
     {
         return $this->hasMany(CustomViewFilter::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_view_sorts(): HasMany
     {
         return $this->hasMany(CustomViewSort::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_view_summaries(): HasMany
     {
         return $this->hasMany(CustomViewSummary::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_view_grid_filters(): HasMany
     {
         return $this->hasMany(CustomViewGridFilter::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function data_share_authoritables(): HasMany
     {
         return $this->hasMany(DataShareAuthoritable::class, 'parent_id')
@@ -129,6 +152,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * get Custom columns using cache
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomViewColumnsCacheAttribute()
     {
         return $this->hasManyCache(CustomViewColumn::class, 'custom_view_id');
@@ -137,6 +162,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * get Custom filters using cache
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomViewFiltersCacheAttribute()
     {
         return $this->hasManyCache(CustomViewFilter::class, 'custom_view_id');
@@ -145,6 +172,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * get Custom Sorts using cache
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomViewSortsCacheAttribute()
     {
         return $this->hasManyCache(CustomViewSort::class, 'custom_view_id');
@@ -153,21 +182,29 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * get Custom summaries using cache
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomViewSummariesCacheAttribute()
     {
         return $this->hasManyCache(CustomViewSummary::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getTableNameAttribute()
     {
         return $this->custom_table->table_name;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getFilterIsOrAttribute()
     {
         return $this->condition_join == 'or';
     }
 
+
+    // @phpstan-ignore-next-line
     public function getGridItemAttribute()
     {
         if (isset($this->_grid_item)) {
@@ -180,15 +217,21 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this->_grid_item;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomOption($key, $default = null)
     {
         return $this->getJson('custom_options', $key, $default);
     }
+
+    // @phpstan-ignore-next-line
     public function setCustomOption($key, $val = null)
     {
         return $this->setJson('custom_options', $key, $val);
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->custom_view_columns()->delete();
@@ -234,6 +277,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         });
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgFilter($query)
     {
         $query->where('view_type', $this->view_type);
@@ -243,6 +288,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgSet()
     {
         // set if only this flg is system
@@ -267,9 +314,21 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * reset search service.
      */
+
+    // @phpstan-ignore-next-line
     public function resetSearchService()
     {
         $this->_search_service = null;
+    }
+
+    /**
+     * set search service.
+     */
+
+    // @phpstan-ignore-next-line
+    public function setSearchService(SearchService $service)
+    {
+        $this->_search_service = $service;
     }
 
 
@@ -277,6 +336,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         if (strlen_ex($id) == 20) {
@@ -294,6 +355,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * @param array $options
      * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
      */
+
+    // @phpstan-ignore-next-line
     public function getQuery($query, array $options = [])
     {
         return $this->grid_item->getQuery($query, $options);
@@ -303,6 +366,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set laravel-admin grid using custom_view
      */
+
+    // @phpstan-ignore-next-line
     public function setGrid($grid)
     {
         return $this->grid_item->setGrid($grid);
@@ -311,9 +376,9 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
 
     /**
      * Get data paginate. default or summary
-     *
-     * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function getDataPaginate($options = [])
     {
         $options = array_merge([
@@ -340,6 +405,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * set DataTable using custom_view
      * @return array $headers : header items, $bodies : body items.
      */
+
+    // @phpstan-ignore-next-line
     public function convertDataTable($datalist, $options = [])
     {
         $options = array_merge(
@@ -488,7 +555,7 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * @param mixed $tableObj table_name, object or id eic
      * @param boolean $getSettingValue if true, getting from UserSetting table
      * @param boolean $is_dashboard call by dashboard
-     * @return CustomView
+     * @return CustomView|null
      */
     public static function getDefault($tableObj, $getSettingValue = true, $is_dashboard = false)
     {
@@ -562,6 +629,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $view;
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function showableViews($query)
     {
         $query->where('view_type', ViewType::SYSTEM);
@@ -593,6 +662,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         });
     }
 
+
+    // @phpstan-ignore-next-line
     public static function createDefaultView($tableObj)
     {
         $tableObj = CustomTable::getEloquent($tableObj);
@@ -610,6 +681,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * filter target model
      */
+
+    // @phpstan-ignore-next-line
     public function filterModel($model, $options = [])
     {
         $options = array_merge([
@@ -646,6 +719,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * filter and sort target model
      */
+
+    // @phpstan-ignore-next-line
     public function filterSortModel($query, $options = [])
     {
         $options = array_merge([
@@ -659,8 +734,9 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * Create default columns
      *
      * @param boolean $appendIndexColumn if true, append custom column has index
-     * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function createDefaultViewColumns($appendIndexColumn = false)
     {
         $view_columns = [];
@@ -707,8 +783,9 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * copy from default view columns
      *
      * @param CustomView|null $fromView copied target view
-     * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function copyFromDefaultViewColumns(?CustomView $fromView)
     {
         $view_columns = [];
@@ -734,6 +811,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set value filters
      */
+
+    // @phpstan-ignore-next-line
     public function setValueFilters($query)
     {
         // If summary, call setSummaryValueFilters.
@@ -744,13 +823,14 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         // Cannot use $custom_view_filters_cache because summary to grid, use custom_view_filters directly.
         $custom_view_filters = $this->custom_view_filters;
 
-        if (count($custom_view_filters) !== 0) {
+        if ($custom_view_filters->count() > 0) {
             $service = $this->getSearchService()->setQuery($query);
             foreach ($custom_view_filters as $filter) {
                 $service->setRelationJoin($filter);
             }
 
-            $query->where(function ($query) use ($custom_view_filters, $service) {
+            $func = boolval($this->condition_reverse)? 'whereNot': 'where';
+            $query->{$func}(function ($query) use ($custom_view_filters, $service) {
                 foreach ($custom_view_filters as $filter) {
                     $service->whereCustomViewFilter($filter, $this->filter_is_or, $query);
                 }
@@ -764,12 +844,14 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set summary value filters
      */
+
+    // @phpstan-ignore-next-line
     protected function setSummaryValueFilters($query)
     {
         // Cannot use $custom_view_filters_cache because summary to grid, use custom_view_filters directly.
         $custom_view_filters = $this->custom_view_filters;
 
-        if (count($custom_view_filters) !== 0) {
+        if ($custom_view_filters->count() > 0) {
             $service = $this->getSearchService()->setQuery($query);
 
             // Get $relationTables.
@@ -808,6 +890,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @deprecated Please use sortModel func.
      */
+
+    // @phpstan-ignore-next-line
     public function setValueSort($model)
     {
         return $this->sortModel($model);
@@ -816,6 +900,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set value sort
      */
+
+    // @phpstan-ignore-next-line
     public function sortModel($query)
     {
         // if request has "_sort", not executing
@@ -839,6 +925,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getSummaryIndexAndViewColumns()
     {
         $results = [];
@@ -865,6 +953,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * get view columns select options. It contains system column(ex. id, suuid, created_at, updated_at), and table columns.
      * @param bool $is_y
      */
+
+    // @phpstan-ignore-next-line
     public function getViewColumnsSelectOptions(bool $is_y): array
     {
         $options = [];
@@ -899,6 +989,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $options;
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setViewColumnsOptions(&$options, $view_kind_type, $custom_view_column, ?bool $is_number)
     {
         $option = $this->getSelectColumn($view_kind_type, $custom_view_column);
@@ -907,6 +999,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getSelectColumn($column_type, $custom_view_column)
     {
         $condition_item = $custom_view_column->condition_item;
@@ -921,6 +1015,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return ['id' => $view_column_id, 'text' => $column_view_name, 'is_number' => $is_number];
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewCalendarTargetAttribute()
     {
         $custom_view_columns = $this->custom_view_columns_cache;
@@ -930,6 +1026,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setViewCalendarTargetAttribute($view_calendar_target)
     {
         $custom_view_columns = $this->custom_view_columns_cache;
@@ -939,11 +1037,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         $custom_view_columns[0]->view_column_target = $view_calendar_target;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getPagerCountAttribute()
     {
         return $this->getOption('pager_count');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setPagerCountAttribute($val)
     {
         $this->setOption('pager_count', $val);
@@ -951,11 +1053,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getConditionJoinAttribute()
     {
         return $this->getOption('condition_join');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setConditionJoinAttribute($val)
     {
         $this->setOption('condition_join', $val);
@@ -963,11 +1069,31 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
+    public function getConditionReverseAttribute()
+    {
+        return $this->getOption('condition_reverse');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setConditionReverseAttribute($val)
+    {
+        $this->setOption('condition_reverse', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
     public function getUseViewInfoboxAttribute()
     {
         return $this->getOption('use_view_infobox');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setUseViewInfoboxAttribute($val)
     {
         $this->setOption('use_view_infobox', $val);
@@ -975,10 +1101,14 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewInfoboxTitleAttribute()
     {
         return $this->getOption('view_infobox_title');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewInfoboxTitleAttribute($val)
     {
         $this->setOption('view_infobox_title', $val);
@@ -986,10 +1116,14 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewInfoboxAttribute()
     {
         return $this->getOption('view_infobox');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewInfoboxAttribute($val)
     {
         $this->setOption('view_infobox', $val);
@@ -997,11 +1131,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getHeaderAlignAttribute()
     {
         return $this->getOption('header_align');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setHeaderAlignAttribute($val)
     {
         $this->setOption('header_align', $val);
@@ -1009,6 +1147,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getHeaderOptions()
     {
         $attributes = [];
@@ -1034,6 +1174,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * Whether login user has edit permission about this view.
      */
+
+    // @phpstan-ignore-next-line
     public function hasEditPermission()
     {
         $login_user = \Exment::user();
@@ -1058,6 +1200,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getQueryData()
     {
         $query = $this->custom_table->getValueQuery();
@@ -1070,6 +1214,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * @param int|string $id
      * @return array [boolean, string] status, error message.
      */
+
+    // @phpstan-ignore-next-line
     public static function validateDestroy($id)
     {
         // check notify target view

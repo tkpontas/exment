@@ -7,8 +7,10 @@ namespace Exceedone\Exment\Services\DataImportExport\Providers\Import;
  */
 class RelationPivotTableProvider extends ProviderBase
 {
+    // @phpstan-ignore-next-line
     protected $relation;
 
+    // @phpstan-ignore-next-line
     public function __construct($args = [])
     {
         $this->relation = array_get($args, 'relation');
@@ -17,6 +19,7 @@ class RelationPivotTableProvider extends ProviderBase
     /**
      * get pivot data for n:n
      */
+    // @phpstan-ignore-next-line
     public function getDataObject($data, $options = [])
     {
         $results = [];
@@ -40,6 +43,10 @@ class RelationPivotTableProvider extends ProviderBase
             }
 
             // combine value
+            $null_merge_array = collect(range(1, count($headers)))->map(function () {
+                return null;
+            })->toArray();
+            $value = $value + $null_merge_array;
             $value_custom = array_combine($headers, $value);
             $delete = boolval(array_get($value_custom, 'delete')) || boolval(array_get($value_custom, 'delete_flg'));
 
@@ -56,6 +63,7 @@ class RelationPivotTableProvider extends ProviderBase
      * @param mixed $dataObjects
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function validateImportData($dataObjects)
     {
         return [$dataObjects, null];
@@ -64,6 +72,7 @@ class RelationPivotTableProvider extends ProviderBase
     /**
      * import data (n:n relation)
      */
+    // @phpstan-ignore-next-line
     public function importdata($dataPivot)
     {
         $data = array_get($dataPivot, 'data');

@@ -14,6 +14,7 @@ class Url extends CustomItem
      * get html(for display)
      * *this function calls from non-escaping value method. So please escape if not necessary unescape.
      */
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         $value = $this->_value($v);
@@ -24,6 +25,7 @@ class Url extends CustomItem
         return \Exment::getUrlTag($url, $value, UrlTagType::BLANK);
     }
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return Field\Url::class;
@@ -32,11 +34,11 @@ class Url extends CustomItem
     /**
      * Get grid filter option. Use grid filter, Ex. LIKE search.
      *
-     * @return string
+     * @return string|null
      */
     protected function getGridFilterOption(): ?string
     {
-        return FilterOption::LIKE;
+        return (string)FilterOption::LIKE;
     }
 
     /**

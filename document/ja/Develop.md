@@ -22,7 +22,7 @@
 - Laravelのプロジェクトを作成します。
 
 ~~~
-composer create-project "laravel/laravel=9.*" (プロジェクト名)
+composer create-project "laravel/laravel=10.*" (プロジェクト名)
 cd (プロジェクト名)
 ~~~
 
@@ -53,20 +53,28 @@ composer require psr/simple-cache=^2.0.0
 ~~~
 git clone https://github.com/hirossyi73/exment.git
 ~~~
+- (任意)あなたのlaravel-adminリポジトリをクローンします。
+(ex. https://github.com/hirossyi73/laravel-admin.git)
+
+~~~
+git clone https://github.com/hirossyi73/laravel-admin.git
+~~~
 
 - Laravelプロジェクトフォルダ直下の、composer.jsonを書き換えます。
 **便宜上、下記の記述にコメントを記載していますが、実際はコメントを削除してください。**
 
 ~~~
     "require": {
-        "php": "^8.0.2",
+        "php": ">=8.1",
         "guzzlehttp/guzzle": "^7.2",
-        "laravel/framework": "^9.19",
-        "laravel/sanctum": "^3.0",
-        "laravel/tinker": "^2.7",
+        "laravel/framework": "^10.10",
+        "laravel/sanctum": "^3.3",
+        "laravel/tinker": "^2.8",
         "psr/simple-cache": "2.0.0",
         // 行追加
         "exceedone/exment": "dev-master"
+        // 任意
+        ,"exceedone/laravel-admin": "dev-master as 4.10.10"
     },
 
     "autoload": {
@@ -84,6 +92,15 @@ git clone https://github.com/hirossyi73/exment.git
         {
             "type": "path",
             "url": "packages/hirossyi73/exment",
+            "options": {
+                "symlink": true
+            }
+        }
+        // 任意
+        ,
+        {
+            "type": "path",
+            "url": "packages/hirossyi73/laravel-admin",
             "options": {
                 "symlink": true
             }

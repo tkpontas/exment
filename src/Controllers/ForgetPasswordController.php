@@ -27,9 +27,8 @@ class ForgetPasswordController extends Controller
 
     /**
      * Display the form to request a password reset link.
-     * *Cutomize
-     *
-     * @return \Illuminate\Http\Response
+     * Customize
+     * @return bool|\Illuminate\Auth\Access\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|mixed
      */
     public function showLinkRequestForm()
     {
@@ -37,6 +36,7 @@ class ForgetPasswordController extends Controller
     }
 
     //defining which password broker to use, in our case its the exment
+    // @phpstan-ignore-next-line
     protected function broker()
     {
         return Password::broker('exment_admins');

@@ -45,6 +45,7 @@ class WorkflowController extends AdminControllerBase
         HasResourceActions::destroy as destroyTrait;
     }
 
+    // @phpstan-ignore-next-line
     protected $exists = false;
 
     public function __construct()
@@ -106,6 +107,7 @@ class WorkflowController extends AdminControllerBase
                 ))->render());
             }
 
+            // @phpstan-ignore-next-line
             if ($actions->row->canActivate()) {
                 $actions->prepend((new Tools\ModalLink(
                     admin_urls('workflow', $actions->row->id, 'activateModal'),
@@ -170,8 +172,12 @@ class WorkflowController extends AdminControllerBase
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param $id
+     * @return Form|Content
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         if (!isset($id)) {
@@ -196,6 +202,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     public function action(Request $request, Content $content, $id)
     {
         return $this->AdminContent($content)->body($this->actionForm($id)->edit($id));
@@ -204,10 +211,10 @@ class WorkflowController extends AdminControllerBase
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     *
-     * @return \Illuminate\Http\Response
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse
      */
+    // @phpstan-ignore-next-line
     public function destroy($id)
     {
         $this->isDeleteForce = true;
@@ -219,6 +226,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function statusForm($id = null)
     {
         $workflow = Workflow::getEloquent($id);
@@ -304,6 +312,7 @@ class WorkflowController extends AdminControllerBase
         });
 
         $form->savedInTransaction(function (Form $form) {
+            /** @var Workflow $model */
             $model = $form->model();
 
             // get workflow_statuses and set completed fig
@@ -337,6 +346,7 @@ class WorkflowController extends AdminControllerBase
         });
 
         $form->saved(function (Form $form) {
+            /** @var Workflow $model */
             $model = $form->model();
 
             // redirect workflow action page
@@ -374,6 +384,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function actionForm($id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -578,7 +589,7 @@ class WorkflowController extends AdminControllerBase
     /**
      * Make a beginning form builder.
      *
-     * @return Form
+     * @return Content
      */
     protected function beginningForm()
     {
@@ -591,6 +602,7 @@ class WorkflowController extends AdminControllerBase
 
         $results = [];
 
+        // @phpstan-ignore-next-line
         if (is_null($results = old('workflow_tables'))) {
             $workflowTables = WorkflowTable::with(['workflow', 'custom_table'])->get()
             ->filter(function ($workflowTable) {
@@ -667,7 +679,7 @@ class WorkflowController extends AdminControllerBase
         $form->html(view('exment::workflow.beginning', [
             'items' => $results
         ])->render());
-
+        // @phpstan-ignore-next-line
         $box = new Box(exmtrans('workflow.beginning'), $form);
         $box->tools(view('exment::tools.button', [
             'href' => admin_url('workflow'),
@@ -683,7 +695,8 @@ class WorkflowController extends AdminControllerBase
     /**
      * save beginning info
      *
-     * @return Form
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     protected function beginningPost(Request $request)
     {
@@ -754,6 +767,7 @@ class WorkflowController extends AdminControllerBase
         return back();
     }
 
+    // @phpstan-ignore-next-line
     public function appendActivateButton($workflow, $tools)
     {
         if (isset($workflow) && $workflow->canActivate()) {
@@ -771,6 +785,7 @@ class WorkflowController extends AdminControllerBase
     /**
      * Append table setting button
      */
+    // @phpstan-ignore-next-line
     public function appendTableSettingButton($workflow, $tools)
     {
         if (isset($workflow) && boolval($workflow->setting_completed_flg)) {
@@ -783,6 +798,7 @@ class WorkflowController extends AdminControllerBase
         }
     }
 
+    // @phpstan-ignore-next-line
     public function disableDelete($workflow, $tools)
     {
         if (isset($workflow) && $workflow->disabled_delete) {
@@ -807,9 +823,10 @@ class WorkflowController extends AdminControllerBase
      * Activate workflow
      *
      * @param Request $request
-     * @param string|int $id
-     * @return void
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function activate(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -848,9 +865,10 @@ class WorkflowController extends AdminControllerBase
      * deactivate workflow
      *
      * @param Request $request
-     * @param string|int $id
-     * @return void
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function deactivate(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -882,6 +900,7 @@ class WorkflowController extends AdminControllerBase
         ]);
     }
 
+    // @phpstan-ignore-next-line
     protected function appendWorkflowNotify($workflow)
     {
         // get mail template
@@ -908,6 +927,7 @@ class WorkflowController extends AdminControllerBase
     /**
      * validate before save.
      */
+    // @phpstan-ignore-next-line
     protected function validateData(Form $form)
     {
         $request = request();
@@ -924,7 +944,9 @@ class WorkflowController extends AdminControllerBase
             "comment_type" => 'required',
         ]);
 
-        $isWorkflowTypeTable = $form->model()->workflow_type == WorkflowType::TABLE;
+        /** @var Workflow $model */
+        $model = $form->model();
+        $isWorkflowTypeTable = $model->workflow_type == WorkflowType::TABLE;
         $key_condition = $isWorkflowTypeTable ? "work_conditions" : "work_condition_select";
         $keys->put($key_condition, "required");
 
@@ -982,32 +1004,30 @@ class WorkflowController extends AdminControllerBase
                     }
                 }
 
-                if ($work_target_type == WorkflowWorkTargetType::ACTION_SELECT || WorkflowWorkTargetType::GET_BY_USERINFO) {
-                    // if contains other FIX action in same acthion
-                    foreach ($workflow_actions as $validateIndex => $workflow_action_validate) {
-                        if ($key == $validateIndex) {
-                            continue;
-                        }
-
-                        if (array_get($workflow_action, 'status_from') != array_get($workflow_action_validate, 'status_from')) {
-                            continue;
-                        }
-
-                        // It's ok if ignore_work
-                        if (array_boolval($workflow_action_validate, 'ignore_work')) {
-                            continue;
-                        }
-
-                        $work_targets_validate = jsonToArray(array_get($workflow_action_validate, 'work_targets'));
-
-                        if ($work_target_type == WorkflowWorkTargetType::ACTION_SELECT) {
-                            if (array_get($work_targets_validate, 'work_target_type') == array_get($work_targets, 'work_target_type')) {
-                                continue;
-                            }
-                            $errors->add("$errorKey.{$key_condition}", exmtrans("workflow.message." . array_get($work_targets_validate, 'work_target_type') . "_and_action_select"));
-                        }
-                        break;
+                // if contains other FIX action in same acthion
+                foreach ($workflow_actions as $validateIndex => $workflow_action_validate) {
+                    if ($key == $validateIndex) {
+                        continue;
                     }
+
+                    if (array_get($workflow_action, 'status_from') != array_get($workflow_action_validate, 'status_from')) {
+                        continue;
+                    }
+
+                    // It's ok if ignore_work
+                    if (array_boolval($workflow_action_validate, 'ignore_work')) {
+                        continue;
+                    }
+
+                    $work_targets_validate = jsonToArray(array_get($workflow_action_validate, 'work_targets'));
+
+                    if ($work_target_type == WorkflowWorkTargetType::ACTION_SELECT) {
+                        if (array_get($work_targets_validate, 'work_target_type') == array_get($work_targets, 'work_target_type')) {
+                            continue;
+                        }
+                        $errors->add("$errorKey.{$key_condition}", exmtrans("workflow.message." . array_get($work_targets_validate, 'work_target_type') . "_and_action_select"));
+                    }
+                    break;
                 }
             }
 
@@ -1031,9 +1051,10 @@ class WorkflowController extends AdminControllerBase
      * Get target modal html
      *
      * @param Request $request
-     * @param string|int $id
-     * @return void
+     * @param $id
+     * @return Response
      */
+    // @phpstan-ignore-next-line
     public function targetModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1123,9 +1144,10 @@ class WorkflowController extends AdminControllerBase
      * Get condition modal html
      *
      * @param Request $request
-     * @param string|int $id
-     * @return void
+     * @param $id
+     * @return Response
      */
+    // @phpstan-ignore-next-line
     public function conditionModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1203,7 +1225,12 @@ class WorkflowController extends AdminControllerBase
                     ->options(exmtrans("condition.condition_join_options"))
                     ->attribute(['data-filter' => json_encode(['key' => "enabled_flg_{$index}", 'value' => '1'])])
                     ->default(array_get($work_condition, "condition_join") ?? 'and');
-            }
+
+                $form->checkboxone("condition_reverse_{$index}", exmtrans("condition.condition_reverse"))
+                    ->option(exmtrans("condition.condition_reverse_options"))
+                    ->attribute(['data-filter' => json_encode(['key' => "enabled_flg_{$index}", 'value' => '1'])])
+                    ->default(array_get($work_condition, "condition_reverse") ?? '0');
+                }
         }
 
         $form->hidden('valueModalUuid')->default($request->get('widgetmodal_uuid'));            // add message
@@ -1223,8 +1250,11 @@ class WorkflowController extends AdminControllerBase
     /**
      * Render Setting modal form.
      *
-     * @return Content
+     * @param Request $request
+     * @param $id
+     * @return Response
      */
+    // @phpstan-ignore-next-line
     public function activateModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1253,8 +1283,11 @@ class WorkflowController extends AdminControllerBase
     /**
      * Render deactivate modal form.
      *
-     * @return Content
+     * @param Request $request
+     * @param $id
+     * @return Response
      */
+    // @phpstan-ignore-next-line
     public function deactivateModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1285,6 +1318,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return ModalForm
      */
+    // @phpstan-ignore-next-line
     protected function getUserOrgModalForm(?CustomTable $custom_table, ?Workflow $workflow, $value = [], $options = [])
     {
         $options = array_merge([

@@ -6,55 +6,93 @@ use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\Define;
 
+/**
+ * @uses \Exceedone\Exment\Model\Traits\MailTemplateTrait
+ * @uses \Exceedone\Exment\Model\Traits\UserTrait
+ * @uses \Exceedone\Exment\Model\Traits\DocumentTrait
+ * @uses \Exceedone\Exment\Model\Traits\OrganizationTrait
+ */
 class ClassBuilder
 {
+    /** @var bool */
     private $isTrait;
 
+    /** @var string|null */
     private $namespace;
 
+    /** @var string */
     private $className;
 
+    /** @var string|null */
     private $superClass;
 
+    /** @var array<int, string> */
     private $interfaces = array();
 
+    /** @var array<int, string> */
     private $uses = array();
 
+    /** @var array<int, string> */
     private $inUses = array();
 
+    /** @var array<int, array<string, mixed>> */
     private $properties = array();
 
+    /** @var array<int, array<string, mixed>> */
     private $methods = array();
 
+    /**
+     * @param string $className
+     * @return static
+     */
     public static function startBuild($className)
     {
+        // @phpstan-ignore-next-line
         return new self($className);
     }
 
+    /**
+     * @param string $className
+     */
     private function __construct($className)
     {
         $this->className = $className;
         $this->isTrait = false;
     }
 
+    /**
+     * @return $this
+     */
     public function addTrait()
     {
         $this->isTrait = true;
         return $this;
     }
 
+    /**
+     * @param string $superClass
+     * @return $this
+     */
     public function extend($superClass)
     {
         $this->superClass = $superClass;
         return $this;
     }
 
+    /**
+     * @param string $interface
+     * @return $this
+     */
     public function implement($interface)
     {
         $this->interfaces[] = $interface;
         return $this;
     }
 
+    /**
+     * @param string $namespace
+     * @return $this
+     */
     public function addNamespace($namespace)
     {
         $this->namespace = $namespace;
@@ -62,18 +100,32 @@ class ClassBuilder
         return $this;
     }
 
+    /**
+     * @param string $use
+     * @return $this
+     */
     public function addUse($use)
     {
         $this->uses[] = $use;
         return $this;
     }
 
+    /**
+     * @param string $inUse
+     * @return $this
+     */
     public function addInUse($inUse)
     {
         $this->inUses[] = $inUse;
         return $this;
     }
 
+    /**
+     * @param string $scope
+     * @param string $name
+     * @param mixed $default
+     * @return $this
+     */
     public function addProperty($scope, $name, $default = null)
     {
         $this->properties[] = array(
@@ -85,6 +137,12 @@ class ClassBuilder
         return $this;
     }
 
+    /**
+     * @param string $scope
+     * @param string $signature
+     * @param string $contents
+     * @return $this
+     */
     public function addMethod($scope, $signature, $contents)
     {
         $this->methods[] = array(
@@ -96,6 +154,9 @@ class ClassBuilder
         return $this;
     }
 
+    /**
+     * @return string
+     */
     public function toString()
     {
         $namespace = empty($this->namespace) ? "" : "namespace {$this->namespace};";
@@ -165,6 +226,7 @@ class ClassBuilder
         return $class;
     }
 
+    // @phpstan-ignore-next-line
     public function build()
     {
         eval($this->toString());
@@ -176,6 +238,7 @@ class ClassBuilder
     /**
      * Create Custom Value Class Definition
      */
+    // @phpstan-ignore-next-line
     public static function createCustomValue($namespace, $className, $fillpath, $table, $obj)
     {
         $table = CustomTable::getEloquent($table);

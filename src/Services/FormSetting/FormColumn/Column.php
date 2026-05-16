@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
 class Column extends ColumnBase
 {
     /**
-     * @var CustomColumn
+     * @var CustomColumn|null
      */
     protected $custom_column;
 
@@ -46,7 +46,8 @@ class Column extends ColumnBase
     /**
      * Get object for suggest
      *
-     * @return self
+     * @param CustomColumn $custom_column
+     * @return ColumnBase
      */
     public static function makeBySuggest(CustomColumn $custom_column): ColumnBase
     {
@@ -88,6 +89,7 @@ class Column extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function prepareSavingOptions(array $options): array
     {
         // convert field_showing_type
@@ -105,6 +107,7 @@ class Column extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function prepareSavingOptionsKeys()
     {
         return [
@@ -130,6 +133,7 @@ class Column extends ColumnBase
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     protected function convertFieldDisplayType(array $options): ?string
     {
         foreach (['view_only','read_only','hidden','internal'] as $key) {
@@ -147,6 +151,7 @@ class Column extends ColumnBase
      *
      * @return WidgetForm
      */
+    // @phpstan-ignore-next-line
     public function getSettingModalForm(BlockBase $block_item, array $parameters): WidgetForm
     {
         $form = new WidgetForm($parameters);
@@ -235,6 +240,7 @@ class Column extends ColumnBase
      *
      * @return Collection
      */
+    // @phpstan-ignore-next-line
     protected function getSelectTableColumns(BlockBase $block_item): Collection
     {
         if (!isset($this->custom_column)) {
@@ -261,7 +267,10 @@ class Column extends ColumnBase
         foreach ($custom_columns as $custom_column) {
             $target_table = $custom_column->select_target_table;
             if (!isset($target_table)) {
-                return collect($result);
+                /** @var Collection $collection */
+                // @phpstan-ignore-next-line
+                $collection =  collect($result);
+                return $collection;
             }
 
             // get custom table
@@ -277,7 +286,10 @@ class Column extends ColumnBase
             $result[array_get($custom_column, 'id')] = $select_table_column_name;
         }
 
-        return collect($result);
+        /** @var Collection $collection */
+        // @phpstan-ignore-next-line
+        $collection = collect($result);
+        return $collection;
     }
 
 

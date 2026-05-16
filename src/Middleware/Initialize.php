@@ -29,6 +29,10 @@ use PDO;
  */
 class Initialize
 {
+    /**
+     * @param \Closure(Request): mixed $next
+     * @return mixed
+     */
     public function handle(Request $request, \Closure $next)
     {
         if (!canConnection() || !hasTable(SystemTableName::SYSTEM)) {
@@ -83,6 +87,10 @@ class Initialize
     }
 
 
+    /**
+     * @param bool $setDatabase
+     * @return void
+     */
     public static function initializeConfig($setDatabase = true)
     {
         //// set from env
@@ -106,7 +114,7 @@ class Initialize
         if (!Config::has('auth.passwords.exment_admins')) {
             Config::set('auth.passwords.exment_admins', [
                 'provider' => 'exment-auth',
-                'table' => 'password_resets',
+                'table' => 'password_reset_tokens',
                 'expire' => 720,
             ]);
         }
@@ -301,6 +309,7 @@ class Initialize
             'url'        => CustomColumns\Url::class,
             'user'        => CustomColumns\User::class,
             'yesno'        => CustomColumns\Yesno::class,
+            'custom_text'        => CustomColumns\CustomText::class,
         ];
         foreach ($map as $abstract => $class) {
             CustomItem::extend($abstract, $class);
@@ -438,6 +447,9 @@ class Initialize
         }
     }
 
+    /**
+     * @return void
+     */
     public static function requireBootstrap()
     {
         $file = config('exment.bootstrap', exment_app_path('bootstrap.php'));
@@ -449,12 +461,14 @@ class Initialize
 
     /**
      * set laravel-admin
+     * @return void
      */
     public static function registeredLaravelAdmin()
     {
         Grid::init(function (Grid $grid) {
             $grid->disableColumnSelector();
 
+            // @phpstan-ignore-next-line
             if ($grid->model() && ($grid->model()->eloquent() instanceof Model\CustomValue)) {
                 if (!is_null($value = System::grid_pager_count())) {
                     $grid->paginate($value);

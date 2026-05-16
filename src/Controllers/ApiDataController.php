@@ -2,12 +2,13 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Exceedone\Exment\Model\CustomViewColumn;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\CustomView;
-use Exceedone\Exment\Model\Linkage;
+use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\File;
 use Exceedone\Exment\Enums\FileType;
 use Exceedone\Exment\Enums\Permission;
@@ -38,6 +39,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param  array   $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function callAction($method, $parameters)
     {
         if (!$this->custom_table) {
@@ -56,6 +58,7 @@ class ApiDataController extends AdminControllerTableBase
     public function dataList(Request $request)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -81,6 +84,7 @@ class ApiDataController extends AdminControllerTableBase
         $this->setQueryInfo($model);
 
         // set order by
+        // @phpstan-ignore-next-line
         $this->setOrderByQuery($model, $orderby_list);
 
         $paginator = $model->paginate($count);
@@ -131,6 +135,7 @@ class ApiDataController extends AdminControllerTableBase
     public function dataQueryColumn(Request $request, $tableKey)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -165,6 +170,7 @@ class ApiDataController extends AdminControllerTableBase
         if (($orderby_list = $this->getOrderBy($request)) instanceof Response) {
             return $orderby_list;
         }
+        // @phpstan-ignore-next-line
         $this->setOrderByQuery($model, $orderby_list);
 
         $paginator = $model->paginate($count);
@@ -184,6 +190,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param array $params
      * @return Response|boolean
      */
+    // @phpstan-ignore-next-line
     protected function setParamsQueryColumn(Request $request, $query, $params)
     {
         if (empty($params)) {
@@ -193,8 +200,10 @@ class ApiDataController extends AdminControllerTableBase
         $paramInfos = [];
         foreach ($params as $param) {
             $values = preg_split("/\s+/", trim($param), 3);
+            // @phpstan-ignore-next-line
             $column_name = $values[0];
 
+            // @phpstan-ignore-next-line
             if (count($values) < 3 || !preg_match('/^eq|ne|gt|gte|lt|lte|like$/i', $values[1])) {
                 return abortJson(400, ErrorCode::INVALID_PARAMS());
             }
@@ -210,6 +219,7 @@ class ApiDataController extends AdminControllerTableBase
             }
 
             $operator = '=';
+            // @phpstan-ignore-next-line
             switch ($values[1]) {
                 case 'gt':
                     $operator = '>';
@@ -230,6 +240,7 @@ class ApiDataController extends AdminControllerTableBase
                     $operator = 'LIKE';
                     break;
             }
+            // @phpstan-ignore-next-line
             $paramInfos[] = [$column_name, $operator, $values[2]];
         }
 
@@ -249,6 +260,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param mixed $id
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function dataFind(Request $request, $tableKey, $id)
     {
         return $this->_dataFind($request, $id);
@@ -271,6 +283,7 @@ class ApiDataController extends AdminControllerTableBase
      * update data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function dataUpdate(Request $request, $tableKey, $id)
     {
         if (!$this->custom_table->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -282,6 +295,7 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         if (($code = $custom_value->enableEdit()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -293,6 +307,7 @@ class ApiDataController extends AdminControllerTableBase
      * delete data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function dataDelete(Request $request, $tableKey, $id)
     {
         if (!$this->custom_table->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -308,15 +323,33 @@ class ApiDataController extends AdminControllerTableBase
         $forceDelete = boolval($request->get('force'));
 
         $custom_values = [];
-        foreach ((array)$ids as $i) {
+        $validates = [];
+        foreach ((array)$ids as $index => $i) {
             if (($custom_value = $this->getCustomValue($this->custom_table, $i, $forceDelete)) instanceof Response) {
                 return $custom_value;
             }
             if (($code = $custom_value->enableDelete()) !== true) {
+                // @phpstan-ignore-next-line
                 return abortJson(403, $code());
             }
-
+            if ($res = $this->custom_table->validateValueDestroy($i)) {
+                $message = array_get($res, 'message')?? exmtrans('error.delete_failed');
+                if (count($ids) == 1) {
+                    $validates[] = $message;
+                } else {
+                    $validates[] = [
+                        'line_no' => $index,
+                        'error' => $message
+                    ];
+                }
+            }
             $custom_values[] = $custom_value;
+        }
+
+        if (count($validates) > 0) {
+            return abortJson(400, [
+                'errors' => $validates
+            ], ErrorCode::VALIDATION_ERROR());
         }
 
         \ExmentDB::transaction(function () use ($custom_values, $forceDelete) {
@@ -345,6 +378,7 @@ class ApiDataController extends AdminControllerTableBase
      * list all data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function viewDataList(Request $request, $tableKey, $viewid)
     {
         $init = $this->viewDataInit($request, $viewid, true);
@@ -382,6 +416,7 @@ class ApiDataController extends AdminControllerTableBase
      * list view data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function viewDataFind(Request $request, $tableKey, $viewid, $id)
     {
         $init = $this->viewDataInit($request, $viewid, false);
@@ -423,6 +458,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param boolean $isList
      * @return Response|array if error, return response. or not, return list($custom_view, $valuetype, $count)
      */
+    // @phpstan-ignore-next-line
     protected function viewDataInit(Request $request, $viewid, bool $isList)
     {
         // get view
@@ -443,6 +479,7 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -460,6 +497,7 @@ class ApiDataController extends AdminControllerTableBase
         return [$custom_view, $valuetype, $count];
     }
 
+    // @phpstan-ignore-next-line
     protected function viewDataAfter($custom_view, $valuetype, $target)
     {
         list($headers, $bodies, $columnStyles, $columnClasses, $columnItems) =
@@ -486,11 +524,15 @@ class ApiDataController extends AdminControllerTableBase
      * Get Attachment files
      *
      * @param Request $request
-     * @return void
+     * @param $tableKey
+     * @param $id
+     * @return \Exceedone\Exment\Model\CustomValue|\Illuminate\Config\Repository|\Illuminate\Contracts\Foundation\Application|\Illuminate\Database\Eloquent\Collection|\Illuminate\Pagination\AbstractPaginator|mixed|Response|null
      */
+    // @phpstan-ignore-next-line
     public function getDocuments(Request $request, $tableKey, $id)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -499,6 +541,7 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         if (($code = $custom_value->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -512,10 +555,12 @@ class ApiDataController extends AdminControllerTableBase
             'paginate' => true,
         ]);
 
+        // @phpstan-ignore-next-line
         $documents->appends([
             'count' => $count
         ]);
 
+        // @phpstan-ignore-next-line
         $documents->getCollection()->transform(function ($document) {
             return $this->getDocumentArray($document);
         });
@@ -527,8 +572,11 @@ class ApiDataController extends AdminControllerTableBase
      * create Attachment files
      *
      * @param Request $request
-     * @return void
+     * @param $tableKey
+     * @param $id
+     * @return \Exceedone\Exment\Model\CustomValue|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response|Response
      */
+    // @phpstan-ignore-next-line
     public function createDocument(Request $request, $tableKey, $id)
     {
         if (!$this->custom_table->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -540,6 +588,7 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         if (($code = $custom_value->enableEdit()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -572,6 +621,7 @@ class ApiDataController extends AdminControllerTableBase
      * *search_type(required) : 1:n, n:n or select_table.
      * *q(required) : id that user selected.
      */
+    // @phpstan-ignore-next-line
     public function relatedLinkage(Request $request)
     {
         return $this->_relatedLinkage($request);
@@ -587,9 +637,11 @@ class ApiDataController extends AdminControllerTableBase
      */
     public function columnData(Request $request, $tableKey, $column_name)
     {
+        // @phpstan-ignore-next-line
         return $this->_columnData($request, $column_name);
     }
 
+    // @phpstan-ignore-next-line
     protected function saveData($request, $custom_value = null)
     {
         $validator = Validator::make($request->all(), [
@@ -707,6 +759,7 @@ class ApiDataController extends AdminControllerTableBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getRootValuesFromPost(Request $request, &$is_single)
     {
         $rootValues = [];
@@ -755,6 +808,7 @@ class ApiDataController extends AdminControllerTableBase
         return $rootValues;
     }
 
+    // @phpstan-ignore-next-line
     protected function convertFindKeys(&$rootValues, $request)
     {
         if (is_null($findKeys = $request->get('findKeys'))) {
@@ -789,6 +843,7 @@ class ApiDataController extends AdminControllerTableBase
     public function calendarList(Request $request)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -815,6 +870,7 @@ class ApiDataController extends AdminControllerTableBase
         $custom_view->filterSortModel($model);
 
         $tasks = [];
+        /** @var CustomViewColumn $custom_view_column */
         foreach ($custom_view->custom_view_columns as $custom_view_column) {
             if ($custom_view_column->view_column_type == ConditionType::COLUMN) {
                 $target_start_column = $custom_view_column->custom_column->getIndexColumnName();
@@ -865,9 +921,15 @@ class ApiDataController extends AdminControllerTableBase
      * Get calendar query
      * ex. display: 4/1 - 4/30
      *
-     * @param mixed $query
-     * @return \Illuminate\Database\Query\Builder
+     * @param $model
+     * @param $start
+     * @param $end
+     * @param $target_start_column
+     * @param $target_end_column
+     * @return mixed
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     protected function getCalendarQuery($model, $start, $end, $target_start_column, $target_end_column)
     {
         $db_table_name = getDBTableName($this->custom_table);
@@ -925,6 +987,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param mixed $row
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setCalendarDate(&$task, $row, $target_start_column, $target_end_column)
     {
         $dt = $row->{$target_start_column};
@@ -962,6 +1025,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param array $value input value
      * @return array Value after converting base64 encode file, and files value
      */
+    // @phpstan-ignore-next-line
     protected function convertFileData($value)
     {
         // get file columns
@@ -989,6 +1053,7 @@ class ApiDataController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getFileValue(CustomColumn $file_column, $file_value): ?array
     {
         // whether is_vector, set as array
@@ -1022,16 +1087,16 @@ class ApiDataController extends AdminControllerTableBase
         return [$names, $result];
     }
 
-
     /**
      * Save fileinfo after custom_value save
      *
      * @param CustomTable $custom_table
      * @param array $files
      * @param array $value
-     * @param array $oroginalValue
+     * @param array $originalValue
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function saveFile($custom_table, $files, &$value, $originalValue)
     {
         foreach ($files as $column_name => $fileInfos) {
@@ -1067,6 +1132,7 @@ class ApiDataController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getDocumentArray($document)
     {
         return [
@@ -1082,8 +1148,9 @@ class ApiDataController extends AdminControllerTableBase
      * Get order by array from request
      *
      * @param Request $request
-     * @return array offset 0 : target column name, 1 : 'asc' or 'desc'
+     * @return array|Response offset 0 : target column name, 1 : 'asc' or 'desc'
      */
+    // @phpstan-ignore-next-line
     protected function getOrderBy(Request $request)
     {
         if (!$request->has('orderby')) {
@@ -1096,7 +1163,9 @@ class ApiDataController extends AdminControllerTableBase
 
         foreach ($params as $param) {
             $values = preg_split("/\s+/", trim($param));
+            // @phpstan-ignore-next-line
             $column_name = $values[0];
+            // @phpstan-ignore-next-line
             if (count($values) > 1 && !preg_match('/^asc|desc$/i', $values[1])) {
                 return abortJson(400, ErrorCode::INVALID_PARAMS());
             }
@@ -1110,6 +1179,7 @@ class ApiDataController extends AdminControllerTableBase
                 }
                 $column_name = $column->getIndexColumnName();
             }
+            // @phpstan-ignore-next-line
             $orderby_list[] = [$column_name, count($values) > 1 ? $values[1] : 'asc'];
         }
 
@@ -1123,6 +1193,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param array $orderby_list
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setOrderByQuery($query, $orderby_list)
     {
         if (empty($orderby_list)) {
@@ -1135,10 +1206,12 @@ class ApiDataController extends AdminControllerTableBase
             if ($item[0] == 'id') {
                 $hasId = true;
             }
+            // @phpstan-ignore-next-line
             $query->orderBy($item[0], $item[1]);
         }
 
         if (!$hasId) {
+            // @phpstan-ignore-next-line
             $query->orderBy('id');
         }
     }

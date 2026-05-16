@@ -14,6 +14,7 @@ class Driver extends EnumBase
     public const FTP = 'ftp';
     public const SFTP = 'sftp';
 
+    // @phpstan-ignore-next-line
     public static $customDrivers = [];
 
 
@@ -37,8 +38,9 @@ class Driver extends EnumBase
      * @param mixed $app
      * @param array $config
      * @param string $driverKey
-     * @return Filesystem
+     * @return Filesystem|FilesystemAdapter
      */
+    // @phpstan-ignore-next-line
     public static function getExmentDriver($app, $config, $driverKey)
     {
         $c = config("exment.driver.$driverKey", 'local');

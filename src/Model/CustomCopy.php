@@ -2,15 +2,18 @@
 
 namespace Exceedone\Exment\Model;
 
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Enums\CopyColumnType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @phpstan-consistent-constructor
- * @method static \Illuminate\Database\Query\Builder whereIn($column, $values, $boolean = 'and', $not = false)
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
- * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
+ * @property mixed $from_custom_table_id
+ * @method static int count($columns = '*')
+ * @method static ExtendedBuilder whereIn($column, $values, $boolean = 'and', $not = false)
+ * @method static ExtendedBuilder orderBy($column, $direction = 'asc')
+ * @method static ExtendedBuilder create(array $attributes = [])
  */
 class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterface
 {
@@ -21,6 +24,8 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
 
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['from_custom_table', 'to_custom_table', 'target_copy_name'],
         'langs' => [
@@ -53,22 +58,30 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
         ],
     ];
 
+
+    // @phpstan-ignore-next-line
     public function from_custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'from_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function to_custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'to_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_copy_columns(): HasMany
     {
         return $this->hasMany(CustomCopyColumn::class, 'custom_copy_id')
         ->where('copy_column_type', CopyColumnType::DEFAULT);
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_copy_input_columns(): HasMany
     {
         return $this->hasMany(CustomCopyColumn::class, 'custom_copy_id')
@@ -78,6 +91,8 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * execute data copy with request parameter
      */
+
+    // @phpstan-ignore-next-line
     public function executeRequest($from_custom_value, $request = null)
     {
         return $this->execute($from_custom_value, $request->all());
@@ -86,6 +101,8 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * execute data copy
      */
+
+    // @phpstan-ignore-next-line
     public function execute($from_custom_value, $inputs = null)
     {
         $to_custom_value = null;
@@ -100,6 +117,7 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
 
             $child_copy_id = $this->getOption('child_copy');
             if (isset($child_copy_id)) {
+                /** @var CustomCopy $child_copy */
                 $child_copy = static::find($child_copy_id);
 
                 // get from-children values
@@ -133,6 +151,8 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
         ];
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function saveCopyModel(
         $custom_copy_columns,
         $custom_copy_input_columns,
@@ -192,6 +212,8 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $to_custom_value;
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function getColumnValueKey($condition_item, $column_type_target, $custom_column)
     {
         return $condition_item ? $condition_item->getColumnValueKey($column_type_target, $custom_column) : null;
@@ -201,11 +223,15 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->custom_copy_columns()->delete();

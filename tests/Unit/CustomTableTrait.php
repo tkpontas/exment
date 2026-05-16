@@ -8,8 +8,13 @@ use Exceedone\Exment\Model\CustomTable;
 
 trait CustomTableTrait
 {
+    /**
+     * @param string $table_name
+     * @return CustomTable
+     */
     protected function _createSimpleTable(string $table_name)
     {
+        /** @var CustomTable $custom_table */
         $custom_table = CustomTable::create([
             'table_name' => $table_name,
             'table_view_name' => $table_name . ' view',

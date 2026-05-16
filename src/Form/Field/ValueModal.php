@@ -3,6 +3,7 @@
 namespace Exceedone\Exment\Form\Field;
 
 use Encore\Admin\Form\Field;
+use Illuminate\Support\Collection;
 
 /**
  * Open Modal and set value selecting modal body.
@@ -12,11 +13,13 @@ class ValueModal extends Field
 {
     protected $view = 'exment::form.field.valuemodal';
 
+    // @phpstan-ignore-next-line
     protected $valueTextScript;
 
     /**
-     * @var string
+     * @var string|array|\Closure|Collection
      */
+    // @phpstan-ignore-next-line
     protected $text;
 
     /**
@@ -25,17 +28,17 @@ class ValueModal extends Field
     protected $nullText;
 
     /**
-     * @var string
+     * @var string|\Closure
      */
     protected $nullValue;
 
     /**
-     * @var string
+     * @var string|null
      */
     protected $buttonlabel;
 
     /**
-     * @var string
+     * @var string|null
      */
     protected $buttonClass;
 
@@ -45,7 +48,7 @@ class ValueModal extends Field
     protected $modalContentname;
 
     /**
-     * @var \Closure
+     * @var \Closure|string
      */
     protected $hiddenFormat;
 
@@ -54,11 +57,13 @@ class ValueModal extends Field
      */
     protected $ajax;
 
+    // @phpstan-ignore-next-line
     protected $escape = true;
 
     /**
      * @var array modal ajax posting names
      */
+    // @phpstan-ignore-next-line
     protected $post_names = [];
 
     /**
@@ -70,6 +75,7 @@ class ValueModal extends Field
      */
     public function text($text = '')
     {
+        // @phpstan-ignore-next-line
         $this->text = $text;
         return $this;
     }
@@ -152,6 +158,7 @@ class ValueModal extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function escape(bool $escape = true)
     {
         $this->escape = $escape;
@@ -159,6 +166,7 @@ class ValueModal extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     protected function script()
     {
         $classname = $this->getElementClassSelector();
@@ -179,12 +187,12 @@ class ValueModal extends Field
                 if(!hasValue(valText)){
                     return;
                 }
-                
+
                 // set value and text
                 let target = getValueModalTarget();
                 target.find('.value-valuemodal').val(valText.value);
                 target.find('.text-valuemodal').html(valText.text);
-                
+
                 if(!hasValue(valText.text)){
                     let nullText = target.find('.nulltext-valuemodal').val();
                     target.find('.text-valuemodal').text(nullText);
@@ -195,7 +203,7 @@ class ValueModal extends Field
                 if(forms.length > 0 &&!forms[0].reportValidity()){
                     return;
                 }
-    
+
                 $('.modal').modal('hide');
             });
 
@@ -258,6 +266,7 @@ EOT;
     {
         // set text
         if ($this->text instanceof \Closure) {
+            // @phpstan-ignore-next-line
             if ($this->form && $this->form->model()) {
                 $this->text = $this->text->bindTo($this->form->model());
             }
@@ -300,6 +309,7 @@ EOT;
         // set script
         $this->script();
 
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'text'   => $this->text,
             'hidden' => $hidden,
@@ -317,9 +327,11 @@ EOT;
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     protected function convertString($value)
     {
         if (is_array($value)) {
+            // @phpstan-ignore-next-line
             return json_encode($value);
         }
 

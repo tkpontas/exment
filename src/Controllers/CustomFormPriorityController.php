@@ -25,6 +25,11 @@ class CustomFormPriorityController extends AdminControllerTableBase
         $this->setPageInfo($title, $title, exmtrans("custom_form_priority.description"), 'fa-keyboard-o');
     }
 
+    /**
+     * @param Request $request
+     * @param Content $content
+     * @return Content|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     */
     public function index(Request $request, Content $content)
     {
         return redirect(admin_urls('form', $this->custom_table->table_name));
@@ -35,11 +40,13 @@ class CustomFormPriorityController extends AdminControllerTableBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new CustomFormPriority());
         $custom_table = $this->custom_table;
         $form->select('custom_form_id', exmtrans("custom_form_priority.custom_form_id"))->required()
+            // @phpstan-ignore-next-line
             ->options(function ($value) use ($custom_table) {
                 return $custom_table->custom_forms->mapWithKeys(function ($item) {
                     return [$item['id'] => $item['form_view_name']];
@@ -75,7 +82,11 @@ class CustomFormPriorityController extends AdminControllerTableBase
             ->options(exmtrans("condition.condition_join_options"))
             ->default('and');
 
+        $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
+            ->option(exmtrans("condition.condition_reverse_options"));
+
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('form', $custom_table));
             $tools->setListPath(admin_urls('form', $custom_table->table_name));
         });

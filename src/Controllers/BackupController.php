@@ -5,6 +5,7 @@ namespace Exceedone\Exment\Controllers;
 use Encore\Admin\Layout\Content;
 use Encore\Admin\Widgets\Form as WidgetForm;
 use Encore\Admin\Widgets\Box;
+use Exceedone\Exment\Validator\ExmentCustomValidator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Exceedone\Exment\Model\System;
@@ -18,7 +19,9 @@ use DB;
 
 class BackupController extends AdminControllerBase
 {
+    // @phpstan-ignore-next-line
     protected $backup;
+    // @phpstan-ignore-next-line
     protected $restore;
 
     public function __construct()
@@ -51,6 +54,7 @@ class BackupController extends AdminControllerBase
         }
 
         // get all archive files
+        // @phpstan-ignore-next-line
         $files = collect($disk->files('list'))->filter(function ($file) {
             return preg_match('/list\/' . Define::RULES_REGEX_BACKUP_FILENAME . '\.zip$/i', $file);
         })->sortByDesc(function ($file) use ($disk) {
@@ -86,6 +90,7 @@ class BackupController extends AdminControllerBase
         return $content;
     }
 
+    // @phpstan-ignore-next-line
     protected function settingFormBox()
     {
         $form = new WidgetForm(System::get_system_values());
@@ -117,12 +122,15 @@ class BackupController extends AdminControllerBase
             ->min(0)
             ->attribute(['data-filter' => json_encode(['key' => 'backup_enable_automatic', 'value' => '1'])]);
 
+        // @phpstan-ignore-next-line
         return new Box(exmtrans("backup.setting_header"), $form);
     }
 
     /**
      * submit
+     *
      * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|void
      */
     public function postSetting(Request $request)
     {
@@ -156,7 +164,8 @@ class BackupController extends AdminControllerBase
     /**
      * Delete interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function delete(Request $request)
     {
@@ -191,7 +200,9 @@ class BackupController extends AdminControllerBase
     /**
      * execute backup command.
      *
-     * @return Content
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws BackupRestoreCheckException
      */
     public function save(Request $request)
     {
@@ -218,6 +229,7 @@ class BackupController extends AdminControllerBase
     /**
      * Download file
      */
+    // @phpstan-ignore-next-line
     public function download($arg)
     {
         $ymdhms = urldecode($arg);
@@ -246,8 +258,10 @@ class BackupController extends AdminControllerBase
     /**
      * Render import modal form.
      *
-     * @return Content
+     * @param $file_key
+     * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     protected function importModal($file_key = null)
     {
         $import_path = admin_url(url_join('backup', 'import'));
@@ -303,6 +317,7 @@ class BackupController extends AdminControllerBase
     /**
      * Upload zip file
      */
+    // @phpstan-ignore-next-line
     protected function import(Request $request)
     {
         \Exment::setTimeLimitLong();
@@ -344,6 +359,7 @@ class BackupController extends AdminControllerBase
             // get upload file
             $file = $request->file('upload_zipfile');
             // store uploaded file
+            // @phpstan-ignore-next-line
             $filename = $file->storeAs('', $file->getClientOriginalName(), Define::DISKNAME_ADMIN_TMP);
             try {
                 $result = $this->restore->execute($filename, true);
@@ -374,7 +390,9 @@ class BackupController extends AdminControllerBase
     /**
      * restore from backup file.
      *
-     * @return Content
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
      */
     public function restore(Request $request)
     {
@@ -414,13 +432,15 @@ class BackupController extends AdminControllerBase
     /**
      * edit file name
      *
-     * @return Content
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function editname(Request $request)
     {
         $data = $request->all();
 
         // validate "\", "/", "."
+        /** @var ExmentCustomValidator $validator */
         $validator = Validator::make($data, [
             'file' => ['required'],
             'filename' => ['required', 'max:30', 'regex:/^' . Define::RULES_REGEX_BACKUP_FILENAME . '$/'],

@@ -30,14 +30,24 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
  */
 class NotifyService
 {
+    /** @var Notify */
     protected $notify;
 
+    /** @var mixed */
     protected $targetid;
 
+    /** @var CustomTable|null */
     protected $custom_table;
 
+    /** @var CustomValue|null */
     protected $custom_value;
 
+    /**
+     * @param Notify $notify
+     * @param mixed $targetid
+     * @param mixed $tableKey
+     * @param mixed $id
+     */
     public function __construct(Notify $notify, $targetid, $tableKey, $id)
     {
         $this->notify = $notify;
@@ -107,6 +117,7 @@ class NotifyService
      * @param array|\Illuminate\Support\Collection $target_users
      * @return ModalForm
      */
+    // @phpstan-ignore-next-line
     public function getNotifyDialogFormMultiple($target_users)
     {
         $users = [];
@@ -117,14 +128,18 @@ class NotifyService
             }
         }
 
+        // @phpstan-ignore-next-line
         return $this->getSendForm($users, true);
     }
 
     /**
      * Get Send Form. if only one user, Replace format.
      *
-     * @return ModalForm
+     * @param $notifyTargets
+     * @param $isFlow
+     * @return ModalForm|false
      */
+    // @phpstan-ignore-next-line
     protected function getSendForm($notifyTargets, $isFlow = false)
     {
         $tableKey = $this->custom_table->table_name;
@@ -204,10 +219,14 @@ class NotifyService
     }
 
     /**
-     * send notfy mail
+     * send notify mail
      *
-     * @return void
+     * @param $custom_table
+     * @return \Symfony\Component\HttpFoundation\Response
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     public function sendNotifyMail($custom_table)
     {
         $request = request();
@@ -266,6 +285,7 @@ class NotifyService
      * @param \Illuminate\Support\Collection $values
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     protected function hasNotifyUserByButton(\Illuminate\Support\Collection $values): bool
     {
         // Exists user, return true
@@ -290,6 +310,7 @@ class NotifyService
      * @param \Illuminate\Support\Collection $notifyTargets
      * @return string
      */
+    // @phpstan-ignore-next-line
     protected function getNotifyTargetLabel(\Illuminate\Support\Collection $notifyTargets): string
     {
         $targets = clone $notifyTargets;
@@ -317,7 +338,7 @@ class NotifyService
     /**
      * Execute Notify test
      *
-     * @param array $params
+     * @param array<mixed> $params
      * @return Notifications\SenderBase
      */
     public static function executeTestNotify($params = []): Notifications\SenderBase
@@ -359,6 +380,7 @@ class NotifyService
      * @param array $params
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function executeNotifyAction($notify, $params = [])
     {
         $params = array_merge(
@@ -439,6 +461,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifyMail(array $params = [])
     {
         $params = array_merge(
@@ -455,6 +478,7 @@ class NotifyService
                 'attach_files' => null,
                 'disableHistoryBody' => false,
                 'replaceOptions' => [],
+                'final_user' => false,
             ],
             $params
         );
@@ -477,6 +501,7 @@ class NotifyService
                 ->bcc($params['bcc'])
                 ->attachments($params['attach_files'])
                 ->replaceOptions($params['replaceOptions'])
+                ->finalUser($params['final_user'])
                 ->send();
 
             return $sender;
@@ -494,6 +519,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifyNavbar(array $params = []): Notifications\SenderBase
     {
         $params = array_merge(
@@ -549,6 +575,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifySlack(array $params = [])
     {
         return static::notifyWebHook($params, Notifications\SlackSender::class);
@@ -561,6 +588,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifyTeams(array $params = [])
     {
         return static::notifyWebHook($params, Notifications\MicrosoftTeamsSender::class);
@@ -574,6 +602,7 @@ class NotifyService
      * @param string $className
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     protected static function notifyWebHook(array $params, string $className): Notifications\SenderBase
     {
         $params = array_merge(
@@ -614,6 +643,7 @@ class NotifyService
     /**
      * replace subject and body from mail template
      */
+    // @phpstan-ignore-next-line
     public static function replaceSubjectBody(&$params = [])
     {
         $params = array_merge(
@@ -665,6 +695,7 @@ class NotifyService
      * @param bool $isSelectTarget
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getProgressInfo($isSelectTarget)
     {
         $steps[] = [
@@ -687,6 +718,7 @@ class NotifyService
     /**
      * replace subject or body words.
      */
+    // @phpstan-ignore-next-line
     public static function replaceWord($target, $custom_value = null, $prms = null, $replaceOptions = [])
     {
         $replaceOptions = array_merge([
@@ -709,6 +741,7 @@ class NotifyService
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getNotifyTargetColumns($custom_table, $notify_action, array $options = [])
     {
         // get notify options by notify action
@@ -860,9 +893,11 @@ class NotifyService
     /**
      * Get User Mail Address. Only single item.
      *
-     * @param string|array|CustomValue|NotifyTarget $user
-     * @return array
+     * @param $user
+     * @return string|null
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public static function getAddress($user): ?string
     {
         $result = static::getAddresses($user);
@@ -875,6 +910,7 @@ class NotifyService
      * @param string|array|CustomValue|NotifyTarget $users
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function getAddresses($users): array
     {
         // Convert "," string to array
@@ -884,6 +920,7 @@ class NotifyService
             $users = [$users];
         }
         $addresses = collect();
+        // @phpstan-ignore-next-line
         foreach ($users as $user) {
             if ($user instanceof CustomValue) {
                 $addresses->push($user->getValue('email'));

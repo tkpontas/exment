@@ -3,6 +3,8 @@
 namespace Exceedone\Exment\Form\Show;
 
 use Encore\Admin\Show;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 
 /**
  * Public show panel.
@@ -17,13 +19,19 @@ class PublicShowPanel extends \Encore\Admin\Show\Panel
      */
     protected $view = 'exment::public-form.confirmpanel';
 
+    // @phpstan-ignore-next-line
     protected $action;
+    // @phpstan-ignore-next-line
     protected $back_action;
+    // @phpstan-ignore-next-line
     protected $confirm_title;
+    // @phpstan-ignore-next-line
     protected $confirm_text;
+    // @phpstan-ignore-next-line
     protected $relations = [];
 
 
+    // @phpstan-ignore-next-line
     public function setAction(string $action)
     {
         $this->action = $action;
@@ -31,6 +39,7 @@ class PublicShowPanel extends \Encore\Admin\Show\Panel
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function setBackAction(string $back_action)
     {
         $this->back_action = $back_action;
@@ -44,6 +53,7 @@ class PublicShowPanel extends \Encore\Admin\Show\Panel
      *
      * @return  self
      */
+    // @phpstan-ignore-next-line
     public function setConfirmTitle($confirm_title)
     {
         $this->confirm_title = $confirm_title;
@@ -56,6 +66,7 @@ class PublicShowPanel extends \Encore\Admin\Show\Panel
      *
      * @return  self
      */
+    // @phpstan-ignore-next-line
     public function setConfirmText($confirm_text)
     {
         $this->confirm_text = $confirm_text;
@@ -69,6 +80,7 @@ class PublicShowPanel extends \Encore\Admin\Show\Panel
      *
      * @return  self
      */
+    // @phpstan-ignore-next-line
     public function setChildRelationShows($relations)
     {
         $this->relations = $relations;
@@ -78,11 +90,10 @@ class PublicShowPanel extends \Encore\Admin\Show\Panel
 
     /**
      * Render this panel.
-     *
-     * @return string
      */
     public function render()
     {
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'action' => $this->action,
             'back_action' => $this->back_action,

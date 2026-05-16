@@ -6,6 +6,7 @@ use Exceedone\Exment\Tests\DatabaseTransactions;
 use Exceedone\Exment\Enums\ConditionType;
 use Exceedone\Exment\Enums\FilterOption;
 use Exceedone\Exment\Model\CustomTable;
+use Exceedone\Exment\Model\CustomValue;
 use Exceedone\Exment\Tests\TestDefine;
 
 class CustomViewFilterTest extends UnitTestBase
@@ -15,6 +16,7 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = EQ
+     * @return void
      */
     public function testFuncFilterEq()
     {
@@ -25,6 +27,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::EQ,
             'filter_value_text' => 'text_2'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.text') == $filter_settings[0]['filter_value_text'];
         });
@@ -32,6 +35,7 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NE
+     * @return void
      */
     public function testFuncFilterNe()
     {
@@ -42,6 +46,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NE,
             'filter_value_text' => 1
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.yesno') != $filter_settings[0]['filter_value_text'];
         });
@@ -49,6 +54,7 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NE
+     * @return void
      */
     public function testFuncFilterNotNull()
     {
@@ -58,6 +64,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'text',
             'filter_condition' => FilterOption::NOT_NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.text') !== null;
         });
@@ -65,6 +72,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NULL
+     *
+     * @return void
      */
     public function testFuncFilterNull()
     {
@@ -74,6 +83,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'text',
             'filter_condition' => FilterOption::NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.text') === null;
         });
@@ -81,6 +91,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = LIKE
+     *
+     * @return void
      */
     public function testFuncFilterLike()
     {
@@ -91,6 +103,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::LIKE,
             'filter_value_text' => 'text_1'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return strpos(array_get($data, 'value.text'), $filter_settings[0]['filter_value_text']) === 0;
         });
@@ -98,6 +111,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NOT LIKE
+     *
+     * @return void
      */
     public function testFuncFilterNotLike()
     {
@@ -108,6 +123,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NOT_LIKE,
             'filter_value_text' => 'text_1'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return !is_null(array_get($data, 'value.text')) && strpos(array_get($data, 'value.text'), $filter_settings[0]['filter_value_text']) !== 0;
         });
@@ -115,6 +131,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY
+     *
+     * @return void
      */
     public function testFuncFilterDayOn()
     {
@@ -125,6 +143,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_ON,
             'filter_value_text' => '2021-01-01'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.date') == $filter_settings[0]['filter_value_text'];
         });
@@ -132,6 +151,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption >= DAY
+     *
+     * @return void
      */
     public function testFuncFilterDayOnOrAfter()
     {
@@ -144,6 +165,7 @@ class CustomViewFilterTest extends UnitTestBase
         ]];
 
         $base_date = \Carbon\Carbon::parse($filter_settings[0]['filter_value_text']);
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($base_date) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -156,6 +178,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption <= DAY
+     *
+     * @return void
      */
     public function testFuncFilterDayOnOrBefore()
     {
@@ -168,6 +192,7 @@ class CustomViewFilterTest extends UnitTestBase
         ]];
 
         $base_date = \Carbon\Carbon::parse($filter_settings[0]['filter_value_text']);
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($base_date) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -180,6 +205,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY NOT NULL
+     *
+     * @return void
      */
     public function testFuncFilterDayNotNull()
     {
@@ -189,6 +216,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_NOT_NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.date') !== null;
         });
@@ -196,6 +224,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY NULL
+     *
+     * @return void
      */
     public function testFuncFilterDayNull()
     {
@@ -206,6 +236,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_NULL,
         ]];
 
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.date') === null;
         });
@@ -213,6 +244,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY TODAY
+     *
+     * @return void
      */
     public function testFuncFilterDayToday()
     {
@@ -223,6 +256,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_TODAY,
         ]];
 
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -235,6 +269,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY TODAY OR AFTER
+     *
+     * @return void
      */
     public function testFuncFilterDayTodayOrAfter()
     {
@@ -245,6 +281,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_TODAY_OR_AFTER,
         ]];
 
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -257,6 +294,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY TODAY OR BEFORE
+     *
+     * @return void
      */
     public function testFuncFilterDayTodayOrBefore()
     {
@@ -267,6 +306,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_TODAY_OR_BEFORE,
         ]];
 
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -279,6 +319,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY YESTERDAY
+     *
+     * @return void
      */
     public function testFuncFilterDayYesterday()
     {
@@ -288,6 +330,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_YESTERDAY,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -300,6 +343,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY TOMORROW
+     *
+     * @return void
      */
     public function testFuncFilterDayTomorrow()
     {
@@ -309,6 +354,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_TOMORROW,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -321,6 +367,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY THIS MONTH
+     *
+     * @return void
      */
     public function testFuncFilterDayThisMonth()
     {
@@ -330,6 +378,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_THIS_MONTH,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -343,6 +392,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY LAST MONTH
+     *
+     * @return void
      */
     public function testFuncFilterDayLastMonth()
     {
@@ -352,6 +403,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_LAST_MONTH,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -359,12 +411,14 @@ class CustomViewFilterTest extends UnitTestBase
             }
             $date = \Carbon\Carbon::parse($date);
             $today = \Carbon\Carbon::today();
-            return $today->firstOfMonth()->subMonthNoOverflow(1)->format('Y-m') == $date->format('Y-m');
+            return $today->firstOfMonth()->subMonthNoOverflow()->format('Y-m') == $date->format('Y-m');
         });
     }
 
     /**
      * FilterOption = DAY NEXT MONTH
+     *
+     * @return void
      */
     public function testFuncFilterDayNextMonth()
     {
@@ -374,6 +428,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_NEXT_MONTH,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -387,6 +442,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY THIS YEAR
+     *
+     * @return void
      */
     public function testFuncFilterDayThisYear()
     {
@@ -396,6 +453,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_THIS_YEAR,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -409,6 +467,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY LAST YEAR
+     *
+     * @return void
      */
     public function testFuncFilterDayLastYear()
     {
@@ -418,6 +478,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_LAST_YEAR,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -425,12 +486,14 @@ class CustomViewFilterTest extends UnitTestBase
             }
             $date = \Carbon\Carbon::parse($date);
             $today = \Carbon\Carbon::today();
-            return $today->subYearNoOverflow(1)->format('Y') == $date->format('Y');
+            return $today->subYearNoOverflow()->format('Y') == $date->format('Y');
         });
     }
 
     /**
      * FilterOption = DAY NEXT YEAR
+     *
+     * @return void
      */
     public function testFuncFilterDayNextYear()
     {
@@ -440,6 +503,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'date',
             'filter_condition' => FilterOption::DAY_NEXT_YEAR,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -447,12 +511,14 @@ class CustomViewFilterTest extends UnitTestBase
             }
             $date = \Carbon\Carbon::parse($date);
             $today = \Carbon\Carbon::today();
-            return $today->addYearNoOverflow(1)->format('Y') == $date->format('Y');
+            return $today->addYearNoOverflow()->format('Y') == $date->format('Y');
         });
     }
 
     /**
      * FilterOption = DAY LAST X DAY OR AFTER
+     *
+     * @return void
      */
     public function testFuncFilterDayLastXDayOrAfter()
     {
@@ -463,6 +529,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_LAST_X_DAY_OR_AFTER,
             'filter_value_text' => 3
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -476,6 +543,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY LAST X DAY OR BEFORE
+     *
+     * @return void
      */
     public function testFuncFilterDayLastXDayOrBefore()
     {
@@ -486,6 +555,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_LAST_X_DAY_OR_BEFORE,
             'filter_value_text' => 3
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -499,6 +569,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY NEXT X DAY OR AFTER
+     *
+     * @return void
      */
     public function testFuncFilterDayNextXDayOrAfter()
     {
@@ -509,6 +581,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_NEXT_X_DAY_OR_AFTER,
             'filter_value_text' => 3
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -522,6 +595,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DAY NEXT X DAY OR BEFORE
+     *
+     * @return void
      */
     public function testFuncFilterDayNextXDayOrBefore()
     {
@@ -532,6 +607,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_NEXT_X_DAY_OR_BEFORE,
             'filter_value_text' => 3
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -545,6 +621,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = Time
+     *
+     * @return void
      */
     public function testFuncFilterTimeEq()
     {
@@ -555,6 +633,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::EQ,
             'filter_value_text' => '02:02:02'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $time = array_get($data, 'value.time');
             if (is_null($time)) {
@@ -566,6 +645,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption <> Time
+     *
+     * @return void
      */
     public function testFuncFilterTimeNe()
     {
@@ -576,6 +657,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NE,
             'filter_value_text' => '02:02:02'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $time = array_get($data, 'value.time');
             if (is_null($time)) {
@@ -587,6 +669,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = DateTime
+     *
+     * @return void
      */
     public function testFuncFilterDateTimeOn()
     {
@@ -597,14 +681,21 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_ON,
             'filter_value_text' => \Carbon\Carbon::today()->format('Y-m-d')
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
-            $date = \Carbon\Carbon::parse(array_get($data, 'value.datetime'));
+            $date = array_get($data, 'value.datetime');
+            if (is_null($date)) {
+                return false;
+            }
+            $date = \Carbon\Carbon::parse($date);
             return $date->format('Y-m-d') == $filter_settings[0]['filter_value_text'];
         });
     }
 
     /**
      * FilterOption >= DateTime
+     *
+     * @return void
      */
     public function testFuncFilterDateTimeOnOrAfter()
     {
@@ -615,6 +706,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_ON_OR_AFTER,
             'filter_value_text' => \Carbon\Carbon::today()->format('Y-m-d')
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.datetime');
             if (is_null($date)) {
@@ -623,6 +715,7 @@ class CustomViewFilterTest extends UnitTestBase
             $date = \Carbon\Carbon::parse($date);
             $date = \Carbon\Carbon::create($date->year, $date->month, $date->day);
 
+            // @phpstan-ignore-next-line
             $diff = \Carbon\Carbon::today()->diffInDays($date, false);
             return $diff >= 0;
         });
@@ -630,6 +723,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption <= DateTime
+     *
+     * @return void
      */
     public function testFuncFilterDateTimeOnOrBefore()
     {
@@ -640,6 +735,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_ON_OR_BEFORE,
             'filter_value_text' => \Carbon\Carbon::today()->format('Y-m-d')
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = array_get($data, 'value.datetime');
             if (is_null($date)) {
@@ -653,6 +749,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = USER_EQ
+     *
+     * @return void
      */
     public function testFuncFilterUserEq()
     {
@@ -664,6 +762,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::USER_EQ,
             'filter_value_text' => $user_id
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($user_id) {
             $user = array_get($data, 'value.user');
             if (is_null($user)) {
@@ -675,6 +774,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = USER_NE
+     *
+     * @return void
      */
     public function testFuncFilterUserNe()
     {
@@ -686,6 +787,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::USER_NE,
             'filter_value_text' => $user_id
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($user_id) {
             $user = array_get($data, 'value.user');
             if (is_null($user)) {
@@ -697,6 +799,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = USER_NOT_NULL
+     *
+     * @return void
      */
     public function testFuncFilterUserNotNull()
     {
@@ -706,6 +810,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'user',
             'filter_condition' => FilterOption::USER_NOT_NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.user') !== null;
         });
@@ -713,6 +818,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = USER_NULL
+     *
+     * @return void
      */
     public function testFuncFilterUserNull()
     {
@@ -722,6 +829,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'user',
             'filter_condition' => FilterOption::USER_NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.user') === null;
         });
@@ -729,6 +837,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = USER_EQ_USER
+     *
+     * @return void
      */
     public function testFuncFilterLoginUser()
     {
@@ -738,6 +848,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'user',
             'filter_condition' => FilterOption::USER_EQ_USER,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $user_id = \Exment::getUserId();
             return array_get($data, 'value.user') == $user_id;
@@ -746,6 +857,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = USER_NE_USER
+     *
+     * @return void
      */
     public function testFuncFilterNotLoginUser()
     {
@@ -756,6 +869,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::USER_NE_USER,
         ]];
 
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $user = array_get($data, 'value.user');
             if (is_null($user)) {
@@ -769,6 +883,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(user/multiple)
+     *
+     * @return void
      */
     public function testFuncFilterUserEqMulti()
     {
@@ -780,11 +896,17 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => $target_value
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return $this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.user_multiple'));
         });
     }
 
+    /**
+     * @param mixed|null $expected
+     * @param mixed|null $actual
+     * @return bool
+     */
     protected function checkArray($expected, $actual)
     {
         if (is_null($actual)) {
@@ -796,6 +918,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NOT_NULL(user/multiple)
+     *
+     * @return void
      */
     public function testFuncFilterUserNotNullMulti()
     {
@@ -807,6 +931,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'user_multiple',
             'filter_condition' => FilterOption::NOT_NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return !empty(array_get($data, 'value.user_multiple'));
         });
@@ -814,6 +939,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(organization)
+     *
+     * @return void
      */
     public function testFuncFilterOrganizationExists()
     {
@@ -825,6 +952,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => $target_value
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($target_value) {
             return array_get($data, 'value.organization') == $target_value;
         });
@@ -832,6 +960,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(organization/multiple)
+     *
+     * @return void
      */
     public function testFuncFilterOrganizationNotExists()
     {
@@ -843,6 +973,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => $target_value
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return !$this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.organization_multiple'));
         });
@@ -850,6 +981,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NULL(organization/multiple)
+     *
+     * @return void
      */
     public function testFuncFilterOrganizationNullMulti()
     {
@@ -861,6 +994,7 @@ class CustomViewFilterTest extends UnitTestBase
             'column_name' => 'organization_multiple',
             'filter_condition' => FilterOption::NULL,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return empty(array_get($data, 'value.organization_multiple'));
         });
@@ -868,6 +1002,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_GT
+     *
+     * @return void
      */
     public function testFuncFilterNumberGt()
     {
@@ -878,6 +1014,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_GT,
             'filter_value_text' => 1000
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.integer') > $filter_settings[0]['filter_value_text'];
         });
@@ -885,6 +1022,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_LT
+     *
+     * @return void
      */
     public function testFuncFilterNumberLt()
     {
@@ -895,7 +1034,12 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_LT,
             'filter_value_text' => 1000
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.integer');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.integer') < $filter_settings[0]['filter_value_text'];
         });
     }
@@ -903,6 +1047,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_GTE
+     *
+     * @return void
      */
     public function testFuncFilterNumberGte()
     {
@@ -913,6 +1059,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_GTE,
             'filter_value_text' => 1000
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.integer') >= $filter_settings[0]['filter_value_text'];
         });
@@ -920,6 +1067,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_LTE
+     *
+     * @return void
      */
     public function testFuncFilterNumberLte()
     {
@@ -930,13 +1079,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_LTE,
             'filter_value_text' => 1000
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.integer');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.integer') <= $filter_settings[0]['filter_value_text'];
         });
     }
 
     /**
      * FilterOption = NUMBER_GT
+     *
+     * @return void
      */
     public function testFuncFilterNumberGtDec()
     {
@@ -948,6 +1104,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_GT,
             'filter_value_text' => "$target_value"
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($target_value) {
             return array_get($data, 'value.decimal') > $target_value;
         });
@@ -955,6 +1112,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_LT
+     *
+     * @return void
      */
     public function testFuncFilterNumberLtDec()
     {
@@ -966,7 +1125,12 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_LT,
             'filter_value_text' => "$target_value"
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($target_value) {
+            $value = array_get($data, 'value.decimal');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.decimal') < $target_value;
         });
     }
@@ -974,6 +1138,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_GTE
+     *
+     * @return void
      */
     public function testFuncFilterNumberGteDec()
     {
@@ -985,6 +1151,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_GTE,
             'filter_value_text' => "$target_value"
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($target_value) {
             return array_get($data, 'value.decimal') >= $target_value;
         });
@@ -992,6 +1159,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NUMBER_LTE
+     *
+     * @return void
      */
     public function testFuncFilterNumberLteDec()
     {
@@ -1003,13 +1172,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NUMBER_LTE,
             'filter_value_text' => "$target_value"
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($target_value) {
+            $value = array_get($data, 'value.decimal');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.decimal') <= $target_value;
         });
     }
 
     /**
      * FilterOption = SELECT_EXISTS
+     *
+     * @return void
      */
     public function testFuncFilterSelectExists()
     {
@@ -1020,13 +1196,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 'bar'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.select');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.select') === $filter_settings[0]['filter_value_text'];
         });
     }
 
     /**
      * FilterOption = SELECT_NOT_EXISTS
+     *
+     * @return void
      */
     public function testFuncFilterSelectNotExists()
     {
@@ -1037,13 +1220,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => 'bar'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.select');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.select') !== $filter_settings[0]['filter_value_text'];
         });
     }
 
     /**
      * FilterOption = SELECT_EXISTS(select_valtext)
+     *
+     * @return void
      */
     public function testFuncFilterSelectExistsVal()
     {
@@ -1054,13 +1244,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 'bar'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.select_valtext');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.select_valtext') === $filter_settings[0]['filter_value_text'];
         });
     }
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select_valtext)
+     *
+     * @return void
      */
     public function testFuncFilterSelectNotExistsVal()
     {
@@ -1071,13 +1268,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => 'bar'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.select_valtext');
+            if (is_null($value)) {
+                return false;
+            }
             return array_get($data, 'value.select_valtext') !== $filter_settings[0]['filter_value_text'];
         });
     }
 
     /**
      * FilterOption = SELECT_EXISTS(select_table)
+     *
+     * @return void
      */
     public function testFuncFilterSelectExistsTable()
     {
@@ -1088,13 +1292,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 2
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.select_table');
+            if (is_null($value)) {
+                return false;
+            }
             return isMatchString(array_get($data, 'value.select_table'), $filter_settings[0]['filter_value_text']);
         });
     }
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select_table)
+     *
+     * @return void
      */
     public function testFuncFilterSelectNotExistsTable()
     {
@@ -1105,13 +1316,20 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => 2
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $value = array_get($data, 'value.select_table');
+            if (is_null($value)) {
+                return false;
+            }
             return !isMatchString(array_get($data, 'value.select_table'), $filter_settings[0]['filter_value_text']);
         });
     }
 
     /**
      * FilterOption = SELECT_EXISTS(multiple select)
+     *
+     * @return void
      */
     public function testFuncFilterSelectExistsMulti()
     {
@@ -1122,6 +1340,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 'bar'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return $this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.select_multiple'));
         });
@@ -1129,6 +1348,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(multiple select)
+     *
+     * @return void
      */
     public function testFuncFilterSelectNotExistsMulti()
     {
@@ -1139,6 +1360,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => 'foo'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return !$this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.select_multiple'));
         });
@@ -1146,6 +1368,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(select_valtext/multiple select)
+     *
+     * @return void
      */
     public function testFuncFilterSelectExistsValMulti()
     {
@@ -1156,6 +1380,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 'bar'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return $this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.select_valtext_multiple'));
         });
@@ -1163,6 +1388,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select_valtext/multiple select)
+     *
+     * @return void
      */
     public function testFuncFilterSelectNotExistsValMulti()
     {
@@ -1173,6 +1400,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => 'baz'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return !$this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.select_valtext_multiple'));
         });
@@ -1180,6 +1408,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(select_table/multiple select)
+     *
+     * @return void
      */
     public function testFuncFilterSelectExistsTableMulti()
     {
@@ -1190,6 +1420,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 2
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return $this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.select_table_multiple'));
         });
@@ -1197,6 +1428,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select_table/multiple select)
+     *
+     * @return void
      */
     public function testFuncFilterSelectNotExistsTableMulti()
     {
@@ -1207,6 +1440,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => 4
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return !$this->checkArray($filter_settings[0]['filter_value_text'], array_get($data, 'value.select_table_multiple'));
         });
@@ -1214,6 +1448,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = like id
+     *
+     * @return void
      */
     public function testFuncFilterIdLike()
     {
@@ -1225,6 +1461,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::LIKE,
             'filter_value_text' => 8
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return strpos(strval(array_get($data, 'id')), strval($filter_settings[0]['filter_value_text'])) === 0;
         });
@@ -1232,6 +1469,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = created_at
+     *
+     * @return void
      */
     public function testFuncFilterCreatedAtDayOn()
     {
@@ -1243,6 +1482,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::DAY_ON,
             'filter_value_text' => \Carbon\Carbon::now()->format('Y-m-d')
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = \Carbon\Carbon::parse(array_get($data, 'created_at'));
             return $date->isSameDay(\Carbon\Carbon::today());
@@ -1251,6 +1491,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = updated_at is today
+     *
+     * @return void
      */
     public function testFuncFilterUpdatedAtToday()
     {
@@ -1261,6 +1503,7 @@ class CustomViewFilterTest extends UnitTestBase
             'condition_type' => ConditionType::SYSTEM,
             'filter_condition' => FilterOption::DAY_TODAY,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $date = \Carbon\Carbon::parse(array_get($data, 'updated_at'));
             return $date->isSameDay(\Carbon\Carbon::today());
@@ -1269,6 +1512,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = created_user is login user
+     *
+     * @return void
      */
     public function testFuncFilterCreatedUserEqUser()
     {
@@ -1279,6 +1524,7 @@ class CustomViewFilterTest extends UnitTestBase
             'condition_type' => ConditionType::SYSTEM,
             'filter_condition' => FilterOption::USER_EQ_USER,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $user_id = \Exment::getUserId();
             return array_get($data, 'created_user_id') == $user_id;
@@ -1287,6 +1533,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = updated_user is not target user
+     *
+     * @return void
      */
     public function testFuncFilterUpdatedUserNe()
     {
@@ -1298,6 +1546,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NE,
             'filter_value_text' => TestDefine::TESTDATA_USER_LOGINID_DEV1_USERC
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'updated_user_id') !== TestDefine::TESTDATA_USER_LOGINID_DEV1_USERC;
         });
@@ -1305,6 +1554,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = EQ(parent_id/1:N relation)
+     *
+     * @return void
      */
     public function testFuncParentIdEq()
     {
@@ -1316,6 +1567,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::EQ,
             'filter_value_text' => '2'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $parent_value = $data->getParentValue();
             return isset($parent_value) && $parent_value->id == $filter_settings[0]['filter_value_text'];
@@ -1324,6 +1576,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NE(parent_id/1:N relation)
+     *
+     * @return void
      */
     public function testFuncParentIdNe()
     {
@@ -1335,6 +1589,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::NE,
             'filter_value_text' => '2'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $parent_value = $data->getParentValue();
             return isset($parent_value) && $parent_value->id != $filter_settings[0]['filter_value_text'];
@@ -1343,6 +1598,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = EQ(workflow status)
+     *
+     * @return void
      */
     public function testFuncWorkflowStatusEq()
     {
@@ -1354,6 +1611,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::WORKFLOW_EQ_STATUS,
             'filter_value_text' => '7'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $workflow_status = array_get($data, 'workflow_status');
             if (!$workflow_status) {
@@ -1365,6 +1623,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NE(workflow status)
+     *
+     * @return void
      */
     public function testFuncWorkflowStatusNe()
     {
@@ -1376,6 +1636,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::WORKFLOW_NE_STATUS,
             'filter_value_text' => 'start'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $workflow_status = array_get($data, 'workflow_status');
             return !is_null($workflow_status);
@@ -1384,6 +1645,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = EQ(workflow status/multiple_select)
+     *
+     * @return void
      */
     public function testFuncWorkflowStatusEqMulti()
     {
@@ -1395,6 +1658,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::WORKFLOW_EQ_STATUS,
             'filter_value_text' => '["start","7"]'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $workflow_status = array_get($data, 'workflow_status');
             if (empty($workflow_status)) {
@@ -1406,6 +1670,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = NE(workflow status/multiple_select)
+     *
+     * @return void
      */
     public function testFuncWorkflowStatusNeMulti()
     {
@@ -1417,6 +1683,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::WORKFLOW_NE_STATUS,
             'filter_value_text' => '["start","7"]'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $workflow_status = array_get($data, 'workflow_status');
             if (empty($workflow_status)) {
@@ -1428,6 +1695,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = workflow status join other condition and option
+     *
+     * @return void
      */
     public function testFuncWorkflowStatusAnd()
     {
@@ -1445,6 +1714,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_value_text' => '["start","7"]'
         ];
         $today = \Carbon\Carbon::today();
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) use ($today) {
             $date = array_get($data, 'value.date');
             if (is_null($date)) {
@@ -1464,6 +1734,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = workflow status join other condition or option
+     *
+     * @return void
      */
     public function testFuncWorkflowStatusOr()
     {
@@ -1481,6 +1753,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::WORKFLOW_NE_STATUS,
             'filter_value_text' => '["start","7"]'
         ];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $odd_even = array_get($data, 'value.odd_even');
             if ($odd_even == 'even') {
@@ -1496,6 +1769,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = EQ(workflow user)
+     *
+     * @return void
      */
     public function testFuncWorkflowUser()
     {
@@ -1506,6 +1781,7 @@ class CustomViewFilterTest extends UnitTestBase
             'condition_type' => ConditionType::WORKFLOW,
             'filter_condition' => FilterOption::WORKFLOW_EQ_WORK_USER,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $workflow_work_users = array_get($data, 'workflow_work_users');
 
@@ -1533,6 +1809,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = EQ(workflow user/target organization)
+     *
+     * @return void
      */
     public function testFuncWorkflowUserOrg()
     {
@@ -1543,6 +1821,7 @@ class CustomViewFilterTest extends UnitTestBase
             'condition_type' => ConditionType::WORKFLOW,
             'filter_condition' => FilterOption::WORKFLOW_EQ_WORK_USER,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $workflow_work_users = array_get($data, 'workflow_work_users');
             foreach ($workflow_work_users as $workflow_work_user) {
@@ -1568,6 +1847,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = multiple filter condition (join AND)
+     *
+     * @return void
      */
     public function testFuncFilterMultipleAnd()
     {
@@ -1588,6 +1869,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 'foo'
         ];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             return array_get($data, 'value.date') >= \Carbon\Carbon::now()->format('Y-m-d') &&
                 array_get($data, 'value.integer') > 100 &&
@@ -1597,6 +1879,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = multiple filter condition (join OR)
+     *
+     * @return void
      */
     public function testFuncFilterMultipleOr()
     {
@@ -1637,7 +1921,81 @@ class CustomViewFilterTest extends UnitTestBase
     }
 
     /**
+     * FilterOption = filter condition (reverse)
+     *
+     * @return void
+     */
+    public function testFuncFilterReverse()
+    {
+        $this->init();
+
+        $filter_settings = [];
+        $filter_settings[] = [
+            'reference_table' => 'custom_value_view_all',
+            'column_name' => 'index_text',
+            'reference_column' => 'select_table',
+            'filter_condition' => FilterOption::LIKE,
+            'filter_value_text' => 'index_003'
+        ];
+
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
+        $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $select_value = $data->getValue('select_table');
+            if ($select_value instanceof CustomValue) {
+                return !str_starts_with($select_value->getValue('index_text'), 'index_003');
+            }
+            return false;
+        }, ['condition_reverse' => '1']);
+    }
+
+    /**
+     * FilterOption = multiple filter condition (reverse)
+     *
+     * @return void
+     */
+    public function testFuncFilterMultipleReverse()
+    {
+        $this->init();
+
+        $filter_settings = [];
+        $filter_settings[] = [
+            'column_name' => 'datetime',
+            'filter_condition' => FilterOption::DAY_TODAY_OR_AFTER,
+        ];
+        $filter_settings[] = [
+            'column_name' => 'boolean',
+            'filter_condition' => FilterOption::EQ,
+            'filter_value_text' => 'ng'
+        ];
+        $filter_settings[] = [
+            'column_name' => 'currency',
+            'filter_condition' => FilterOption::NUMBER_GT,
+            'filter_value_text' => 70000
+        ];
+
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
+        $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
+            $cnt = 0;
+
+            $datetime = \Carbon\Carbon::parse(array_get($data, 'value.datetime'));
+            if ($datetime->format('Y-m-d') >= \Carbon\Carbon::now()->format('Y-m-d')) {
+                $cnt++;
+            }
+            if (array_get($data, 'value.currency') > 70000) {
+                $cnt++;
+            }
+            if (array_get($data, 'value.boolean') == 'ng') {
+                $cnt++;
+            }
+
+            return $cnt === 0;
+        }, ['condition_join' => 'or', 'condition_reverse' => '1']);
+    }
+
+    /**
      * FilterOption = SELECT_EXISTS(select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeExists1()
     {
@@ -1655,6 +2013,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select');
             return $actual == 'ドトール' || $actual == '珈琲館';
@@ -1663,6 +2022,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeExistsOld1()
     {
@@ -1676,6 +2037,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => 'コメダ珈琲'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select');
             return $actual == 'コメダ珈琲';
@@ -1684,6 +2046,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeExistsOld2()
     {
@@ -1701,6 +2065,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select');
             return $actual == 'コメダ珈琲' || $actual == 'スターバックス';
@@ -1709,6 +2074,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeNotExists()
     {
@@ -1726,6 +2093,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select');
             return $actual != 'コメダ珈琲' && $actual != 'スターバックス';
@@ -1734,6 +2102,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeNotExistsOld1()
     {
@@ -1747,6 +2117,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => '上島珈琲店'
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select');
             return $actual != '上島珈琲店';
@@ -1755,6 +2126,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeNotExistsOld2()
     {
@@ -1772,6 +2145,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select');
             return $actual != '上島珈琲店' && $actual != '珈琲館';
@@ -1780,6 +2154,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(multiple select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeExistsMulti()
     {
@@ -1798,6 +2174,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select_multiple');
             return in_array('イタリア', $actual) || in_array('中国', $actual);
@@ -1806,6 +2183,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(multiple select unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeNotExistsMulti()
     {
@@ -1823,6 +2202,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select_multiple');
             return !in_array('アメリカ', $actual) && !in_array('日本', $actual);
@@ -1831,6 +2211,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_EXISTS(multiple select_valtext unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeExistsVal()
     {
@@ -1848,6 +2230,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select_valtext_multiple');
             return in_array('ろ', $actual) || in_array('と', $actual);
@@ -1856,6 +2239,8 @@ class CustomViewFilterTest extends UnitTestBase
 
     /**
      * FilterOption = SELECT_NOT_EXISTS(multiple select_valtext unicode)
+     *
+     * @return void
      */
     public function testFuncFilterSelectUnicodeNotExistsVal()
     {
@@ -1873,6 +2258,7 @@ class CustomViewFilterTest extends UnitTestBase
             'filter_condition' => FilterOption::SELECT_NOT_EXISTS,
             'filter_value_text' => $isUseUnicode ? unicode_encode($searchArray) : $searchArray,
         ]];
+        /** @phpstan-ignore-next-line Result of method Exceedone\Exment\Tests\Unit\CustomViewFilterTest::getColumnFilterData() (void) is used.   */
         $array = $this->getColumnFilterData($filter_settings, function ($data, $filter_settings) {
             $actual = array_get($data, 'value.select_valtext_multiple');
             return !in_array('い', $actual) && !in_array('ち', $actual);
@@ -1880,12 +2266,20 @@ class CustomViewFilterTest extends UnitTestBase
     }
 
 
-
+    /**
+     * @return void
+     */
     protected function init()
     {
         $this->initAllTest();
     }
 
+    /**
+     * @param array<mixed> $filter_settings
+     * @param \Closure $testCallback
+     * @param array<mixed> $options
+     * @return void
+     */
     protected function getColumnFilterData(array $filter_settings, \Closure $testCallback, array $options = [])
     {
         $options = array_merge(
@@ -1903,6 +2297,13 @@ class CustomViewFilterTest extends UnitTestBase
     }
 
 
+    /**
+     * @param \Illuminate\Support\Collection<int,string|mixed> $collection
+     * @param array<mixed> $filter_settings
+     * @param \Closure $testCallback
+     * @param array<mixed> $options
+     * @return void
+     */
     protected function __testFilter(\Illuminate\Support\Collection $collection, array $filter_settings, \Closure $testCallback, array $options = [])
     {
         $options = array_merge(
@@ -1926,6 +2327,7 @@ class CustomViewFilterTest extends UnitTestBase
         foreach ($notMatchedValues as $data) {
             $matchResult = $testCallback($data, $filter_settings);
 
+            /** @var mixed $data */
             $this->assertTrue(!$matchResult, 'Expect matchResult is false, but matched. Target id is ' . $data->id);
         }
     }

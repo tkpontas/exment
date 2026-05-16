@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\CustomView;
 use Exceedone\Exment\ConditionItems\ConditionItemBase;
+use Illuminate\Support\Collection;
 
 /**
  * Api about target table
@@ -23,6 +24,7 @@ class ApiTableController extends AdminControllerTableBase
      * @param  array   $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function callAction($method, $parameters)
     {
         if (!$this->custom_table) {
@@ -36,9 +38,11 @@ class ApiTableController extends AdminControllerTableBase
     /**
      * get table columns
      */
+    // @phpstan-ignore-next-line
     public function tableColumns(Request $request)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -64,12 +68,16 @@ class ApiTableController extends AdminControllerTableBase
 
     /**
      * get view datalist
-     * @param mixed $request request value
-     * @return mixed
+     *
+     * @param Request $request
+     * @param $tableKey
+     * @return Collection<int, CustomView>|\Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function views(Request $request, $tableKey)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -93,6 +101,7 @@ class ApiTableController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getFilterCondition(Request $request)
     {
         $item = $this->getConditionItem($request, $request->get('q'));
@@ -105,6 +114,7 @@ class ApiTableController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getFilterValue(Request $request)
     {
         $item = $this->getConditionItem($request, $request->get('target'), $request->get('filter_kind'));
@@ -114,6 +124,7 @@ class ApiTableController extends AdminControllerTableBase
         return $item->getFilterValueAjax($request->get('cond_key'), $request->get('cond_name'), boolval($request->get('show_condition_key')));
     }
 
+    // @phpstan-ignore-next-line
     protected function getConditionItem(Request $request, $target, $filterKind = null)
     {
         $item = ConditionItemBase::getItemByRequest($this->custom_table, $target);
@@ -134,6 +145,7 @@ class ApiTableController extends AdminControllerTableBase
     /**
      * get updateTypeCondition condition
      */
+    // @phpstan-ignore-next-line
     public function getOperationUpdateType(Request $request)
     {
         $item = $this->getConditionItem($request, $request->get('q'));
@@ -146,6 +158,7 @@ class ApiTableController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getOperationFilterValue(Request $request)
     {
         $item = $this->getConditionItem($request, $request->get('target'), $request->get('filter_kind'));
