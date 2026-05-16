@@ -41,6 +41,8 @@ class DefaultGrid extends GridBase
     }
 
     /**
+     * Make a grid builder.
+     *
      * @return Grid
      */
     public function grid()
@@ -70,12 +72,11 @@ class DefaultGrid extends GridBase
 
         $this->manageMenuToolButton($grid);
 
-        $grid->getDataCallback(function ($grid): void {
+        $grid->getDataCallback(function ($grid) {
             $customValueCollection = $grid->getOriginalCollection();
 
-            $this->custom_table->setSelectTableValues(
-                $customValueCollection
-            );
+            $this->custom_table
+                ->setSelectTableValues($customValueCollection);
         });
 
         if ($this->modal) {
@@ -86,13 +87,14 @@ class DefaultGrid extends GridBase
     }
 
     /**
-     * @param mixed $query
+     * @param \Illuminate\Database\Query\Builder|\Illuminate\Database\Schema\Builder $query
      * @param array<string,mixed> $options
-     * @return mixed
+     * @return \Illuminate\Database\Query\Builder|\Illuminate\Database\Schema\Builder
      */
     public function getQuery($query, array $options = [])
     {
-        return $this->custom_view->filterSortModel($query, $options);
+        return $this->custom_view
+            ->filterSortModel($query, $options);
     }
 
     /**
@@ -107,30 +109,27 @@ class DefaultGrid extends GridBase
             $this->custom_view->getHeaderOptions()
         );
 
-        /** @var iterable<int,mixed> $custom_view_columns */
         $custom_view_columns =
             $this->custom_view->custom_view_columns_cache;
 
         foreach ($custom_view_columns as $custom_view_column) {
-
-            /** @var mixed $item */
             $item = $custom_view_column->column_item;
 
-            if ($item === null) {
+            if (!isset($item)) {
                 continue;
             }
 
-            $item = $item->label(
-                array_get($custom_view_column, 'view_column_name')
-            )->options([
-                'grid_column' => true,
-                'view_pivot_column' =>
-                    $custom_view_column->view_pivot_column_id ?? null,
-                'view_pivot_table' =>
-                    $custom_view_column->view_pivot_table_id ?? null,
-                'header_align' =>
-                    $this->custom_view->header_align ?? null,
-            ]);
+            $item = $item
+                ->label(array_get($custom_view_column, 'view_column_name'))
+                ->options([
+                    'grid_column' => true,
+                    'view_pivot_column'
+                        => $custom_view_column->view_pivot_column_id ?? null,
+                    'view_pivot_table'
+                        => $custom_view_column->view_pivot_table_id ?? null,
+                    'header_align'
+                        => $this->custom_view->header_align ?? null,
+                ]);
 
             $className = 'column-' . $item->name();
 
@@ -146,7 +145,8 @@ class DefaultGrid extends GridBase
                      * @param array<int,string> $args
                      * @return void
                      */
-                    function (&$query, $args) use ($custom_view_column): void {
+                    function (&$query, $args)
+                    use ($custom_view_column): void {
 
                         if ($query instanceof Model) {
                             $query = $query->newQuery();
@@ -156,34 +156,26 @@ class DefaultGrid extends GridBase
                             return;
                         }
 
-                        $direction = count($args) > 0
-                            ? $args[0]
-                            : 'asc';
-
                         $this->custom_view
                             ->getSearchService()
                             ->setQuery($query)
                             ->addSelect()
                             ->orderByCustomViewColumn(
                                 $custom_view_column,
-                                $direction
+                                count($args) > 0
+                                    ? $args[0]
+                                    : 'asc'
                             );
                     }
                 )
                 ->style($item->gridStyle())
                 ->setClasses([$className])
                 ->setHeaderStyle($item->gridHeaderStyle())
-                ->display(
-                    /**
-                     * @param mixed $v
-                     * @return string
-                     */
-                    function ($v) use ($item): string {
-                        return (string) $item
-                            ->setCustomValue($this)
-                            ->html();
-                    }
-                )
+                ->display(function ($v) use ($item) {
+                    return $item
+                        ->setCustomValue($this)
+                        ->html();
+                })
                 ->escape(false);
 
             $this->setGridColumn($column, $custom_view_column);
@@ -192,12 +184,12 @@ class DefaultGrid extends GridBase
         $pager_count = $this->custom_view->pager_count;
 
         if (
-            request()->get('per_page') === null
-            && $pager_count !== null
+            is_null(request()->get('per_page'))
+            && isset($pager_count)
             && is_numeric($pager_count)
-            && (int)$pager_count > 0
+            && $pager_count > 0
         ) {
-            $grid->paginate((int)$pager_count);
+            $grid->paginate((int) $pager_count);
         }
 
         $grid_per_pages = stringToArray(
@@ -222,7 +214,7 @@ class DefaultGrid extends GridBase
      * @return void
      */
     protected function setGridColumn(
-        Column $column,
+        $column,
         $custom_view_column
     ): void {
     }
@@ -240,6 +232,96 @@ class DefaultGrid extends GridBase
             Define::SYSTEM_KEY_SESSION_DISABLE_DATA_URL_TAG,
             true
         );
+
+        $modal_target_view = CustomView::getEloquent(
+            request()->get('target_view_id')
+        );
+
+        $this->custom_view = CustomView::getAllData(
+            $this->custom_table
+        );
+
+        if (isset($modal_target_view)) {
+            $modal_target_view->filterSortModel(
+                $grid->model(),
+                ['callback' => $filter_func]
+            );
+        }
+
+        $modal_display_table = CustomTable::getEloquent(
+            request()->get('display_table_id')
+        );
+
+        $modal_custom_column = CustomColumn::getEloquent(
+            request()->get('target_column_id')
+        );
+
+        if (
+            !empty($modal_display_table)
+            && !empty($modal_custom_column)
+        ) {
+            $this->custom_table->filterDisplayTable(
+                $grid->model(),
+                $modal_display_table,
+                [
+                    'all'
+                        => $modal_custom_column
+                            ->isGetAllUserOrganization(),
+                ]
+            );
+        }
+
+        $expand = request()->get('linkage');
+
+        if (!is_nullorempty($expand)) {
+            RelationTable::setQuery(
+                $grid->model(),
+                array_get($expand, 'search_type'),
+                array_get($expand, 'linkage_value_id'),
+                [
+                    'parent_table' => CustomTable::getEloquent(
+                        array_get(
+                            $expand,
+                            'parent_select_table_id'
+                        )
+                    ),
+                    'child_table' => CustomTable::getEloquent(
+                        array_get(
+                            $expand,
+                            'child_select_table_id'
+                        )
+                    ),
+                ]
+            );
+        }
+    }
+
+    protected function getFilterUrl(): string
+    {
+        if (!$this->modal) {
+            $query = array_filter(
+                request()->all([
+                    '_scope_',
+                ])
+            );
+        } else {
+            $query = array_filter(
+                request()->all([
+                    'target_view_id',
+                    'display_table_id',
+                    'target_column_id',
+                    'linkage',
+                ])
+            );
+
+            $query['modal'] = 1;
+        }
+
+        return admin_urls_query(
+            'data',
+            $this->custom_table->table_name,
+            $query
+        );
     }
 
     /**
@@ -247,9 +329,21 @@ class DefaultGrid extends GridBase
      */
     public function getFilterHtml(): array
     {
+        $classname = getModelName($this->custom_table);
+
+        $grid = new Grid(new $classname());
+
+        $this->setCustomGridFilters($grid, true);
+
+        $html = null;
+
+        $grid->filter(function ($filter) use (&$html) {
+            $html = $filter->render();
+        });
+
         return [
-            'html' => null,
-            'script' => null,
+            'html' => $html,
+            'script' => \Admin::purescript()->render(),
         ];
     }
 
@@ -262,6 +356,110 @@ class DefaultGrid extends GridBase
         $grid,
         bool $ajax = false
     ): void {
+        $grid->quickSearch(function ($model, $input) {
+
+            $eloquent = $model->eloquent();
+
+            if (
+                is_object($eloquent)
+                && method_exists(
+                    $eloquent,
+                    'setSearchQueryOrWhere'
+                )
+            ) {
+                $eloquent->setSearchQueryOrWhere(
+                    $model,
+                    $input,
+                    [
+                        'searchDocument' => true,
+                    ]
+                );
+            }
+        }, 'left');
+
+        $grid->filter(function ($filter) use ($ajax) {
+
+            $filter->disableIdFilter();
+
+            $filter->setAction($this->getFilterUrl());
+
+            if (
+                $this->custom_table->enableShowTrashed() === true
+                && !$this->modal
+            ) {
+                $filter
+                    ->scope(
+                        'trashed',
+                        exmtrans(
+                            'custom_value.soft_deleted_data'
+                        )
+                    )
+                    ->onlyTrashed();
+            }
+
+            if (
+                config(
+                    'exment.custom_value_filter_ajax',
+                    true
+                )
+                && !$ajax
+                && !$this->modal
+                && !boolval(request()->get('execute_filter'))
+            ) {
+                $filter->setFilterAjax(
+                    admin_urls_query(
+                        'data',
+                        $this->custom_table->table_name,
+                        ['filter_ajax' => 1]
+                    )
+                );
+
+                return;
+            }
+
+            $filterItems = $this->getFilterColumns($filter);
+
+            if (count($filterItems) <= 6) {
+
+                foreach ($filterItems as $filterItem) {
+                    $filterItem->setAdminFilter($filter);
+                }
+
+            } else {
+
+                $separate = (int) floor(
+                    count($filterItems) / 2
+                );
+
+                $filter->column(
+                    1 / 2,
+                    function ($filter)
+                    use ($filterItems, $separate) {
+
+                        for ($i = 0; $i < $separate; $i++) {
+                            $filterItems[$i]
+                                ->setAdminFilter($filter);
+                        }
+                    }
+                );
+
+                $filter->column(
+                    1 / 2,
+                    function ($filter)
+                    use ($filterItems, $separate) {
+
+                        for (
+                            $i = $separate;
+                            $i < count($filterItems);
+                            $i++
+                        ) {
+                            $filterItems[$i]
+                                ->setAdminFilter($filter);
+                        }
+                    }
+                );
+            }
+        });
     }
 
     /**
@@ -270,101 +468,88 @@ class DefaultGrid extends GridBase
      */
     protected function getFilterColumns($filter): Collection
     {
-        return new Collection([]);
-    }
+        $filterItems = [];
 
-    /**
-     * @param array<int,mixed> $filterItems
-     * @return void
-     */
-    protected function setRelationFilter(
-        array &$filterItems
-    ): void {
-    }
+        $custom_view_grid_filters =
+            $this->custom_view->custom_view_grid_filters;
 
-    /**
-     * @param array<int,mixed> $filterItems
-     * @return void
-     */
-    protected function setColumnFilter(
-        array &$filterItems
-    ): void {
-    }
+        if (count($custom_view_grid_filters) > 0) {
 
-    /**
-     * @param mixed $grid
-     * @return void
-     */
-    protected function manageMenuToolButton($grid): void
-    {
-    }
+            $service = $this->custom_view
+                ->getSearchService()
+                ->setQuery($filter->model());
 
-    /**
-     * @param mixed $grid
-     * @return void
-     */
-    protected function manageRowAction($grid): void
-    {
-    }
+            foreach (
+                $custom_view_grid_filters
+                as $custom_view_grid_filter
+            ) {
+                $service->setRelationJoin(
+                    $custom_view_grid_filter
+                );
 
-    /**
-     * @return mixed
-     */
-    public function import(Request $request)
-    {
-        return null;
-    }
+                $filterItems[] =
+                    $custom_view_grid_filter->column_item;
+            }
 
-    /**
-     * @return mixed
-     */
-    public function renderModalFrame()
-    {
-        return null;
-    }
+            return new Collection($filterItems);
+        }
 
-    /**
-     * @param mixed $grid
-     * @return mixed
-     */
-    public function renderModal($grid)
-    {
-        return null;
-    }
+        foreach (
+            SystemColumn::getOptions([
+                'grid_filter' => true,
+                'grid_filter_system' => true,
+            ])
+            as $filterKey => $filterType
+        ) {
 
-    /**
-     * @param mixed $view_kind_type
-     * @param mixed $form
-     * @param mixed $custom_table
-     * @param array<string,mixed> $options
-     * @return void
-     */
-    public static function setViewForm(
-        $view_kind_type,
-        $form,
-        $custom_table,
-        array $options = []
-    ): void {
-    }
+            if (
+                $this->custom_table
+                    ->gridFilterDisable($filterKey)
+            ) {
+                continue;
+            }
 
-    /**
-     * @param mixed $form
-     * @param mixed $custom_table
-     * @param array<string,mixed> $column_options
-     * @return void
-     */
-    public static function setGridFilterFields(
-        &$form,
-        $custom_table,
-        array $column_options = []
-    ): void {
-    }
+            $filterItems[] =
+                ColumnItems\SystemItem::getItem(
+                    $this->custom_table,
+                    $filterKey
+                );
+        }
 
-    /**
-     * @param mixed $grid
-     * @return void
-     */
-    protected function appendSelectItemButton($grid): void
-    {
+        $this->setRelationFilter($filterItems);
+
+        if (
+            !is_null(
+                Workflow::getWorkflowByTable(
+                    $this->custom_table
+                )
+            )
+        ) {
+            foreach (
+                SystemColumn::getOptions([
+                    'grid_filter' => true,
+                    'grid_filter_system' => false,
+                ])
+                as $filterKey => $filterType
+            ) {
+
+                if (
+                    $this->custom_table
+                        ->gridFilterDisable($filterKey)
+                ) {
+                    continue;
+                }
+
+                $filterItems[] =
+                    ColumnItems\WorkflowItem::getItem(
+                        $this->custom_table,
+                        $filterKey
+                    );
+            }
+        }
+
+        $this->setColumnFilter($filterItems);
+
+        return new Collection($filterItems);
     }
 }
