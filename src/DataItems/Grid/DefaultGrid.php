@@ -126,7 +126,7 @@ class DefaultGrid extends GridBase
                 ->sortName($item->getSortName())
                 //->cast($item->getCastName())
                 // todo 一覧ソートバグ対応用の修正です パラメータ$queryの頭に&が追加されているのに注意
-                ->sortCallback(function (&$query, $args) use ($custom_view_column) {
+                ->sortCallback(function (&$query, $args) use ($custom_view_column): void {
                     if ($query instanceof Model) {
                         $query = $query->newQuery();
                     }
@@ -309,9 +309,10 @@ class DefaultGrid extends GridBase
     /**
      * Get filter showing columns
      *
-     * @return \Illuminate\Support\Collection
+     * @param mixed $filter
+     * @return Collection<int,mixed>
      */
-    protected function getFilterColumns($filter): \Illuminate\Support\Collection
+    protected function getFilterColumns($filter): Collection
     {
         $filterItems = [];
 
@@ -362,6 +363,7 @@ class DefaultGrid extends GridBase
     /**
      * Set relation filter. Consider modal.
      *
+     * @param array<int,mixed> $filterItems
      * @return void
      */
     protected function setRelationFilter(&$filterItems)
@@ -389,6 +391,7 @@ class DefaultGrid extends GridBase
     /**
      * Set column filter. Consider modal.
      *
+     * @param array<int,mixed> $filterItems
      * @return void
      */
     protected function setColumnFilter(&$filterItems)
@@ -441,7 +444,7 @@ class DefaultGrid extends GridBase
         $service = $this->getImportExportService($grid);
         $grid->exporter($service);
 
-        $grid->tools(function (Grid\Tools $tools) use ($grid) {
+        $grid->tools(function (Grid\Tools $tools) use ($grid): void {
             $listButtons = Plugin::pluginPreparingButton(PluginEventTrigger::GRID_MENUBUTTON, $this->custom_table);
 
             // validate export and import
@@ -473,7 +476,7 @@ class DefaultGrid extends GridBase
             }
 
             // manage batch --------------------------------------------------
-            $tools->batch(function ($batch) {
+            $tools->batch(function ($batch): void {
                 if ($this->custom_table->enableEdit() === true) {
                     if (request()->get('_scope_') == 'trashed' && $this->custom_table->enableShowTrashed() === true) {
                         $batch->disableDelete();
@@ -510,7 +513,11 @@ class DefaultGrid extends GridBase
             $custom_table = $this->custom_table;
             $relationTables = $custom_table->getRelationTables();
 
-            $grid->actions(function (Grid\Displayers\Actions $actions) use ($custom_table, $relationTables) {
+            $grid->actions(function (7Grid\Displayers\Actions $actions
+            ) use (
+                $custom_table,
+                $relationTables
+            ): void {
                 $custom_table->setGridAuthoritable($actions->grid->getOriginalCollection());
                 $enableEdit = true;
                 $enableDelete = true;
@@ -599,6 +606,14 @@ class DefaultGrid extends GridBase
                 }
 
                 PartialCrudService::setGridRowAction($custom_table, $actions);
+                PartialCrudService::setGridRowAction(
+                    $custom_table,
+                    $actions
+                );
+            }
+                          );
+        }
+    }
             });
         }
     }
@@ -616,7 +631,12 @@ class DefaultGrid extends GridBase
         return getAjaxResponse($result);
     }
 
-    // create import and exporter
+    /**
+     * create import and exporter
+     *
+     * @param Grid|null $grid
+     * @return DataImportExport\DataImportExportService
+     */
     public function getImportExportService($grid = null)
     {
         $service = (new DataImportExport\DataImportExportService())
@@ -715,8 +735,10 @@ class DefaultGrid extends GridBase
     /**
      * Set custom view columns form. For controller.
      *
+     * @param mixed $view_kind_type
      * @param Form $form
      * @param CustomTable $custom_table
+     * @param array<string,mixed> $options
      * @return void
      */
     public static function setViewForm($view_kind_type, $form, $custom_table, array $options = [])
@@ -752,7 +774,16 @@ class DefaultGrid extends GridBase
 
         static::setSortFields($form, $custom_table, true);
 
-        if (in_array($view_kind_type, [Enums\ViewKindType::DEFAULT, Enums\ViewKindType::ALLDATA])) {
+        if (
+            in_array(
+                $view_kind_type,
+                [
+                Enums\ViewKindType::DEFAULT,
+                Enums\ViewKindType::ALLDATA,
+                ],
+                true
+            )
+        ) {
             static::setGridFilterFields($form, $custom_table);
         }
     }
@@ -764,6 +795,7 @@ class DefaultGrid extends GridBase
      *
      * @param Form $form
      * @param CustomTable $custom_table
+     * @param array<string,mixed> $column_options
      * @return void
      */
     public static function setGridFilterFields(&$form, $custom_table, array $column_options = [])
@@ -795,6 +827,11 @@ class DefaultGrid extends GridBase
             $form->hidden('order')->default(0);
         })->setTableColumnWidth(8, 4)
         ->rowUpDown('order', 10)
-        ->descriptionHtml(exmtrans("custom_view.description_custom_view_grid_filters", $manualUrl));
+        ->descriptionHtml(
+            exmtrans(
+                "custom_view.description_custom_view_grid_filters",
+                $manualUrl
+            )
+        );
     }
 }
