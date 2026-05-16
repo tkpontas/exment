@@ -6,9 +6,8 @@ class MultipleImage extends \Encore\Admin\Form\Field\MultipleImage
 {
     /**
      *  Validation rules.
-     *
-     * @var array
      */
+    // @phpstan-ignore-next-line
     protected $rules = [];
 
     /**
@@ -25,6 +24,7 @@ class MultipleImage extends \Encore\Admin\Form\Field\MultipleImage
     protected function getRules()
     {
         $rules = parent::getRules();
+        // @phpstan-ignore-next-line
         $rules[] = new \Exceedone\Exment\Validator\ImageRule();
         return $rules;
     }

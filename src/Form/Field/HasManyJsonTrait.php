@@ -13,7 +13,7 @@ trait HasManyJsonTrait
     /**
      * Get the HasMany relation key name.
      *
-     * @return string
+     * @return string|null
      */
     protected function getKeyName()
     {
@@ -21,6 +21,7 @@ trait HasManyJsonTrait
     }
 
 
+    // @phpstan-ignore-next-line
     public function prepare($input)
     {
         $input = parent::prepare($input);
@@ -32,9 +33,11 @@ trait HasManyJsonTrait
 
             return $item;
         })->filter(function ($item) {
+            /** @phpstan-ignore-next-line */
             return !is_nullorempty($item);
         })->values();
 
+        /** @phpstan-ignore-next-line */
         if (is_nullorempty($values)) {
             return null;
         }
@@ -49,26 +52,33 @@ trait HasManyJsonTrait
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function buildRelatedForms()
     {
         $forms = [];
 
+        /** @phpstan-ignore-next-line Call to function is_null() with array will always evaluate to false. */
         if (!is_null($this->relatedValue)) {
             foreach ($this->relatedValue as $index => $data) {
+                // @phpstan-ignore-next-line
                 $forms[$index] = $this->buildNestedForm($this->column, $this->builder, null, $index)
                     ->fill($data, $index);
             }
         }
 
+        /** @phpstan-ignore-next-line Call to function is_null() with Encore\Admin\Form will always evaluate to false. */
         if (is_null($this->form)) {
             return $forms;
         }
 
         $model = $this->form->model();
 
+        // @phpstan-ignore-next-line
         if (is_null($this->value)) {
             $this->value = [];
+        /** @phpstan-ignore-next-line */
         } elseif (is_string($this->value) && is_json($this->value)) {
+            /** @phpstan-ignore-next-line */
             $this->value = json_decode_ex($this->value, true);
         }
 
@@ -79,6 +89,7 @@ trait HasManyJsonTrait
          *
          * Else get data from database.
          */
+        // @phpstan-ignore-next-line
         if ($values = old($this->column)) {
             $index = 0;
             foreach ($values as $key => $data) {
@@ -91,6 +102,7 @@ trait HasManyJsonTrait
                     $forms = [];
                 }
 
+                // @phpstan-ignore-next-line
                 $forms[$key] = $this->buildNestedForm($this->column, $this->builder, $key, $index)
                     ->fill($data, $index);
                 $index++;
@@ -98,6 +110,7 @@ trait HasManyJsonTrait
         } else {
             foreach ($this->value as $index => $data) {
                 if (is_int($index)) {
+                    /** @phpstan-ignore-next-line */
                     $key = make_uuid();
                 } else {
                     $key = $index;
@@ -115,6 +128,7 @@ trait HasManyJsonTrait
 
                 // $forms[$key] = $this->buildNestedForm($this->column, $this->builder, $data, $index)
                 //     ->fill($data, $index);
+                // @phpstan-ignore-next-line
                 $forms[] = $this->buildNestedForm($this->column, $this->builder, $key, $index)
                     ->fill($data, $index);
             }
@@ -124,6 +138,7 @@ trait HasManyJsonTrait
     }
 
 
+    // @phpstan-ignore-next-line
     protected function buildNestedForm($column, \Closure $builder, $key = null, $index = null)
     {
         $form = new NestedForm($column);

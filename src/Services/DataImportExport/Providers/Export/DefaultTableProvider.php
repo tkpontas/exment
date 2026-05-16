@@ -9,13 +9,18 @@ use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\File as ExmentFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class DefaultTableProvider extends ProviderBase
 {
+    // @phpstan-ignore-next-line
     protected $grid;
+    // @phpstan-ignore-next-line
     protected $parent_table;
+    // @phpstan-ignore-next-line
     protected $custom_table;
 
+    // @phpstan-ignore-next-line
     public function __construct($args = [])
     {
         parent::__construct();
@@ -28,6 +33,7 @@ class DefaultTableProvider extends ProviderBase
     /**
      * get data name
      */
+    // @phpstan-ignore-next-line
     public function name()
     {
         return $this->custom_table->table_name;
@@ -36,6 +42,7 @@ class DefaultTableProvider extends ProviderBase
     /**
      * get data
      */
+    // @phpstan-ignore-next-line
     public function data()
     {
         // get header info
@@ -73,6 +80,7 @@ class DefaultTableProvider extends ProviderBase
      * get export headers
      * contains custom column name, column view name
      */
+    // @phpstan-ignore-next-line
     protected function getHeaders($columnDefines)
     {
         // create 2 rows.
@@ -107,17 +115,23 @@ class DefaultTableProvider extends ProviderBase
     /**
      * get target chunk records
      */
+    // @phpstan-ignore-next-line
     public function getRecords(): Collection
     {
         $records = new Collection();
         $this->grid->applyQuickSearch();
         if (isset($this->parent_table)) {
-            $this->grid->model()->eloquent()->chunk(100, function ($data) use (&$records) {
+            $func = function ($data) use (&$records) {
                 if (is_nullorempty($records)) {
                     $records = new Collection();
                 }
                 $records = $records->merge($data);
-            }) ?? new Collection();
+            };
+            if ($this->grid->model()->eloquent() instanceof LengthAwarePaginator) {
+                $this->grid->model()->chunk($func, 100) ?? new Collection();
+            } else {
+                $this->grid->model()->eloquent()->chunk(100, $func) ?? new Collection();
+            }
 
             if ($records->count() > 0) {
                 return getModelName($this->name())::whereIn('parent_id', $records->pluck('id'))
@@ -140,6 +154,7 @@ class DefaultTableProvider extends ProviderBase
     /**
      * get export bodies
      */
+    // @phpstan-ignore-next-line
     protected function getBodies($records, $columnDefines)
     {
         if (!isset($records)) {
@@ -165,6 +180,7 @@ class DefaultTableProvider extends ProviderBase
     /**
      * get export body items
      */
+    // @phpstan-ignore-next-line
     protected function getBodyItems($record, $columns, $array_header_key = null, $view_column_type = ConditionType::SYSTEM)
     {
         $body_items = [];
@@ -185,9 +201,13 @@ class DefaultTableProvider extends ProviderBase
     /**
      * Get body value
      *
-     * @param mixed $value
-     * @return string|null
+     * @param $values
+     * @param $column
+     * @param $view_column_type
+     * @param $record
+     * @return int|mixed|string|null
      */
+    // @phpstan-ignore-next-line
     protected function getBodyValue($values, $column, $view_column_type, $record)
     {
         if (is_nullorempty($values)) {

@@ -4,9 +4,9 @@ namespace Exceedone\Exment\Controllers;
 
 use App\Http\Controllers\Controller;
 use Encore\Admin\Facades\Admin;
-use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Grid\Linker;
+use Encore\Admin\Form;
 use Encore\Admin\Widgets\Form as WidgetForm;
 use Encore\Admin\Widgets\Box;
 use Encore\Admin\Layout\Content;
@@ -50,7 +50,9 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -201,15 +203,14 @@ class CustomFormController extends AdminControllerTableBase
         }
     }
 
-
     /**
      * Edit
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|Response
+     * @param $tableKey
+     * @param $id
+     * @return Content|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -225,12 +226,11 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
     /**
      * Showing preview
      *
      * @param Request $request
-     * @return void
+     * @return Content
      */
     public function preview(Request $request)
     {
@@ -254,13 +254,11 @@ class CustomFormController extends AdminControllerTableBase
         return $this->getPreviewContent($request, $custom_form);
     }
 
-
-
     /**
      * Preview error. (If called as GET request)
      *
      * @param Request $request
-     * @return void
+     * @return Content
      */
     public function previewError(Request $request)
     {
@@ -269,13 +267,13 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
     /**
      * Showing preview by id
      *
      * @param Request $request
+     * @param string $tableKey
      * @param string $suuid
-     * @return void
+     * @return Content
      */
     public function previewBySuuid(Request $request, string $tableKey, string $suuid)
     {
@@ -284,6 +282,11 @@ class CustomFormController extends AdminControllerTableBase
     }
 
 
+    /**
+     * @param Request $request
+     * @param CustomForm $custom_form
+     * @return Content
+     */
     protected function getPreviewContent(Request $request, CustomForm $custom_form)
     {
         $form_item = $custom_form->form_item;
@@ -299,12 +302,12 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
-
     /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -323,10 +326,13 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Update the specified resource in storage.
      *
-     * @param int $id
-     *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @param $tableKey
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|null
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public function update(Request $request, $tableKey, $id)
     {
         $validator = $this->saveformValidate($request, $id);
@@ -348,7 +354,9 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|null
+     * @throws \Exception
      */
     public function store(Request $request)
     {
@@ -392,6 +400,7 @@ class CustomFormController extends AdminControllerTableBase
 
         $custom_table = $this->custom_table;
         $grid->tools(function (Grid\Tools $tools) {
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomTableMenuButton('form', $this->custom_table));
             $tools->batch(function (Grid\Tools\BatchActions $actions) {
                 $actions->disableDelete();
@@ -401,8 +410,7 @@ class CustomFormController extends AdminControllerTableBase
         $grid->disableExport();
         $grid->disableRowSelector();
 
-        if ($custom_table->hasPermission(Permission::EDIT_CUSTOM_FORM)) {
-        } else {
+        if (!$custom_table->hasPermission(Permission::EDIT_CUSTOM_FORM)) {
             $grid->disableCreateButton();
         }
 
@@ -445,11 +453,16 @@ class CustomFormController extends AdminControllerTableBase
     }
 
     /**
-     *
      * Make a form
      *
-     * @return Form|void
+     * @param $content
+     * @param $id
+     * @param $copy_id
+     * @return void
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function createForm($content, $id = null, $copy_id = null)
     {
         // get form
@@ -485,16 +498,17 @@ class CustomFormController extends AdminControllerTableBase
         ]));
     }
 
-
     /**
      * Get header box ex. view name, label, default flg....
      *
      * @param CustomForm|null $custom_form
+     * @param string $formroot
      * @return Box
      */
     protected function getHeaderBox(?CustomForm $custom_form, string $formroot)
     {
         ///// set default setting
+        // @phpstan-ignore-next-line
         $form = new WidgetForm($custom_form);
         $form->disableSubmit()->disableReset()->onlyRenderFields();
 
@@ -517,7 +531,7 @@ class CustomFormController extends AdminControllerTableBase
             ->help(exmtrans('custom_form.help.form_label_type'))
             ->default(FormLabelType::HORIZONTAL)
             ->options(FormLabelType::transArrayFilter('custom_form.form_label_type_options', FormLabelType::getFormLabelTypes()));
-
+        // @phpstan-ignore-next-line
         $box = new Box(exmtrans('custom_form.header_basic_setting'), $form);
         $box->tools(view('exment::tools.button', [
             'href' => 'javascript:void(0);',
@@ -537,6 +551,7 @@ class CustomFormController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getFormBlocks($form)
     {
         // Loop using CustomFormBlocks
@@ -586,13 +601,16 @@ class CustomFormController extends AdminControllerTableBase
      *
      * @return array|\Illuminate\Support\Collection
      */
+    // @phpstan-ignore-next-line
     protected function getFormBlockItems($form)
     {
         // get custom_form_blocks from request
         $req_custom_form_blocks = old('custom_form_blocks');
         if (!isset($req_custom_form_blocks)
         ) {
-            return $form->custom_form_blocks;
+            return $form->custom_form_blocks->sortBy(function ($item, $key) {
+                return $item->getOption('form_block_order')?? 0;
+            });
         }
 
         return collect($req_custom_form_blocks)->map(function ($req_custom_form_block, $key) {
@@ -608,6 +626,7 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * validate before update or store
      */
+    // @phpstan-ignore-next-line
     protected function saveformValidate($request, $id = null)
     {
         //not required check, confirm on display.
@@ -653,6 +672,7 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Store form data
      */
+    // @phpstan-ignore-next-line
     protected function saveform(Request $request, $id = null)
     {
         $saveData = $this->getModelFromRequest($request, $id);
@@ -713,6 +733,7 @@ class CustomFormController extends AdminControllerTableBase
      *     'deletes' => [(column_ids)],
      * ]
      */
+    // @phpstan-ignore-next-line
     protected function getModelFromRequest(Request $request, $id = null, $isPrepareOptions = true): array
     {
         $result = [
@@ -749,8 +770,11 @@ class CustomFormController extends AdminControllerTableBase
             } else {
                 $block = CustomFormBlock::findOrFail($key);
             }
+            // @phpstan-ignore-next-line
             $block->available = array_get($value, 'available') ?? 0;
+            // @phpstan-ignore-next-line
             $block->form_block_view_name = array_get($value, 'form_block_view_name');
+            // @phpstan-ignore-next-line
             $block->options = array_get($value, 'options', []);
 
             // create columns --------------------------------------------------
@@ -777,6 +801,7 @@ class CustomFormController extends AdminControllerTableBase
                     continue;
                 } elseif ($new_column) {
                     $column = new CustomFormColumn();
+                    // @phpstan-ignore-next-line
                     $column->custom_form_block_id = $block->id;
                     $column->form_column_type = array_get($column_value, 'form_column_type');
                     if (is_null(array_get($column_value, 'form_column_target_id'))) {
@@ -787,6 +812,7 @@ class CustomFormController extends AdminControllerTableBase
                     $column = CustomFormColumn::findOrFail($column_key);
                 }
 
+                // @phpstan-ignore-next-line
                 $column_item = FormSetting\FormColumn\ColumnBase::make($column);
 
                 // if change row_no and calc_no, increment no's.
@@ -802,18 +828,24 @@ class CustomFormController extends AdminControllerTableBase
                 $real_before_row_no = array_get($column_value, 'row_no', 1);
                 $real_before_column_no = array_get($column_value, 'column_no', 1);
 
+                // @phpstan-ignore-next-line
                 $column->row_no = $before_row_no;
+                // @phpstan-ignore-next-line
                 $column->column_no = $before_column_no;
+                // @phpstan-ignore-next-line
                 $column->width = array_get($column_value, 'width', 1);
 
                 $form_options = jsonToArray(array_get($column_value, 'options', "[]"));
                 if ($isPrepareOptions) {
+                    // @phpstan-ignore-next-line
                     $column->options = $column_item->prepareSavingOptions($form_options);
                 }
                 // if preview, options set directrly.
                 else {
+                    // @phpstan-ignore-next-line
                     $column->options = $form_options;
                 }
+                // @phpstan-ignore-next-line
                 $column->order = $order++;
 
                 $result_block['custom_form_columns'][] = $column;
@@ -837,18 +869,18 @@ class CustomFormController extends AdminControllerTableBase
 
 
     // create form because we need for delete
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         return Admin::form(CustomForm::class, function (Form $form) {
         });
     }
 
-
     /**
      * Get setting modal
      *
      * @param Request $request
-     * @return void
+     * @return Response
      */
     public function settingModal(Request $request)
     {
@@ -871,6 +903,7 @@ class CustomFormController extends AdminControllerTableBase
 
         return getAjaxResponse([
             'body'  => $form->render(),
+            // @phpstan-ignore-next-line
             'script' => $form->getScript(),
             'title' => trans('admin.setting'),
             'modalSize' => 'modal-xl',
@@ -881,12 +914,12 @@ class CustomFormController extends AdminControllerTableBase
         ]);
     }
 
-
     /**
      * Save attachment and get column name
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function saveAndStoreImage(array $new_columns)
     {
         $files = request()->files->all();
@@ -914,6 +947,7 @@ class CustomFormController extends AdminControllerTableBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function deleteImage($deletes)
     {
         collect($deletes)->map(function ($delete) {

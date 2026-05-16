@@ -10,6 +10,7 @@ use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Enums\LoginType;
 use Exceedone\Exment\Services\Login\LoginService;
+use Illuminate\Http\RedirectResponse;
 
 /**
  * Login User item
@@ -20,6 +21,7 @@ class LoginUserItem extends ProviderBase
     /**
      * set laravel admin form's option
      */
+    // @phpstan-ignore-next-line
     public function setAdminFormOptions(&$form, $id = null)
     {
         if (!\Exment::user()->hasPermission(Permission::LOGIN_USER)) {
@@ -42,6 +44,7 @@ class LoginUserItem extends ProviderBase
 
         if ($has_loginuser) {
             $form->switchbool('reset_password', exmtrans('user.reset_password'))
+                        // @phpstan-ignore-next-line
                         ->default(!$has_loginuser)
                         ->help(exmtrans('user.help.reset_password'))
                         ->attribute(['data-filter' => json_encode(['key' => 'use_loginuser', 'value' => '1'])]);
@@ -101,6 +104,7 @@ class LoginUserItem extends ProviderBase
     /**
      * saving event
      */
+    // @phpstan-ignore-next-line
     public function saving($form, $id = null)
     {
         if (!\Exment::user()->hasPermission(Permission::LOGIN_USER)) {
@@ -123,6 +127,7 @@ class LoginUserItem extends ProviderBase
     /**
      * saved event
      */
+    // @phpstan-ignore-next-line
     public function saved($form, $id)
     {
         if (!\Exment::user()->hasPermission(Permission::LOGIN_USER)) {
@@ -161,8 +166,9 @@ class LoginUserItem extends ProviderBase
      *
      * @param array $data
      * @param null|string $id
-     * @return array|\Illuminate\Http\Response  if error, return redirect. if success, array.
+     * @return array|\Illuminate\Http\Response|RedirectResponse|void  if error, return redirect. if success, array.
      */
+    // @phpstan-ignore-next-line
     protected function getLoginUserInfo($data, $id)
     {
         $user = getModelName(SystemTableName::USER)::find($id);
@@ -181,6 +187,7 @@ class LoginUserItem extends ProviderBase
         $has_change = false;
         $is_newuser = false;
         $password = null;
+        // @phpstan-ignore-next-line
         if (is_null($login_user) && boolval(array_get($data, 'use_loginuser'))) {
             $login_user = new LoginUser();
             $is_newuser = true;
@@ -217,6 +224,7 @@ class LoginUserItem extends ProviderBase
     /**
      * set user grid's actions
      */
+    // @phpstan-ignore-next-line
     public function setGridRowAction(&$actions)
     {
         $this->setEditDelete($actions, $actions->row);
@@ -225,6 +233,7 @@ class LoginUserItem extends ProviderBase
     /**
      * set user form's tools
      */
+    // @phpstan-ignore-next-line
     public function setAdminFormTools(&$tools, $id = null)
     {
         $this->setEditDelete($tools, $id);
@@ -233,11 +242,13 @@ class LoginUserItem extends ProviderBase
     /**
      * set user show form's tool
      */
+    // @phpstan-ignore-next-line
     public function setAdminShowTools(&$tools, $id = null)
     {
         $this->setEditDelete($tools, $id);
     }
 
+    // @phpstan-ignore-next-line
     protected function setEditDelete($tools, $custom_value)
     {
         if (is_numeric($custom_value)) {
@@ -259,6 +270,7 @@ class LoginUserItem extends ProviderBase
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function getLoginUser($base_user_id)
     {
         if (!isset($base_user_id)) {

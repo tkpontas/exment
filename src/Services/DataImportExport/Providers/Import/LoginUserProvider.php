@@ -6,11 +6,14 @@ use Exceedone\Exment\Services\Login\LoginService;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Model\LoginUser;
 use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Validator\ExmentCustomValidator;
 
 class LoginUserProvider extends ProviderBase
 {
+    // @phpstan-ignore-next-line
     protected $primary_key;
 
+    // @phpstan-ignore-next-line
     public function __construct($args = [])
     {
         $this->primary_key = array_get($args, 'primary_key', 'id');
@@ -20,6 +23,7 @@ class LoginUserProvider extends ProviderBase
      * get data and object.
      * set matched model data
      */
+    // @phpstan-ignore-next-line
     public function getDataObject($data, $options = [])
     {
         $results = [];
@@ -60,6 +64,7 @@ class LoginUserProvider extends ProviderBase
             // if exists, firstOrNew
             else {
                 //*Replace "." to "->" for json value
+                // @phpstan-ignore-next-line
                 $model = $modelName::withTrashed()->firstOrNew([str_replace(".", "->", $this->primary_key) => $primary_value]);
             }
             if (!isset($model)) {
@@ -79,6 +84,7 @@ class LoginUserProvider extends ProviderBase
      * @param mixed $dataObjects
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function validateImportData($dataObjects)
     {
         $error_data = [];
@@ -97,10 +103,12 @@ class LoginUserProvider extends ProviderBase
 
     /**
      * validate data row
-     * @param int $line_no
-     * @param array $dataAndModel
-     * @return array
+     *
+     * @param $line_no
+     * @param $dataAndModel
+     * @return array|true
      */
+    // @phpstan-ignore-next-line
     public function validateDataRow($line_no, $dataAndModel)
     {
         $data = array_get($dataAndModel, 'data');
@@ -117,6 +125,7 @@ class LoginUserProvider extends ProviderBase
         $errors = [];
 
         // execute validation
+        /** @var ExmentCustomValidator $validator */
         $validator = \Validator::make($data, [
             // get validate password.
             // not check history.
@@ -139,6 +148,7 @@ class LoginUserProvider extends ProviderBase
     /**
      * import data
      */
+    // @phpstan-ignore-next-line
     public function importData($dataAndModel)
     {
         $data = array_get($dataAndModel, 'data');

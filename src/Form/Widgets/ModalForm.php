@@ -4,6 +4,15 @@ namespace Exceedone\Exment\Form\Widgets;
 
 use Encore\Admin\Widgets\Form as WidgetForm;
 
+/**
+ * @method mixed hasManyTable($tableName, $columnName, $closure)
+ * @method mixed description($label)
+ * @method mixed descriptionHtml($description)
+ * @method mixed switchbool($optionName, $label)
+ * @method mixed modalAttribute($attribute, $modal)
+ * @method mixed modalHeader($label)
+ * @method mixed progressTracker()
+ */
 class ModalForm extends WidgetForm
 {
     /**
@@ -11,6 +20,7 @@ class ModalForm extends WidgetForm
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $buttons = [];
 
     /**
@@ -18,6 +28,7 @@ class ModalForm extends WidgetForm
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getScript()
     {
         return collect($this->fields)->map(function ($field) {

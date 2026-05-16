@@ -19,11 +19,16 @@ use Exceedone\Exment\Form\Tools;
 
 abstract class GridBase
 {
+    // @phpstan-ignore-next-line
     protected $custom_table;
+    // @phpstan-ignore-next-line
     protected $custom_view;
+    // @phpstan-ignore-next-line
     protected $modal = false;
+    // @phpstan-ignore-next-line
     protected $callback;
 
+    // @phpstan-ignore-next-line
     public static function getItem(...$args)
     {
         list($custom_table, $custom_view) = $args + [null, null];
@@ -33,6 +38,7 @@ abstract class GridBase
         return new static($custom_table, $custom_view);
     }
 
+    // @phpstan-ignore-next-line
     public function modal(bool $modal)
     {
         $this->modal = $modal;
@@ -40,6 +46,7 @@ abstract class GridBase
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function callback($callback)
     {
         $this->callback = $callback;
@@ -47,6 +54,7 @@ abstract class GridBase
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function renderModal($grid)
     {
         return [];
@@ -59,6 +67,7 @@ abstract class GridBase
      * @param array $options
      * @return \Illuminate\Database\Query\Builder|\Illuminate\Database\Schema\Builder
      */
+    // @phpstan-ignore-next-line
     public function getQuery($query, array $options = [])
     {
         return $query;
@@ -67,6 +76,7 @@ abstract class GridBase
     /**
      * set laravel-admin grid using custom_view
      */
+    // @phpstan-ignore-next-line
     public function setGrid($grid)
     {
     }
@@ -89,9 +99,14 @@ abstract class GridBase
 
         // replace view
         $this->custom_view = CustomView::getAllData($this->custom_table);
+        $service = $this->custom_view->getSearchService();
+        $group_view->setSearchService($service);
+        
         $filters = [];
+        // @phpstan-ignore-next-line
         foreach ($group_keys as $key => $value) {
             $custom_view_column = CustomViewColumn::findByCkey($key);
+            $column_item = $custom_view_column->column_item;
             $custom_view_filter = new CustomViewFilter();
             $custom_view_filter->custom_view_id = $custom_view_column->custom_view_id;
             $custom_view_filter->view_column_type = $custom_view_column->view_column_type;
@@ -99,6 +114,9 @@ abstract class GridBase
             $custom_view_filter->view_group_condition = $custom_view_column->view_group_condition;
             $custom_view_filter->view_filter_condition = FilterOption::EQ;
             $custom_view_filter->view_filter_condition_value_text = $value;
+            if ($column_item->isMultipleEnabled()) {
+                $custom_view_filter->is_multiple = true;
+            }
             $filters[] = $custom_view_filter;
             if ($custom_view_filter->view_column_target_id == SystemColumn::WORKFLOW_STATUS()->option()['id']) {
                 System::setRequestSession(Define::SYSTEM_KEY_SESSION_WORLFLOW_STATUS_CHECK, true);
@@ -108,14 +126,44 @@ abstract class GridBase
             }
         }
         $filter_func = function ($model) use ($filters, $group_view) {
-            $group_view->custom_view_filters = collect($filters);
+            $filter_raws = [];
+            foreach ($filters as $filter) {
+                if (isset($filter->view_group_condition) || $filter->is_multiple) {
+                    $filter_raws[] = $filter;
+                } else {
+                    $group_view->custom_view_filters->push($filter);
+                }
+            }
             $group_view->filterModel($model);
+            foreach ($filter_raws as $filter_raw) {
+                $column_item = $filter_raw->column_item;
+                $value_table_column = $column_item->getTableColumn();
+                $query_value = $column_item->convertFilterValue($filter_raw->view_filter_condition_value_text);
+                if (is_nullorempty($query_value)) {
+                    if ($filter_raw->is_multiple) {
+                        $model->where(function($query) use($value_table_column) {
+                            $query->whereNull($value_table_column)->orWhere($value_table_column, '[]');
+                        });
+                    } else {
+                        $model->whereNull($value_table_column);
+                    }
+                } else {
+                    if ($filter_raw->is_multiple) {
+                        $column = \DB::getQueryGrammar()->wrapJsonExtract($value_table_column);
+                        $model->whereRaw("$column = '$filter_raw->view_filter_condition_value_text'");
+                    } else {
+                        $column = \DB::getQueryGrammar()->getDateFormatString($filter_raw->view_group_condition, $value_table_column);
+                        $model->whereRaw("$column = '$query_value'");
+                    }
+                }
+            }
             return $model;
         };
         return $filter_func;
     }
 
 
+    // @phpstan-ignore-next-line
     protected static function setViewInfoboxFields(&$form)
     {
         // view input area ----------------------------------------------------
@@ -134,11 +182,13 @@ abstract class GridBase
             ->attribute(['data-filter' => json_encode(['key' => 'use_view_infobox', 'value' => '1'])]);
     }
 
+    // @phpstan-ignore-next-line
     protected static function convertGroups($targetOptions, $defaultCustomTable)
     {
         $options = collect($targetOptions)->mapToDictionary(function ($item, $query) {
             $keys = preg_split('/\?/', $query, 2);
             $items = preg_split('/\:/', $item);
+            // @phpstan-ignore-next-line
             return [$keys[1] => [$query => trim($items[count($items)-1])]];
         })->map(function ($item, $key) use ($defaultCustomTable) {
             if (empty($key)) {
@@ -222,6 +272,7 @@ abstract class GridBase
      * @param CustomTable $custom_table
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function setColumnFields(&$form, $custom_table, array $column_options = [])
     {
         // columns setting
@@ -295,6 +346,7 @@ abstract class GridBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setTableMenuButton(&$tools)
     {
         if ($this->custom_table->enableTableMenuButton()) {
@@ -307,6 +359,7 @@ abstract class GridBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setViewMenuButton(&$tools)
     {
         if ($this->custom_table->enableViewMenuButton()) {
@@ -319,6 +372,7 @@ abstract class GridBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setNewButton(&$tools)
     {
         if ($this->custom_table->enableCreate(true) === true) {
@@ -327,5 +381,6 @@ abstract class GridBase
     }
 
 
+    // @phpstan-ignore-next-line
     abstract public function grid();
 }

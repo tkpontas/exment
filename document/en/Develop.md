@@ -21,7 +21,7 @@ This page explains how to set up developing Exment engine.
 - Please execute this command on any path.
 
 ~~~
-composer create-project "laravel/laravel=9.*" (project name)
+composer create-project "laravel/laravel=10.*" (project name)
 cd (project name)
 ~~~
 
@@ -53,20 +53,27 @@ composer require psr/simple-cache=^2.0.0
 ~~~
 git clone https://github.com/hirossyi73/exment.git
 ~~~
+- (Optional)Clone your laravel-admin repository.
+(ex. https://github.com/hirossyi73/laravel-admin.git)
 
+~~~
+git clone https://github.com/hirossyi73/laravel-admin.git
+~~~
 - rewrite composer.json on project root directory.  
 ***When you edit composer.json, please remove comments. We cannot add comments on json file.**
 
 ~~~
     "require": {
-        "php": "^8.0.2",
+        "php": ">=8.1",
         "guzzlehttp/guzzle": "^7.2",
-        "laravel/framework": "^9.19",
-        "laravel/sanctum": "^3.0",
-        "laravel/tinker": "^2.7",
+        "laravel/framework": "^10.10",
+        "laravel/sanctum": "^3.3",
+        "laravel/tinker": "^2.8",
         "psr/simple-cache": "2.0.0",
         // Add this line
         "exceedone/exment": "dev-master"
+        // Optional
+        ,"exceedone/laravel-admin": "dev-master as 4.10.10"
     },
 
     "autoload": {
@@ -84,6 +91,15 @@ git clone https://github.com/hirossyi73/exment.git
         {
             "type": "path",
             "url": "packages/hirossyi73/exment",
+            "options": {
+                "symlink": true
+            }
+        }
+        // Optional
+        ,
+        {
+            "type": "path",
+            "url": "packages/hirossyi73/laravel-admin",
             "options": {
                 "symlink": true
             }

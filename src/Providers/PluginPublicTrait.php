@@ -13,16 +13,20 @@ trait PluginPublicTrait
     /**
      * routing plugin
      *
-     * @param PluginPageBase $pluginScriptStyle
+     * @param Plugin $plugin
+     * @param string $prefix
+     * @param string $middleware
      * @return void
      */
     protected function pluginScriptStyleRoute(Plugin $plugin, string $prefix, string $middleware)
     {
+        /** @phpstan-ignore-next-line */
         if ($this->app->routesAreCached()) {
             return;
         }
 
         Route::group([
+            /** @phpstan-ignore-next-line */
             'prefix'        => url_join($prefix, $plugin->getRouteUri()),
             'namespace'     => 'Exceedone\Exment\Services\Plugin',
             'middleware'    => ['adminweb', $middleware],

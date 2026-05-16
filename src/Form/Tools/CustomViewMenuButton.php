@@ -11,14 +11,19 @@ use Exceedone\Exment\Enums\RelationType;
 
 class CustomViewMenuButton extends ModalTileMenuButton
 {
+    // @phpstan-ignore-next-line
     protected $custom_table;
+    // @phpstan-ignore-next-line
     protected $current_custom_view;
 
+    // @phpstan-ignore-next-line
     protected $addMenuList = true;
 
     // this views items, if already get, set this params. if this value is null, not init items.
+    // @phpstan-ignore-next-line
     protected $items = null;
 
+    // @phpstan-ignore-next-line
     public function __construct($custom_table, $current_custom_view = null, $addMenuList = true)
     {
         $this->custom_table = $custom_table;
@@ -77,18 +82,8 @@ class CustomViewMenuButton extends ModalTileMenuButton
             }
         }
 
-        $compare = function ($a, $b) {
-            $atype = array_get($a, 'view_kind_type');
-            $btype = array_get($b, 'view_kind_type');
-
-            if ($atype == ViewKindType::ALLDATA) {
-                return -1;
-            } elseif ($btype == ViewKindType::ALLDATA) {
-                return 1;
-            } else {
-                return $atype <=> $btype;
-            }
-        };
+        $sort_options = config('exment.sort_custom_view_options', 0);
+        $compare = $this->getCompare($sort_options);
         usort($userviews, $compare);
         usort($systemviews, $compare);
 
@@ -151,6 +146,54 @@ class CustomViewMenuButton extends ModalTileMenuButton
     }
 
 
+    // @phpstan-ignore-next-line
+    protected function getCompare(int $sort_options)
+    {
+        switch ($sort_options) {
+            case 0:
+                return function ($a, $b) {
+                    $atype = array_get($a, 'view_kind_type');
+                    $btype = array_get($b, 'view_kind_type');
+        
+                    if ($atype == ViewKindType::ALLDATA) {
+                        return -1;
+                    } elseif ($btype == ViewKindType::ALLDATA) {
+                        return 1;
+                    } else {
+                        return $atype <=> $btype;
+                    }
+                };
+            case 1:
+                return function ($a, $b) {
+                    $atype = array_get($a, 'view_kind_type');
+                    $btype = array_get($b, 'view_kind_type');
+    
+                    if ($atype == $btype) {
+                        $aorder = array_get($a, 'order');
+                        $border = array_get($b, 'order');
+                        return $aorder <=> $border;
+                    } else {
+                        if ($atype == ViewKindType::ALLDATA) {
+                            return -1;
+                        } elseif ($btype == ViewKindType::ALLDATA) {
+                            return 1;
+                        } else {
+                            return $atype <=> $btype;
+                        }
+                    }
+                };
+            case 2:
+                return function ($a, $b) {
+                    $aorder = array_get($a, 'order');
+                    $border = array_get($b, 'order');
+                    return $aorder <=> $border;
+                };
+                        
+        }
+    }
+
+
+    // @phpstan-ignore-next-line
     protected function getItems()
     {
         if (!is_null($this->items)) {

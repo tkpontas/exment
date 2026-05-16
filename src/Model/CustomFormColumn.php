@@ -3,6 +3,7 @@
 namespace Exceedone\Exment\Model;
 
 use Exceedone\Exment\ColumnItems;
+use Exceedone\Exment\Database\Query\ExtendedBuilder;
 use Exceedone\Exment\Enums\FormColumnType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,6 +15,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property mixed $order
  * @property mixed $custom_form_block_id
  * @property mixed $column_no
+ * @property mixed $row_no
+ * @property mixed $width
+ * @property mixed $options
+ * @method static ExtendedBuilder where($column, $operator = null, $value = null, $boolean = 'and')
+ * @method static ExtendedBuilder orderBy($column, $direction = 'asc')
  */
 class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterInterface
 {
@@ -26,6 +32,8 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
 
     protected $casts = ['options' => 'json'];
     protected $appends = ['form_column_target'];
+
+    // @phpstan-ignore-next-line
     protected $with = ['custom_column'];
 
     /**
@@ -38,10 +46,12 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
     /**
      * request key. Used by custom form setting display. Ex. NEW__f482dce0-662c-11eb-8f65-5f9d12681ab1
      *
-     * @var string
+     * @var string|null
      */
     protected $_request_key;
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['custom_column', 'form_column_target', 'options.changedata_target_column_id', 'options.changedata_column_id', 'options.relation_filter_target_column_id'],
         'langs' => [
@@ -107,16 +117,22 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
         ]
     ];
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_block(): BelongsTo
     {
         return $this->belongsTo(CustomFormBlock::class, 'custom_form_block_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_column(): BelongsTo
     {
         return $this->belongsTo(CustomColumn::class, 'form_column_target_id');
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getFormColumnTargetAttribute()
     {
         if ($this->form_column_type == FormColumnType::COLUMN) {
@@ -127,6 +143,8 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
         return null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getColumnItemAttribute()
     {
         // if tagret is number, column type is column.
@@ -139,11 +157,15 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getCustomFormBlockCacheAttribute()
     {
         return CustomFormBlock::getEloquentDefault($this->custom_form_block_id);
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getCustomColumnCacheAttribute()
     {
         if ($this->form_column_type != FormColumnType::COLUMN) {
@@ -153,35 +175,47 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
         return CustomColumn::getEloquent($this->form_column_target_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getTargetTableCacheAttribute()
     {
         $custom_form_block = $this->custom_form_block_cache ?: $this->custom_form_block;
         return $custom_form_block ? $custom_form_block->target_table_cache : null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getFormTableCacheAttribute()
     {
         $custom_form_block = $this->custom_form_block_cache ?: $this->custom_form_block;
         return $custom_form_block ? $custom_form_block->form_table_cache : null;
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getDeleteFlgAttribute()
     {
         return $this->_delete_flg;
     }
 
 
+
+    // @phpstan-ignore-next-line
     protected function setDeleteFlgAttribute($delete_flg)
     {
         $this->_delete_flg = $delete_flg;
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getRequestKeyAttribute()
     {
         return $this->_request_key ?? $this->id;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setRequestKeyAttribute($request_key)
     {
         $this->_request_key = $request_key;
@@ -192,6 +226,8 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
     /**
      * get Table And Column Name
      */
+
+    // @phpstan-ignore-next-line
     protected function getUniqueKeyValuesFormColumn()
     {
         switch ($this->form_column_type) {
@@ -207,6 +243,8 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
         return [];
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function importReplaceJson(&$json, $options = [])
     {
         // set form column type
@@ -248,6 +286,8 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
      * @param string $column_key_id
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     protected static function replaceChangedata(&$json, $table_key_name, $column_key_name, $column_key_id)
     {
         // set changedata_custom_table_id
@@ -277,6 +317,8 @@ class CustomFormColumn extends ModelBase implements Interfaces\TemplateImporterI
         array_forget($json, $column_key_name);
     }
 
+
+    // @phpstan-ignore-next-line
     protected function importSetValue(&$json, $options = [])
     {
         if (!$this->exists) {

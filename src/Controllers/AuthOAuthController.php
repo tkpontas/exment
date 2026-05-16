@@ -29,6 +29,7 @@ class AuthOAuthController extends \Encore\Admin\Controllers\AuthController
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse|\Illuminate\View\View
      */
+    // @phpstan-ignore-next-line
     public function getLoginProvider(Request $request, $login_provider)
     {
         if ($this->guard()->check()) {
@@ -64,8 +65,11 @@ class AuthOAuthController extends \Encore\Admin\Controllers\AuthController
     /**
      * callback login provider and login exment
      *
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse|\Illuminate\View\View
+     * @param Request $request
+     * @param $provider_name
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
+    // @phpstan-ignore-next-line
     public function callback(Request $request, $provider_name)
     {
         if ($this->guard()->check()) {
@@ -87,6 +91,7 @@ class AuthOAuthController extends \Encore\Admin\Controllers\AuthController
                 // set session access key
                 LoginService::setToken();
 
+                // @phpstan-ignore-next-line
                 return $this->sendLoginResponse($request);
             }
 

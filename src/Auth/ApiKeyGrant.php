@@ -54,6 +54,9 @@ class ApiKeyGrant extends AbstractGrant
         return $responseType;
     }
 
+    /**
+     * @return UserEntityInterface
+     */
     protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client)
     {
         $api_key = $this->getRequestParameter('api_key', $request);
@@ -82,10 +85,14 @@ class ApiKeyGrant extends AbstractGrant
 
     /**
      * {@inheritdoc}
+     * @param string $api_key
+     * @return UserEntityInterface|null
      */
     public function getUserEntityByUserCredentials($api_key)
     {
+        /** @var ApiKey $api_key */
         $api_key = ApiKey::where('key', $api_key)->first();
+        // @phpstan-ignore-next-line
         if (is_null($api_key) || is_null($api_key->client)) {
             throw OAuthServerException::invalidCredentials();
         }

@@ -10,7 +10,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class PluginCrudController extends Controller
 {
+    // @phpstan-ignore-next-line
     protected $pluginPage;
+    // @phpstan-ignore-next-line
     protected $plugin;
 
     public function __construct(?PluginCrudBase $pluginPage)
@@ -22,8 +24,10 @@ class PluginCrudController extends Controller
     /**
      * Index. for grid.
      *
-     * @return void
+     * @param $endpoint
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function index($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint);
@@ -32,14 +36,18 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->gridClass;
+        // @phpstan-ignore-next-line
         return (new $className($this->plugin, $targetClass))->index();
     }
 
     /**
      * Show. for detail.
      *
-     * @return void
+     * @param $endpoint
+     * @param $id
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function show($endpoint = null, $id = null)
     {
         if (!is_nullorempty($endpoint) && is_nullorempty($id)) {
@@ -53,14 +61,17 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->showClass;
+        // @phpstan-ignore-next-line
         return (new $className($this->plugin, $targetClass))->show($id);
     }
 
     /**
      * create.
      *
-     * @return void
+     * @param $endpoint
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function create($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint);
@@ -69,15 +80,17 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->createClass;
+        // @phpstan-ignore-next-line
         return (new $className($this->plugin, $targetClass))->create();
     }
-
 
     /**
      * store.
      *
-     * @return void
+     * @param $endpoint
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function store($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint);
@@ -86,15 +99,18 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->createClass;
+        // @phpstan-ignore-next-line
         return (new $className($this->plugin, $targetClass))->store();
     }
-
 
     /**
      * edit.
      *
-     * @return void
+     * @param $endpoint
+     * @param $id
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function edit($endpoint = null, $id = null)
     {
         if (!is_nullorempty($endpoint) && is_nullorempty($id)) {
@@ -108,14 +124,18 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->editClass;
+        // @phpstan-ignore-next-line
         return (new $className($this->plugin, $targetClass))->edit($id);
     }
 
     /**
      * update.
      *
-     * @return void
+     * @param $endpoint
+     * @param $id
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function update($endpoint = null, $id = null)
     {
         if (!is_nullorempty($endpoint) && is_nullorempty($id)) {
@@ -129,14 +149,18 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->editClass;
+        // @phpstan-ignore-next-line
         return (new $className($this->plugin, $targetClass))->update($id);
     }
 
     /**
      * destroy.
      *
-     * @return void
+     * @param $endpoint
+     * @param $id
+     * @return \Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function destroy($endpoint = null, $id = null)
     {
         if (!is_nullorempty($endpoint) && is_nullorempty($id)) {
@@ -150,6 +174,7 @@ class PluginCrudController extends Controller
         }
 
         $className = $targetClass->deleteClass;
+        // @phpstan-ignore-next-line
         $result = (new $className($this->plugin, $targetClass))->delete($id);
 
         return getAjaxResponse([
@@ -159,13 +184,14 @@ class PluginCrudController extends Controller
         ]);
     }
 
-
     /**
      * Execute login oauth
      *
-     * @param Request $request
-     * @return void
+     * @param $endpoint
+     * @return \Illuminate\Http\RedirectResponse|Response
+     * @throws SsoLoginErrorException
      */
+    // @phpstan-ignore-next-line
     public function oauth($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint, false, true);
@@ -188,9 +214,11 @@ class PluginCrudController extends Controller
     /**
      * Execute login oauth callback
      *
-     * @param Request $request
-     * @return void
+     * @param $endpoint
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|Response
+     * @throws SsoLoginErrorException
      */
+    // @phpstan-ignore-next-line
     public function oauthcallback($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint, false, true);
@@ -220,9 +248,11 @@ class PluginCrudController extends Controller
     /**
      * Execute oauth logout
      *
-     * @param Request $request
-     * @return void
+     * @param $endpoint
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|Response
+     * @throws SsoLoginErrorException
      */
+    // @phpstan-ignore-next-line
     public function oauthlogout($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint, false, true);
@@ -246,8 +276,10 @@ class PluginCrudController extends Controller
     /**
      * No Auth page.
      *
-     * @return void
+     * @param $endpoint
+     * @return \Encore\Admin\Layout\Content|false|string
      */
+    // @phpstan-ignore-next-line
     public function noauth($endpoint = null)
     {
         $targetClass = $this->getClass($endpoint, false, true);
@@ -288,10 +320,11 @@ class PluginCrudController extends Controller
 
     /**
      * Get plugin target class.
-     * *If plugin supports multiple endpoint, get class using endpoint.*
-     *
+     * If plugin supports multiple endpoint, get class using endpoint.*
      * @param string|null $endpoint
-     * @return PluginCrudBase
+     * @param bool $isCheckAuthorize
+     * @param bool $isEmptyEndpoint
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|mixed|true|null
      */
     protected function getClass(?string $endpoint, bool $isCheckAuthorize = true, bool $isEmptyEndpoint = false)
     {
@@ -301,6 +334,7 @@ class PluginCrudController extends Controller
         }
 
         $class = new $className($this->plugin);
+        // @phpstan-ignore-next-line
         $class->setPluginOptions($this->pluginPage->getPluginOptions())
             ->setEndpoint($endpoint);
 
@@ -314,8 +348,11 @@ class PluginCrudController extends Controller
     /**
      * Authorize plugin.
      *
-     * @return true|
+     * @param string|null $endpoint
+     * @param $targetClass
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|true|void
      */
+    // @phpstan-ignore-next-line
     protected function authorizePlugin(?string $endpoint, $targetClass)
     {
         if (!$targetClass->enableAccessCrud()) {

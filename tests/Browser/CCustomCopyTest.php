@@ -20,6 +20,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * pre-excecute process before test.
+     * @return void
      */
     protected function setUp(): void
     {
@@ -29,6 +30,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Check custom value copy setting display.
+     * @return void
      */
     public function testDisplayCopySetting()
     {
@@ -60,6 +62,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Create custom value copy all field.
+     * @return void
      */
     public function testAddCopySetting()
     {
@@ -93,6 +96,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Update custom value copy input field.
+     * @return void
      */
     public function testUpdateCopySetting()
     {
@@ -108,6 +112,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
         $custom_copy = CustomCopy::find($id);
 
+        // @phpstan-ignore-next-line
         foreach ($custom_copy->custom_copy_columns as $custom_copy_column) {
             $row_id = $custom_copy_column->id;
             $this->seeIsSelected(
@@ -120,6 +125,7 @@ class CCustomCopyTest extends ExmentKitTestCase
             );
         }
 
+        // @phpstan-ignore-next-line
         foreach ($custom_copy->custom_copy_input_columns as $custom_copy_column) {
             $row_id = $custom_copy_column->id;
             $this->seeIsSelected(
@@ -136,6 +142,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Copy custom value in same table.
+     * @return void
      */
     public function testCustomValueCopySameTable()
     {
@@ -146,6 +153,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Copy custom value all field.
+     * @return void
      */
     public function testCustomValueCopyAll()
     {
@@ -156,6 +164,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Copy custom value all field.
+     * @return void
      */
     public function testCustomValueCopyInput()
     {
@@ -173,6 +182,10 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Copy custom value.
+     * @param mixed $custom_copy
+     * @param array<mixed> $data
+     *
+     * @return void
      */
     public function _executeCopy($custom_copy, $data = [])
     {
@@ -193,7 +206,7 @@ class CCustomCopyTest extends ExmentKitTestCase
 
         $this->assertEquals($pre_cnt + 1, $to_table->count());
 
-        $new_value = $to_table->orderBy('created_at', 'desc')->first();
+        $new_value = $to_table->orderBy('id', 'desc')->first();
         $this->visit(admin_url("data/$to_table_name/" . $new_value->id));
 
         $custom_copy_columns = CustomCopyColumn::where('custom_copy_id', $custom_copy->id)->get();
@@ -215,6 +228,9 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Update custom value copy contains field.
+     * @param mixed $copy
+     * @param bool $with_input
+     * @return void
      */
     protected function _updateCopyData($copy, bool $with_input = false)
     {
@@ -273,6 +289,8 @@ class CCustomCopyTest extends ExmentKitTestCase
 
     /**
      * Create custom value copy contains field.
+     * @param bool $is_same
+     * @return mixed
      */
     protected function _addCopyData($is_same = false)
     {
@@ -330,7 +348,7 @@ class CCustomCopyTest extends ExmentKitTestCase
         $this->assertEquals($pre_child_cnt + $column_count, CustomCopyColumn::count())
         ;
 
-        $raw = CustomCopy::orderBy('created_at', 'desc')->first();
+        $raw = CustomCopy::orderBy('id', 'desc')->first();
 
         return $raw;
     }

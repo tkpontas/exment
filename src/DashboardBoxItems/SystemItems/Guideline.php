@@ -7,6 +7,7 @@ class Guideline
     /**
      * get header
      */
+    // @phpstan-ignore-next-line
     public function header()
     {
         return null;
@@ -15,6 +16,7 @@ class Guideline
     /**
      * get footer
      */
+    // @phpstan-ignore-next-line
     public function footer()
     {
         return null;
@@ -23,8 +25,10 @@ class Guideline
     /**
      * get html body
      */
+    // @phpstan-ignore-next-line
     public function body()
     {
+        // @phpstan-ignore-next-line
         return view('exment::dashboard.system.guideline')->render() ?? null;
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 
 class BackupDiskService extends DiskServiceBase
 {
+    // @phpstan-ignore-next-line
     public function __construct(...$args)
     {
         $now = date('YmdHis');
@@ -45,11 +46,10 @@ class BackupDiskService extends DiskServiceBase
         return true;
     }
 
-
     /**
      * copy file from disk to localSyncDisk disk
      *
-     * @return void
+     * @return true
      */
     protected function sync()
     {

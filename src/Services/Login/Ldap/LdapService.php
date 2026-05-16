@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Services\Login\Ldap;
 
+use Adldap\Connections\ProviderInterface;
 use Exceedone\Exment\Exceptions\SsoLoginErrorException;
 use Exceedone\Exment\Services\Login\LoginService;
 use Exceedone\Exment\Model\System;
@@ -12,6 +13,7 @@ use Exceedone\Exment\Enums\LoginType;
 use Exceedone\Exment\Enums\SsoLoginErrorType;
 use Exceedone\Exment\Services\Login\LoginServiceInterface;
 use Exceedone\Exment\Form\Widgets\ModalForm;
+use Exceedone\Exment\Validator\ExmentCustomValidator;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 
@@ -34,6 +36,7 @@ class LdapService implements LoginServiceInterface
      *
      * @throws SsoLoginErrorException
      */
+    // @phpstan-ignore-next-line
     public static function retrieveByCredential(array $credentials)
     {
         list($result, $message, $adminMessage, $custom_login_user) = static::loginCallback(request(), array_get($credentials, 'login_setting') ?? LoginSetting::getLdapSetting(array_get($credentials, 'provider_name')));
@@ -57,8 +60,9 @@ class LdapService implements LoginServiceInterface
      *
      * @param Authenticatable $login_user
      * @param array $credentials
-     * @return void
+     * @return boolean
      */
+    // @phpstan-ignore-next-line
     public static function validateCredential(Authenticatable $login_user, array $credentials)
     {
         // always true.
@@ -66,6 +70,7 @@ class LdapService implements LoginServiceInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getLdapConfig(LoginSetting $login_setting)
     {
         return [
@@ -94,15 +99,15 @@ class LdapService implements LoginServiceInterface
         $prefix = $login_setting->getOption('ldap_account_prefix');
         $suffix = $login_setting->getOption('ldap_account_suffix');
 
-        return ((isset($prefix) && strpos($username, $prefix) !== 0) ? $prefix : '').
-        $username .
-        ((isset($suffix) && strripos($username, $suffix) !== (mb_strlen($username) - mb_strlen($suffix))) ? $suffix : '');
+        return ((isset($prefix) && strpos($username, $prefix) !== 0) ? $prefix : '') .
+            $username .
+            ((isset($suffix) && strripos($username, $suffix) !== (mb_strlen($username) - mb_strlen($suffix))) ? $suffix : '');
     }
 
     /**
      * Get login user dn.
      *
-     * @param Provider $provider
+     * @param ProviderInterface $provider
      * @param string $username
      * @param LoginSetting $login_setting
      * @return string
@@ -131,6 +136,10 @@ class LdapService implements LoginServiceInterface
         return $builder->findBy($login_setting->getOption('ldap_search_key'), $username);
     }
 
+    /**
+     * @param LoginSetting $login_setting
+     * @return ModalForm
+     */
     public static function getTestForm(LoginSetting $login_setting)
     {
         $form = new ModalForm(System::get_system_values());
@@ -144,8 +153,7 @@ class LdapService implements LoginServiceInterface
 
         $form->textarea('resultarea', exmtrans('common.execute_result'))
             ->attribute(['readonly' => true])
-            ->rows(4)
-        ;
+            ->rows(4);
 
         $form->setWidth(10, 2);
 
@@ -155,6 +163,7 @@ class LdapService implements LoginServiceInterface
 
 
 
+    // @phpstan-ignore-next-line
     public static function setLdapForm($form, $login_setting, $errors)
     {
         if (array_has($errors, LoginType::LDAP)) {
@@ -182,7 +191,7 @@ class LdapService implements LoginServiceInterface
         $form->select('ldap_schema', "スキーマ")->options(["OpenLDAP" => "OpenLDAP", "ActiveDirectory" => "ActiveDirectory"])
             ->required()
             ->attribute(['data-filter' => json_encode(['key' => 'login_type', 'parent' => 1, 'value' => [LoginType::LDAP]])])
-			->default('ActiveDirectory');
+            ->default('ActiveDirectory');
         $form->text('ldap_hosts', exmtrans('login.ldap_hosts'))
             ->required()
             ->attribute(['data-filter' => json_encode(['key' => 'login_type', 'parent' => 1, 'value' => [LoginType::LDAP]])]);
@@ -223,13 +232,12 @@ class LdapService implements LoginServiceInterface
             ->default(false);
     }
 
-
-
     /**
      * Execute login test
      *
      * @param Request $request
-     * @return void
+     * @param mixed $login_setting
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public static function loginTest(Request $request, $login_setting)
     {
@@ -253,7 +261,7 @@ class LdapService implements LoginServiceInterface
      *
      * @param Request $request
      * @param LoginSetting $login_setting
-     * @return array $result(bool), $message(string), $adminMessage(string), $custom_login_user
+     * @return array<mixed> $result(bool), $message(string), $adminMessage(string), $custom_login_user
      */
     protected static function loginCallback(Request $request, $login_setting)
     {
@@ -269,10 +277,11 @@ class LdapService implements LoginServiceInterface
             $provider = $ad->getDefaultProvider();
 
             $provider->connect();
-            $bindDN = ($login_setting->getOption('ldap_schema') == "ActiveDirectory") ?
+            $bindDN = (empty($login_setting->getOption('ldap_schema')) || $login_setting->getOption('ldap_schema') == "ActiveDirectory") ?
                 $username :
                 static::getLdapUserDN($provider, $credentials['username'], $login_setting);
             if (!$bindDN || !$provider->auth()->attempt($bindDN, $credentials['password'], true)) {
+                // @phpstan-ignore-next-line
                 return LoginService::getLoginResult(SsoLoginErrorType::NOT_EXISTS_PROVIDER_USER, [exmtrans('error.login_failed')]);
             }
 
@@ -280,6 +289,7 @@ class LdapService implements LoginServiceInterface
             $ldapUser = static::syncLdapUser($provider, $login_setting, $username);
 
             if (!$ldapUser) {
+                // @phpstan-ignore-next-line
                 return LoginService::getLoginResult(SsoLoginErrorType::NOT_EXISTS_PROVIDER_USER, [exmtrans('error.login_failed')]);
             }
 
@@ -287,14 +297,18 @@ class LdapService implements LoginServiceInterface
             $custom_login_user = LdapUser::with($login_setting, $ldapUser);
 
             if (!is_nullorempty($custom_login_user->mapping_errors)) {
+                // @phpstan-ignore-next-line
                 return LoginService::getLoginResult(SsoLoginErrorType::SYNC_MAPPING_ERROR, exmtrans('login.sso_provider_error'), $custom_login_user->mapping_errors);
             }
 
+            /** @var ExmentCustomValidator $validator */
             $validator = LoginService::validateCustomLoginSync($custom_login_user);
             if ($validator->fails()) {
                 return LoginService::getLoginResult(
+                    // @phpstan-ignore-next-line
                     SsoLoginErrorType::SYNC_VALIDATION_ERROR,
                     exmtrans('login.sso_provider_error_validate', ['errors' => implode(' ', $validator->getMessageStrings())]),
+                    // @phpstan-ignore-next-line
                     $validator->errors(),
                     $custom_login_user
                 );
@@ -303,15 +317,16 @@ class LdapService implements LoginServiceInterface
             return LoginService::getLoginResult(true, [], [], $custom_login_user);
         } catch (\Adldap\Auth\BindException $ex) {
             \Log::error($ex);
-
+            // @phpstan-ignore-next-line
             return LoginService::getLoginResult(SsoLoginErrorType::PROVIDER_ERROR, exmtrans('login.sso_provider_error'), [$ex]);
         } catch (\Exception $ex) {
             \Log::error($ex);
-
+            // @phpstan-ignore-next-line
             return LoginService::getLoginResult(SsoLoginErrorType::UNDEFINED_ERROR, exmtrans('login.sso_provider_error'), [$ex]);
         }
     }
 
+    // @phpstan-ignore-next-line
     public static function appendActivateSwalButton($tools, LoginSetting $login_setting)
     {
         return LoginService::appendActivateSwalButtonSso($tools, $login_setting);

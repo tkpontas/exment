@@ -22,11 +22,13 @@ trait RevisionableTrait
     /**
      * @var array
      */
+    // @phpstan-ignore-next-line
     private $originalData = array();
 
     /**
      * @var array
      */
+    // @phpstan-ignore-next-line
     private $updatedData = array();
 
     /**
@@ -35,18 +37,21 @@ trait RevisionableTrait
     private $updating = false;
 
     /**
-     * @var array
+     * @var array|null
      */
+    // @phpstan-ignore-next-line
     private $dontKeep = array();
 
     /**
-     * @var array
+     * @var array|null
      */
+    // @phpstan-ignore-next-line
     private $doKeep = array();
 
     /**
-     * @var array
+     * @var array|null
      */
+    // @phpstan-ignore-next-line
     private $doKeepTrigger = array();
 
     /**
@@ -54,12 +59,13 @@ trait RevisionableTrait
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $dirtyData = array();
 
     /**
      * Remove old revisions (works only when used with $historyLimit)
      *
-     * @var boolean
+     * @var boolean|null
      */
     protected $revisionCleanup = true;
 
@@ -128,6 +134,7 @@ trait RevisionableTrait
     /**
     * Invoked before a model is saved. Return false to abort the operation.
     */
+    // @phpstan-ignore-next-line
     public function preSave()
     {
         if (!isset($this->revisionEnabled) || $this->revisionEnabled) {
@@ -235,6 +242,7 @@ trait RevisionableTrait
     /**
     * Called after record successfully created
     */
+    // @phpstan-ignore-next-line
     public function postCreate()
     {
         // Check if we should store creations in our revision history
@@ -270,6 +278,7 @@ trait RevisionableTrait
     /**
      * If softdeletes are enabled, store the deleted time
      */
+    // @phpstan-ignore-next-line
     public function postDelete()
     {
         if ((!isset($this->revisionEnabled) || $this->revisionEnabled)
@@ -313,6 +322,7 @@ trait RevisionableTrait
     /**
      * Force delete are enabled, store the deleted time
      */
+    // @phpstan-ignore-next-line
     public function postForceDelete()
     {
         if ((!isset($this->revisionEnabled) || $this->revisionEnabled)
@@ -330,6 +340,7 @@ trait RevisionableTrait
     /**
      * If softdeletes are enabled, restore event
      */
+    // @phpstan-ignore-next-line
     public function postRestore()
     {
         if ((!isset($this->revisionEnabled) || $this->revisionEnabled)
@@ -370,6 +381,7 @@ trait RevisionableTrait
      * Attempt to find the user id of the currently logged in user
      * Supports Cartalyst Sentry/Sentinel based authentication, as well as stock Auth
      **/
+    // @phpstan-ignore-next-line
     public function getSystemUserId()
     {
         try {
@@ -393,6 +405,7 @@ trait RevisionableTrait
         return null;
     }
 
+    // @phpstan-ignore-next-line
     protected function saveData($revisions)
     {
         foreach ($revisions as $revision) {
@@ -409,6 +422,7 @@ trait RevisionableTrait
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function forceDeleteData($revisions)
     {
         foreach ($revisions as $revision) {
@@ -424,6 +438,7 @@ trait RevisionableTrait
      *
      * @return array fields with new data, that should be recorded
      */
+    // @phpstan-ignore-next-line
     private function changedRevisionableFields()
     {
         $changes_to_record = array();
@@ -494,11 +509,13 @@ trait RevisionableTrait
     private function isSoftDelete()
     {
         // check flag variable used in laravel 4.2+
+        /** @phpstan-ignore-next-line Property Exceedone\Exment\Model\CustomValue::$forceDeleting (bool) in isset() is not nullable. */
         if (isset($this->forceDeleting)) {
             return !$this->forceDeleting;
         }
 
         // otherwise, look for flag used in older versions
+        /** @phpstan-ignore-next-line Unreachable statement - code above always terminates. */
         if (isset($this->softDelete)) {
             return $this->softDelete;
         }

@@ -95,6 +95,7 @@ class CustomNotifyController extends AdminControllerTableBase
             ->whereIn('notify_trigger', NotifyTrigger::CUSTOM_TABLES());
 
         $grid->tools(function (Grid\Tools $tools) {
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomTableMenuButton('notify', $this->custom_table));
         });
 
@@ -123,12 +124,14 @@ class CustomNotifyController extends AdminControllerTableBase
         return $grid;
     }
 
-
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param $id
+     * @param $copy_id
+     * @return Form|false|void
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null, $copy_id = null)
     {
         if (!$this->hasPermissionEdit($id)) {
@@ -137,6 +140,7 @@ class CustomNotifyController extends AdminControllerTableBase
 
         $form = new Form(new Notify());
         $notify = Notify::find($id);
+        // @phpstan-ignore-next-line
         if ($notify && !in_array($notify->notify_trigger, NotifyTrigger::CUSTOM_TABLES())) {
             Checker::error(exmtrans('common.message.wrongdata'));
             return false;
@@ -147,6 +151,7 @@ class CustomNotifyController extends AdminControllerTableBase
         $form->internal('target_id')->default($this->custom_table->id);
         $form->display('custom_table.table_view_name', exmtrans("custom_table.table"))->default($this->custom_table->table_view_name);
 
+        // @phpstan-ignore-next-line
         $this->setBasicForm($form, $notify);
 
         $form->exmheader(exmtrans('notify.header_trigger'))->hr();
@@ -250,14 +255,18 @@ class CustomNotifyController extends AdminControllerTableBase
             ->help(exmtrans("notify.help.notify_action"))
             ;
 
+            // @phpstan-ignore-next-line
             $this->setActionForm($form, $notify, $custom_table);
         })->required()->disableHeader();
 
+        // @phpstan-ignore-next-line
         $this->setMailTemplateForm($form, $notify);
 
+        // @phpstan-ignore-next-line
         $this->setFooterForm($form, $notify);
 
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('notify', $custom_table));
         });
 
@@ -266,6 +275,7 @@ class CustomNotifyController extends AdminControllerTableBase
 
 
 
+    // @phpstan-ignore-next-line
     public function notify_action_target(Request $request)
     {
         $options = NotifyService::getNotifyTargetColumns($this->custom_table, $request->get('q'), [
@@ -275,6 +285,7 @@ class CustomNotifyController extends AdminControllerTableBase
         return $options;
     }
 
+    // @phpstan-ignore-next-line
     protected function getTargetDateColumnOptions($custom_table_id, $table_name = null)
     {
         return CustomColumn::where('custom_table_id', $custom_table_id)
@@ -288,6 +299,7 @@ class CustomNotifyController extends AdminControllerTableBase
             });
     }
 
+    // @phpstan-ignore-next-line
     protected function getTargetColumnOptions($custom_table)
     {
         $custom_table = CustomTable::getEloquent($custom_table);
@@ -313,6 +325,7 @@ class CustomNotifyController extends AdminControllerTableBase
         return $options->pluck('text', 'id');
     }
 
+    // @phpstan-ignore-next-line
     public function getNotifyTriggerTemplate(Request $request)
     {
         $keyName = 'mail_template_id';

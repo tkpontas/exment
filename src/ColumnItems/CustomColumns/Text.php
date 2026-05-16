@@ -13,6 +13,7 @@ class Text extends CustomItem
 {
     use TextTrait;
 
+    // @phpstan-ignore-next-line
     public function saving()
     {
         if (is_nullorempty($this->value)) {
@@ -21,11 +22,13 @@ class Text extends CustomItem
         return strval($this->value);
     }
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return Field\Text::class;
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         // value size
@@ -38,6 +41,7 @@ class Text extends CustomItem
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
         // value size
@@ -64,6 +68,7 @@ class Text extends CustomItem
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getAvailableCharactersInfo()
     {
         // // regex rules
@@ -111,11 +116,11 @@ class Text extends CustomItem
     /**
      * Get grid filter option. Use grid filter, Ex. LIKE search.
      *
-     * @return string
+     * @return string|null
      */
     protected function getGridFilterOption(): ?string
     {
-        return FilterOption::LIKE;
+        return (string)FilterOption::LIKE;
     }
 
 

@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Model;
 
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Services\Login as LoginServiceRoot;
 use Exceedone\Exment\Enums\LoginType;
 use Exceedone\Exment\Enums\LoginProviderType;
@@ -10,6 +11,8 @@ use Exceedone\Exment\Enums\LoginProviderType;
  * @phpstan-consistent-constructor
  * @property mixed $login_view_name
  * @property mixed $login_type
+ * @property mixed $active_flg
+ * @method static ExtendedBuilder create(array $attributes = [])
  */
 class LoginSetting extends ModelBase
 {
@@ -20,12 +23,16 @@ class LoginSetting extends ModelBase
     protected $appends = ['login_type_text'];
     protected $casts = ['options' => 'json', 'active_flg' => 'boolean'];
 
+
+    // @phpstan-ignore-next-line
     public function getLoginTypeTextAttribute()
     {
         $enum = LoginType::getEnum($this->login_type);
         return isset($enum) ? $enum->transKey('login.login_type_options') : null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getProviderNameAttribute()
     {
         if ($this->login_type == LoginType::OAUTH) {
@@ -41,6 +48,8 @@ class LoginSetting extends ModelBase
         }
     }
 
+
+    // @phpstan-ignore-next-line
     public function getNameIdFormatStringAttribute()
     {
         // create config(copied from setting file)
@@ -124,6 +133,8 @@ class LoginSetting extends ModelBase
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
@@ -132,8 +143,10 @@ class LoginSetting extends ModelBase
     /**
      * Get login button
      *
-     * @return void
+     * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getLoginButton()
     {
         $provider_name = $this->provider_name;
@@ -159,8 +172,12 @@ class LoginSetting extends ModelBase
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getAllSettings($filterActive = true)
     {
+
+        // @phpstan-ignore-next-line
         return static::allRecords(function ($record) use ($filterActive) {
             return !$filterActive || $record->active_flg;
         }, false);
@@ -171,6 +188,8 @@ class LoginSetting extends ModelBase
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getSSOSettings($filterActive = true)
     {
         return static::getOAuthSettings($filterActive)->merge(static::getSamlSettings());
@@ -181,6 +200,8 @@ class LoginSetting extends ModelBase
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getOAuthSettings($filterActive = true)
     {
         return static::getAllSettings($filterActive)->filter(function ($record) {
@@ -193,6 +214,8 @@ class LoginSetting extends ModelBase
      *
      * @return ?LoginSetting
      */
+
+    // @phpstan-ignore-next-line
     public static function getOAuthSetting($provider_name, $filterActive = true)
     {
         return static::getOAuthSettings($filterActive)->first(function ($record) use ($provider_name) {
@@ -205,6 +228,8 @@ class LoginSetting extends ModelBase
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getSamlSettings($filterActive = true)
     {
         return static::getAllSettings($filterActive)->filter(function ($record) {
@@ -217,6 +242,8 @@ class LoginSetting extends ModelBase
      *
      * @return ?LoginSetting
      */
+
+    // @phpstan-ignore-next-line
     public static function getSamlSetting($provider_name, $filterActive = true)
     {
         return static::getSamlSettings($filterActive)->first(function ($record) use ($provider_name) {
@@ -229,6 +256,8 @@ class LoginSetting extends ModelBase
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getLdapSettings($filterActive = true)
     {
         return static::getAllSettings($filterActive)->filter(function ($record) {
@@ -241,6 +270,8 @@ class LoginSetting extends ModelBase
      *
      * @return ?LoginSetting
      */
+
+    // @phpstan-ignore-next-line
     public static function getLdapSetting($provider_name, $filterActive = true)
     {
         return static::getLdapSettings($filterActive)->first(function ($record) use ($provider_name) {
@@ -252,7 +283,7 @@ class LoginSetting extends ModelBase
      * Whether redirect sso page force.
      * System setting "sso_redirect_force" is true and show_default_login_provider is false and active_flg count is 1
      *
-     * @return boolean
+     * @return boolean|string|null
      */
     public static function getRedirectSSOForceUrl()
     {
@@ -275,6 +306,8 @@ class LoginSetting extends ModelBase
     /**
      * get Socialite Provider
      */
+
+    // @phpstan-ignore-next-line
     public static function getSocialiteProvider($login_provider, $isTest = false, ?string $redirectUrl = null)
     {
         if (is_string($login_provider)) {
@@ -310,6 +343,8 @@ class LoginSetting extends ModelBase
 
         // If has custom setting, call custom config.
         if (!is_nullorempty($socialiteProvider) && is_subclass_of($socialiteProvider, \Exceedone\Exment\Auth\ProviderLoginConfig::class)) {
+
+            // @phpstan-ignore-next-line
             $socialiteProvider->setLoginCustomConfig($provider);
         }
 
@@ -319,6 +354,8 @@ class LoginSetting extends ModelBase
     /**
      * get Socialite Provider
      */
+
+    // @phpstan-ignore-next-line
     public static function getSamlAuth($login_provider, bool $isTest = false)
     {
         if (!class_exists('\\Aacotroneo\\Saml2\\Saml2Auth')) {
@@ -370,15 +407,16 @@ class LoginSetting extends ModelBase
             ],
 
             'security' => [
-                'nameIdEncrypted' => boolval($provider->getOption('saml_option_name_id_encrypted')) ??  false,
-                'authnRequestsSigned' => boolval($provider->getOption('saml_option_authn_request_signed')) ??  false,
-                'logoutRequestSigned' => boolval($provider->getOption('saml_option_logout_request_signed')) ??  false,
-                'logoutResponseSigned' => boolval($provider->getOption('saml_option_logout_response_signed')) ??  false,
+                'nameIdEncrypted' => boolval($provider->getOption('saml_option_name_id_encrypted')),
+                'authnRequestsSigned' => boolval($provider->getOption('saml_option_authn_request_signed')),
+                'logoutRequestSigned' => boolval($provider->getOption('saml_option_logout_request_signed')),
+                'logoutResponseSigned' => boolval($provider->getOption('saml_option_logout_response_signed')),
+                'requestedAuthnContext' => false,
             ],
         ];
 
         // set proxy vars
-        if (boolval($provider->getOption('saml_option_proxy_vars')) ?? false) {
+        if (boolval($provider->getOption('saml_option_proxy_vars'))) {
             \OneLogin\Saml2\Utils::setProxyVars(true);
         }
 

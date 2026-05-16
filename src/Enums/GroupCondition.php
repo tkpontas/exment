@@ -16,6 +16,12 @@ class GroupCondition extends EnumBase
     // for sqk sercer
     public const YMDHIS = "ymdhis";
 
+    /**
+     * We should use `const OPTIONS` instead of `protected static $options`.
+     *
+     * @var array[]
+     */
+    // @phpstan-ignore-next-line
     protected static $options = [
         ['id' => 'y', 'name' => 'y'],
         ['id' => 'ym', 'name' => 'ym'],

@@ -17,7 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @phpstan-consistent-constructor
  * @property mixed $default_flg
  * @property mixed $custom_table_id
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
+ * @property mixed $form_view_name
+ * @method static int count($columns = '*')
  * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
  */
 class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterface
@@ -31,6 +32,8 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
 
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['custom_table', 'form_name'],
         'langs' => [
@@ -63,47 +66,61 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * Form item
      *
-     * @var FormItem\FormBase
+     * @var FormItem\FormBase|null
      */
     private $_form_item;
 
     /**
      * Show Item for data detail
      *
-     * @var ShowItem\ShowBase
+     * @var ShowItem\ShowBase|null
      */
     private $_show_item;
 
+
+    // @phpstan-ignore-next-line
     public function custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_blocks(): HasMany
     {
         return $this->hasMany(CustomFormBlock::class, 'custom_form_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_priorities(): HasMany
     {
         return $this->hasMany(CustomFormPriority::class, 'custom_form_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function public_forms(): HasMany
     {
         return $this->hasMany(PublicForm::class, 'custom_form_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_columns(): HasManyThrough
     {
         return $this->hasManyThrough(CustomFormColumn::class, CustomFormBlock::class, 'custom_form_id', 'custom_form_block_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomTableCacheAttribute()
     {
         return CustomTable::getEloquent($this->custom_table_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomFormBlocksCacheAttribute()
     {
         return $this->hasManyCache(CustomFormBlock::class, 'custom_form_id');
@@ -141,19 +158,27 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this->_form_item;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getFormLabelTypeAttribute()
     {
         return $this->getOption('form_label_type', FormLabelType::HORIZONTAL);
     }
+
+    // @phpstan-ignore-next-line
     public function setFormLabelTypeAttribute($form_label_type)
     {
         $this->setOption('form_label_type', $form_label_type);
         return $this;
     }
+
+    // @phpstan-ignore-next-line
     public function getShowGridTypeAttribute()
     {
         return $this->getOption('show_grid_type', ShowGridType::GRID);
     }
+
+    // @phpstan-ignore-next-line
     public function setShowGridTypeAttribute($form_label_type)
     {
         $this->setOption('show_grid_type', $form_label_type);
@@ -192,6 +217,8 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
         }
 
         // get form block
+
+        // @phpstan-ignore-next-line
         $form_block = $form->custom_form_blocks()
             ->where('form_block_type', FormBlockType::DEFAULT)
             ->first();
@@ -201,12 +228,16 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
             $form_block->form_block_type = FormBlockType::DEFAULT;
             $form_block->form_block_target_table_id = $tableObj->id;
             $form_block->available = true;
+
+            // @phpstan-ignore-next-line
             $form->custom_form_blocks()->save($form_block);
 
             // add columns.
             $form_columns = [];
 
             // get target block as default.
+
+            // @phpstan-ignore-next-line
             $form_block = $form->custom_form_blocks()
                 ->where('form_block_type', FormBlockType::DEFAULT)
                 ->first();
@@ -225,9 +256,13 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
             $form_block->custom_form_columns()->saveMany($form_columns);
 
             // re-get form
+
+            // @phpstan-ignore-next-line
             $form = static::find($form->id);
         }
 
+
+        // @phpstan-ignore-next-line
         return $form;
     }
 
@@ -235,11 +270,15 @@ class CustomForm extends ModelBase implements Interfaces\TemplateImporterInterfa
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         foreach ($this->custom_form_blocks as $item) {

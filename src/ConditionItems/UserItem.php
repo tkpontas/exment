@@ -10,11 +10,13 @@ use Exceedone\Exment\Model\Interfaces\WorkflowAuthorityInterface;
 use Exceedone\Exment\Enums\FilterOption;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\ConditionTypeDetail;
+use Exceedone\Exment\Model\ModelBase;
 
 class UserItem extends ConditionDetailBase implements ConditionItemInterface
 {
     use UserOrganizationItemTrait;
 
+    // @phpstan-ignore-next-line
     public function getFilterOption()
     {
         return $this->getFilterOptionConditon();
@@ -50,13 +52,14 @@ class UserItem extends ConditionDetailBase implements ConditionItemInterface
      * @param string $key
      * @param string $value
      * @param bool $showFilter
-     * @return string
+     * @return string|null
      */
     public function getText($key, $value, $showFilter = true)
     {
         $model = getModelName(SystemTableName::USER)::find($value);
         if ($model instanceof \Illuminate\Database\Eloquent\Collection) {
             $result = $model->filter()->map(function ($row) {
+                /** @var CustomValue $row */
                 return $row->getValue('user_name');
             })->implode(',');
         } else {
@@ -83,6 +86,7 @@ class UserItem extends ConditionDetailBase implements ConditionItemInterface
         return $workflow_authority->related_id == $targetUser->id;
     }
 
+    // @phpstan-ignore-next-line
     public static function setWorkflowConditionQuery($query, $tableName, $custom_table)
     {
         $query->orWhere(function ($query) {

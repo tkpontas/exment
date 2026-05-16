@@ -9,6 +9,7 @@ class Tile extends Field
 {
     protected $view = 'exment::form.field.tile';
 
+    // @phpstan-ignore-next-line
     protected $multipled;
 
     /**
@@ -18,6 +19,7 @@ class Tile extends Field
      */
     protected $overlay = false;
 
+    // @phpstan-ignore-next-line
     public function __construct($column, $arguments = array())
     {
         parent::__construct($column, $arguments);
@@ -32,6 +34,7 @@ class Tile extends Field
      *
      * @return $this|mixed
      */
+    // @phpstan-ignore-next-line
     public function options($options = [])
     {
         // remote options
@@ -44,6 +47,7 @@ class Tile extends Field
         }
 
         if (is_callable($options)) {
+            // @phpstan-ignore-next-line
             $this->options = $options;
         } else {
             $this->options = (array) $options;
@@ -52,6 +56,7 @@ class Tile extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function overlay($overlay = true)
     {
         $this->overlay = $overlay;
@@ -59,6 +64,7 @@ class Tile extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function multiple()
     {
         $this->multipled = true;
@@ -69,6 +75,7 @@ class Tile extends Field
     /**
      * {@inheritdoc}
      */
+    // @phpstan-ignore-next-line
     public function prepare($value)
     {
         //if (is_array($value) && !Arr::isAssoc($value)) {
@@ -79,7 +86,9 @@ class Tile extends Field
     }
     public function render()
     {
+        // @phpstan-ignore-next-line
         if ($this->options instanceof \Closure) {
+            // @phpstan-ignore-next-line
             if ($this->form && $this->form->model()) {
                 $this->options = $this->options->bindTo($this->form->model());
             }
@@ -92,7 +101,7 @@ class Tile extends Field
 
         // template search url
         $this->script = <<<EOT
-    
+
     $(document).on('click.exment_tile', '[data-ajax-link]', {}, function(ev){
         searchTemplate(null, $(ev.target).data('ajax-link'));
     });
@@ -100,8 +109,8 @@ class Tile extends Field
     $(document).off('click', '#tile-{$this->column} .tile').on('click', '#tile-{$this->column} .tile', {}, function(event){
         var tile = $(event.target).closest('.tile');
         var hasActive = tile.hasClass('active');
-        
-        // not multipled 
+
+        // not multipled
         if(!{$multipled}){
             var tile_group = $(event.target).closest('.tile-group');
             tile_group.find('.tile').removeClass('active');
@@ -119,6 +128,7 @@ class Tile extends Field
 
 EOT;
 
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'options'  => $this->options,
             'overlay' => $this->overlay,

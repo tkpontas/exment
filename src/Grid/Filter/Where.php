@@ -10,7 +10,7 @@ class Where extends BaseWhere
     /**
      * where null query closure.
      *
-     * @var \Closure
+     * @var \Closure|null
      */
     protected $whereNull;
 
@@ -29,9 +29,9 @@ class Where extends BaseWhere
     /**
      * Get condition of this filter.
      *
-     * @param array $inputs
+     * @param array<string, mixed> $inputs
      *
-     * @return array|mixed|void
+     * @return array<string, mixed>|mixed|null
      */
     public function condition($inputs)
     {
@@ -52,9 +52,7 @@ class Where extends BaseWhere
     /**
      * Get query where null condition from filter.
      *
-     * @param array $inputs
-     *
-     * @return array|mixed|null
+     * @return array<string, mixed>|mixed|null
      */
     public function whereNullCondition()
     {
@@ -72,9 +70,9 @@ class Where extends BaseWhere
     /**
      * Get query condition from filter.
      *
-     * @param array $inputs
+     * @param array<string, mixed> $inputs
      *
-     * @return array|mixed|null
+     * @return array<string, mixed>|mixed|null
      */
     public function getCondition($inputs)
     {

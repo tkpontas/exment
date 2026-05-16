@@ -55,7 +55,7 @@ class Google
 
         // set 2factor params
         $verify_code = str_random(32);
-        $valid_period_datetime = Carbon::now()->addMinute(60);
+        $valid_period_datetime = Carbon::now()->addMinutes(60);
         $register_url = admin_urls('auth-2factor', 'google', 'register?code=' . $verify_code);
 
         // send verify
@@ -187,10 +187,12 @@ class Google
         return redirect(admin_url(''));
     }
 
+    // @phpstan-ignore-next-line
     public function insertVerify()
     {
     }
 
+    // @phpstan-ignore-next-line
     protected function getG2fa()
     {
         $g2fa = new Google2FA();

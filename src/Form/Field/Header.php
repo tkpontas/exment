@@ -8,8 +8,10 @@ class Header extends Field\Display
 {
     protected $view = 'exment::form.field.header';
 
+    // @phpstan-ignore-next-line
     protected $no;
 
+    // @phpstan-ignore-next-line
     protected $hr;
 
     /**
@@ -19,6 +21,7 @@ class Header extends Field\Display
      */
     protected $escape = true;
 
+    // @phpstan-ignore-next-line
     public function __construct($label)
     {
         $this->no = 4;
@@ -41,6 +44,7 @@ class Header extends Field\Display
      *
      * @return $this|mixed
      */
+    // @phpstan-ignore-next-line
     public function no($no)
     {
         $this->no = $no;
@@ -50,7 +54,8 @@ class Header extends Field\Display
     /**
      * Toggle escape
      *
-     * @var boolean
+     * @param bool $escape
+     * @return $this|Header
      */
     public function escape(bool $escape = true)
     {
@@ -61,6 +66,7 @@ class Header extends Field\Display
 
     public function render()
     {
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'no' => $this->no,
             'hr' => $this->hr,

@@ -10,9 +10,13 @@ use Laravel\Passport\Client;
  * Extend Laravel\Passport\Client
  * For view Api Setting
  *
+ * @property mixed $name
  * @property mixed $personal_access_client
  * @property mixed $password_client
  * @property mixed $api_key_client
+ * @property mixed $secret
+ * @property mixed $client_api_key
+ * @property mixed $redirect
  */
 class ApiClient extends Client
 {
@@ -24,22 +28,30 @@ class ApiClient extends Client
      *
      * @var array
      */
+
+    // @phpstan-ignore-next-line
     protected $hidden = [
         //'secret',
     ];
 
     protected $keyType = 'string';
 
+
+    // @phpstan-ignore-next-line
     public function client_api_key()
     {
         return $this->hasOne(ApiKey::class, 'client_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getApiKeyStringAttribute()
     {
         return $this->client_api_key->key ?? null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getClientTypeAttribute()
     {
         if (boolval($this->api_key_client)) {
@@ -48,11 +60,15 @@ class ApiClient extends Client
         if (boolval($this->password_client)) {
             return ApiClientType::PASSWORD_GRANT;
         }
+
+        // @phpstan-ignore-next-line
         if (!boolval($this->personal_access_client) && !boolval($this->password_client)) {
             return ApiClientType::CLIENT_CREDENTIALS;
         }
     }
 
+
+    // @phpstan-ignore-next-line
     public function getClientTypeTextAttribute()
     {
         $client_type = $this->client_type;

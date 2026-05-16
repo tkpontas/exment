@@ -5,18 +5,22 @@ namespace Exceedone\Exment\ColumnItems\CustomColumns;
 use Exceedone\Exment\ColumnItems\CustomItem;
 use Encore\Admin\Form;
 use Encore\Admin\Form\Field;
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Model\File as ExmentFile;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Enums\UrlTagType;
 use Exceedone\Exment\Enums\FileType;
 use Exceedone\Exment\Validator;
+use Illuminate\Contracts\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Http\UploadedFile;
 
 class File extends CustomItem
 {
     use SelectTrait;
 
+    // @phpstan-ignore-next-line
     public function saved()
     {
         $this->refreshTmpFile();
@@ -26,6 +30,7 @@ class File extends CustomItem
     /**
      * get file info
      */
+    // @phpstan-ignore-next-line
     public function file()
     {
         return ExmentFile::getFile($this->fileValue($this->value));
@@ -34,6 +39,7 @@ class File extends CustomItem
     /**
      * get text
      */
+    // @phpstan-ignore-next-line
     protected function _text($v)
     {
         if (!is_null($name = $this->getPublicFileName($v))) {
@@ -46,6 +52,7 @@ class File extends CustomItem
     /**
      * get html. show link to file
      */
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         if (!is_null($name = $this->getPublicFileName($v))) {
@@ -67,10 +74,11 @@ class File extends CustomItem
     /**
      * replace value for import
      *
-     * @param mixed $value
+     * @param $value
      * @param array $setting
-     * @return void
+     * @return array|true[]
      */
+    // @phpstan-ignore-next-line
     public function getImportValue($value, $setting = [])
     {
         if (is_nullorempty($value)) {
@@ -80,20 +88,25 @@ class File extends CustomItem
         }
 
         if (is_array($value)) {
-            $value = collect($value)->implode(",");
-        }
-
-        // Get file info by url
-        // only check by uuid
-        $uuid = pathinfo(trim($value, '/'), PATHINFO_FILENAME);
-        if (is_nullorempty($uuid)) {
+            $file_path = [];
+            foreach ($value as $val) {
+                $result = $this->getImportFilePath($val);
+                if ($result === false) {
+                    return [
+                        'skip' => true,
+                    ];
+                }
+                $file_path[] = $result;
+            }
+            // @phpstan-ignore-next-line
             return [
-                'skip' => true,
+                'result' => true,
+                'value' => $file_path
             ];
         }
 
-        $file = ExmentFile::where('uuid', $uuid)->first();
-        if (!isset($file)) {
+        $result = $this->getImportFilePath($value);
+        if ($result === false) {
             return [
                 'skip' => true,
             ];
@@ -102,10 +115,28 @@ class File extends CustomItem
         // return file path
         return [
             'result' => true,
-            'value' => $file->path,
+            'value' => $result
         ];
     }
 
+    // @phpstan-ignore-next-line
+    protected function getImportFilePath($value)
+    {
+        // Get file info by url
+        // only check by uuid
+        $uuid = pathinfo(trim($value, '/'), PATHINFO_FILENAME);
+        if (is_nullorempty($uuid)) {
+            return false;
+        }
+
+        $file = ExmentFile::where('uuid', $uuid)->first();
+        if (!isset($file)) {
+            return false;
+        }
+        return $file->path;
+    }
+
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         if ($this->isMultipleEnabled()) {
@@ -115,6 +146,7 @@ class File extends CustomItem
     }
 
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         // set file options
@@ -265,6 +297,7 @@ class File extends CustomItem
         return $value;
     }
 
+    // @phpstan-ignore-next-line
     protected static function getFileOptions($custom_column, $id)
     {
         $options = [
@@ -295,8 +328,9 @@ class File extends CustomItem
     /**
      * Get File Value. checking array
      *
-     * @return string
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     protected function fileValue($v)
     {
         if (is_null($v)) {
@@ -310,6 +344,7 @@ class File extends CustomItem
         return $v;
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
         $options = $this->custom_column->options;
@@ -321,8 +356,10 @@ class File extends CustomItem
         if (!is_null($accept_extensions = array_get($options, 'accept_extensions'))) {
             $validates[] = new Validator\FileRule(stringToArray($accept_extensions));
         }
+        $validates[] = new Validator\FileNameRule();
     }
 
+    // @phpstan-ignore-next-line
     protected function getCustomField($classname, $column_name_prefix = null)
     {
         $field = parent::getCustomField($classname, $column_name_prefix);
@@ -352,6 +389,12 @@ class File extends CustomItem
     }
 
 
+    /**
+     * @param \Exceedone\Exment\Database\Query\ExtendedBuilder $query
+     * @param $input
+     * @return void
+     */
+    // @phpstan-ignore-next-line
     public function getAdminFilterWhereQuery($query, $input)
     {
         list($mark, $value) = \Exment::getQueryMarkAndValue(true, $input);
@@ -374,6 +417,7 @@ class File extends CustomItem
      * @param string|null $q
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getSearchQueries($mark, $value, $takeCount, $q, $options = [])
     {
         // get values ids
@@ -393,11 +437,11 @@ class File extends CustomItem
     /**
      * Set Search orWhere for free text search
      *
-     * @param Builder $mark
+     * @param $query
      * @param string $mark
      * @param string $value
      * @param string|null $q
-     * @return void
+     * @return $this
      */
     public function setSearchOrWhere(&$query, $mark, $value, $q)
     {
@@ -415,8 +459,9 @@ class File extends CustomItem
      *
      * @param string $mark
      * @param string $value
-     * @return array target custom values's id list
+     * @return Collection target custom values's id list
      */
+    // @phpstan-ignore-next-line
     protected function getQueryIds($mark, $value)
     {
         ///// first, search document table
@@ -482,7 +527,9 @@ class File extends CustomItem
      * Get tmp file info
      *
      * @param string $name
-     * @return array|null
+     * @return mixed|null
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
     protected function getTmpFileInfo(string $name)
     {
@@ -500,7 +547,7 @@ class File extends CustomItem
      * Get tmp file from tmp folder
      *
      * @param string $name
-     * @return string
+     * @return UploadedFile|null
      */
     protected function getTmpFile(string $name)
     {

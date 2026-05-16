@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Model;
 
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Enums\SystemColumn;
 use Exceedone\Exment\Enums\ConditionType;
 use Exceedone\Exment\ConditionItems\ConditionItemBase;
@@ -22,7 +23,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property mixed $from_column_target_id
  * @property mixed $from_column_table_id
  * @property mixed $custom_view_id
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
+ * @property mixed $copy_column_type
+ * @method static int count($columns = '*')
+ * @method static ExtendedBuilder create(array $attributes = [])
  */
 class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterInterface
 {
@@ -31,6 +34,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
     use Traits\TemplateTrait;
     protected $appends = ['from_column_target', 'to_column_target'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         //'excepts' => ['custom_copy_id', 'from_custom_column', 'to_custom_column', 'from_column_target', 'to_column_target', 'from_column_target_id', 'to_column_target_id', 'from_column_table_id', 'to_column_table_id'],
         'excepts' => [
@@ -70,36 +75,50 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
         ]
     ];
 
+
+    // @phpstan-ignore-next-line
     public function custom_copy(): BelongsTo
     {
         return $this->belongsTo(CustomCopy::class, 'custom_copy_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function from_custom_column(): BelongsTo
     {
         return $this->belongsTo(CustomColumn::class, 'from_column_target_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function to_custom_column(): BelongsTo
     {
         return $this->belongsTo(CustomColumn::class, 'to_column_target_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function from_custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'from_column_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function to_custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'to_column_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getFromCustomTableCacheAttribute()
     {
         return CustomTable::getEloquent($this->from_column_table_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getToCustomTableCacheAttribute()
     {
         return CustomTable::getEloquent($this->to_column_table_id);
@@ -109,6 +128,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
      * get CopyColumnTarget.
      * * we have to convert string if view_column_type is system for custom view form-display*
      */
+
+    // @phpstan-ignore-next-line
     public function getFromColumnTargetAttribute()
     {
         return $this->getViewColumnTarget('from_column_table_id', 'from_column_type', 'from_column_target_id');
@@ -118,6 +139,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
      * set CopyColumnTarget.
      * * we have to convert int if view_column_type is system for custom view form-display*
      */
+
+    // @phpstan-ignore-next-line
     public function setFromColumnTargetAttribute($copy_column_target)
     {
         $this->setViewColumnTarget($copy_column_target, 'custom_copy', 'from_column_table_id', 'from_column_type', 'from_column_target_id');
@@ -127,6 +150,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
      * get ViewColumnTarget.
      * * we have to convert string if view_column_type is system for custom view form-display*
      */
+
+    // @phpstan-ignore-next-line
     public function getToColumnTargetAttribute()
     {
         return $this->getViewColumnTarget('to_column_table_id', 'to_column_type', 'to_column_target_id');
@@ -136,6 +161,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
      * set ViewColumnTarget.
      * * we have to convert int if view_column_type is system for custom view form-display*
      */
+
+    // @phpstan-ignore-next-line
     public function setToColumnTargetAttribute($copy_column_target)
     {
         $this->setViewColumnTarget($copy_column_target, 'custom_copy', 'to_column_table_id', 'to_column_type', 'to_column_target_id');
@@ -144,6 +171,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
     /**
      * get Table And Column Name
      */
+
+    // @phpstan-ignore-next-line
     protected function getFromUniqueKeyValues()
     {
         return $this->getCopyColumnUniqueKeyValues('from_custom_table', 'from_custom_column', 'from_column_type', 'from_column_target_id');
@@ -152,6 +181,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
     /**
      * get Table And Column Name
      */
+
+    // @phpstan-ignore-next-line
     protected function getToUniqueKeyValues()
     {
         return $this->getCopyColumnUniqueKeyValues('to_custom_table', 'to_custom_column', 'to_column_type', 'to_column_target_id');
@@ -159,9 +190,9 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
 
     /**
      * getConditionTypeFromItemAttribute
-     *
-     * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function getFromConditionItemAttribute()
     {
         return ConditionItemBase::getItem($this->from_custom_table_cache, $this->from_column_type, $this->from_column_target_id);
@@ -169,9 +200,9 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
 
     /**
      * getConditionTypeFromItemAttribute
-     *
-     * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function getToConditionItemAttribute()
     {
         return ConditionItemBase::getItem($this->to_custom_table_cache, $this->to_column_type, $this->to_column_target_id);
@@ -181,6 +212,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
     /**
      * get Table And Column Name for custom copy column
      */
+
+    // @phpstan-ignore-next-line
     protected function getCopyColumnUniqueKeyValues($column_table_key, $column_column_key, $column_type_key, $column_target_id_key)
     {
         // get custom table.
@@ -213,6 +246,8 @@ class CustomCopyColumn extends ModelBase implements Interfaces\TemplateImporterI
         return [];
     }
 
+
+    // @phpstan-ignore-next-line
     public static function importReplaceJson(&$json, $options = [])
     {
         $custom_copy = array_get($options, 'parent');

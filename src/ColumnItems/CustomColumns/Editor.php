@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\Storage;
 
 class Editor extends CustomItem
 {
+    // @phpstan-ignore-next-line
     protected $tmpfiles;
 
+    // @phpstan-ignore-next-line
     public function saving()
     {
         if (is_nullorempty($this->value)) {
@@ -27,6 +29,7 @@ class Editor extends CustomItem
         return strval($value);
     }
 
+    // @phpstan-ignore-next-line
     public function saved()
     {
         if (is_nullorempty($this->tmpfiles)) {
@@ -38,14 +41,16 @@ class Editor extends CustomItem
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function _text($v)
     {
         // replace img html
-        $v = $this->replaceImgUrl($v);
+        $v = $this::replaceImgUrl($v);
 
         return $v;
     }
 
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         $text = $this->_text($v);
@@ -61,11 +66,13 @@ class Editor extends CustomItem
         return  '<div class="show-tinymce">'.replaceBreak(html_clean($text), false).'</div>';
     }
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return Field\Tinymce::class;
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         $options = $this->custom_column->options;
@@ -73,7 +80,7 @@ class Editor extends CustomItem
 
         $item = $this;
         $field->callbackValue(function ($value) use ($item) {
-            return $item->replaceImgUrl($value);
+            return $item::replaceImgUrl($value);
         });
 
         if ($this->isPublicForm()) {
@@ -81,6 +88,7 @@ class Editor extends CustomItem
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
         // value string
@@ -97,7 +105,8 @@ class Editor extends CustomItem
      * @param ?string $v
      * @return string
      */
-    public function replaceImgUrl($v)
+    // @phpstan-ignore-next-line
+    public static function replaceImgUrl($v, $options = [])
     {
         // replace img html
         preg_match_all('/\<img(.*?)data-exment-file-uuid="(?<file_uuid>.*?)"(.*?)\>/u', $v, $matches);
@@ -111,9 +120,8 @@ class Editor extends CustomItem
             if (is_nullorempty($file_uuid)) {
                 continue;
             }
-
-            $url = ExmentFile::getUrl($file_uuid);
-
+            $url = ExmentFile::getUrl($file_uuid, $options);
+ 
             //replace src
             $replaceValue = preg_replace('/src="(.*?)"/u', 'src="' . $url . '"', $replaceValue);
             //$replaceValue = preg_replace('/data-exment-file-uuid="(.*?)"/u', "", $replaceValue);
@@ -125,6 +133,7 @@ class Editor extends CustomItem
     }
 
 
+    // @phpstan-ignore-next-line
     protected function savedFileInEditor($value)
     {
         if (is_nullorempty($value)) {
@@ -222,6 +231,7 @@ class Editor extends CustomItem
         return $value;
     }
 
+    // @phpstan-ignore-next-line
     protected function getExtention($type)
     {
         if (is_nullorempty($type)) {

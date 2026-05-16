@@ -8,6 +8,11 @@ trait ExmentKitPrepareTrait
 {
     /**
      * Prepare custom relation for form test.
+     * @param string $parent_table
+     * @param string $child_table
+     * @param int|null $relation_type
+     *
+     * @return void
      */
     protected function createCustomRelation($parent_table, $child_table, $relation_type = 1)
     {
@@ -20,12 +25,18 @@ trait ExmentKitPrepareTrait
         // Create custom relation
         $this->visit(admin_url("relation/$parent_table/create"))
                 ->submitForm('admin-submit', $data)
-                ->seePageIs('/admin/relation/' . $parent_table)
+                ->seePageIs(admin_url('relation/' . $parent_table))
                 ->seeInElement('td', array_get($row, 'table_view_name'));
     }
 
     /**
      * Prepare custom table for test.
+     *
+     * @param string $table_name
+     * @param int|null $search_enabled
+     * @param int|null $one_record_flg
+     *
+     * @return void
      */
     protected function createCustomTable($table_name, $search_enabled = 1, $one_record_flg = 0)
     {
@@ -58,6 +69,11 @@ trait ExmentKitPrepareTrait
 
     /**
      * Prepare custom column all columntype.
+     *
+     * @param string $table_name
+     * @param null|mixed $targets
+     *
+     * @return void
      */
     protected function createCustomColumns($table_name, $targets = null)
     {
@@ -230,7 +246,7 @@ trait ExmentKitPrepareTrait
                 // Create custom column
                 $this->post(admin_url("column/$table_name"), $data);
                 $this->visit(admin_url("column/$table_name"))
-                        ->seePageIs("/admin/column/$table_name")
+                        ->seePageIs(admin_url("column/$table_name"))
                         ->seeInElement('td', array_get($data, 'column_view_name'));
             }
         }

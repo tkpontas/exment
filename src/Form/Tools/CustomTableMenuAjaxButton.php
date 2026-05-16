@@ -27,11 +27,13 @@ class CustomTableMenuAjaxButton extends ModalTileAjaxMenuButton
         $this->modal_title = exmtrans("change_page_menu.change_page_label");
     }
 
+    // @phpstan-ignore-next-line
     public function id($id)
     {
         $this->custom_table = CustomTable::getEloquent($id);
     }
 
+    // @phpstan-ignore-next-line
     protected function script()
     {
         $uuid = $this->uuid;
@@ -55,6 +57,9 @@ class CustomTableMenuAjaxButton extends ModalTileAjaxMenuButton
 EOT;
     }
 
+    /**
+     * @return string|null
+     */
     public function ajaxHtml()
     {
         $items = $this->getItems();

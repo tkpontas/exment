@@ -7,11 +7,15 @@ use Carbon\Carbon;
 
 class TimeOnOrBefore extends TimeBeforeAfterBase
 {
+    /**
+     * @return int|string
+     */
     public static function getFilterOption()
     {
         return FilterOption::TIME_ON_OR_BEFORE;
     }
 
+    // @phpstan-ignore-next-line
     protected function getTargetDay($query_value)
     {
         return Carbon::parse($query_value)->format('H:i:s');

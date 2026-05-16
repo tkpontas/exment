@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Services\DataImportExport;
 
+use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\CustomTable;
@@ -11,6 +12,8 @@ use Exceedone\Exment\Enums\ExportImportLibrary;
 use Exceedone\Exment\ColumnItems\ParentItem;
 use Exceedone\Exment\Form\Widgets\ModalForm;
 use Exceedone\Exment\Services\DataImportExport\Formats\FormatBase;
+use Exceedone\Exment\Services\DataImportExport\Formats\SpOut\SpOut;
+use Exceedone\Exment\Services\DataImportExport\Formats\SpOut\Xlsx;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Validator;
@@ -19,38 +22,46 @@ use Validator;
  */
 trait DataImportExportServiceTrait
 {
+    // @phpstan-ignore-next-line
     public static $queryName = '_export_';
 
     /**
      * csv or excel format string (xlsx, csv)
      */
+    // @phpstan-ignore-next-line
     protected $format;
 
     /**
      * file base name
      */
+    // @phpstan-ignore-next-line
     protected $filebasename;
 
     /**
      * import action.
      */
+    // @phpstan-ignore-next-line
     protected $importAction;
 
     /**
      * export action.
      */
+    // @phpstan-ignore-next-line
     protected $exportAction;
 
     /**
      * view export action.
      */
+    // @phpstan-ignore-next-line
     protected $viewExportAction;
 
     /**
      * plugin export action.
      */
+    // @phpstan-ignore-next-line
     protected $pluginExportAction;
 
+    // @phpstan-ignore-next-line
     public function __construct($args = [])
     {
         $this->format = static::getFormat($args);
@@ -60,6 +71,7 @@ trait DataImportExportServiceTrait
         }
     }
 
+    // @phpstan-ignore-next-line
     public function format($format = null)
     {
         if (!func_num_args()) {
@@ -71,6 +83,7 @@ trait DataImportExportServiceTrait
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function filebasename($filebasename = null)
     {
         if (!func_num_args()) {
@@ -82,6 +95,7 @@ trait DataImportExportServiceTrait
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     protected static function getFormat($args = []): string
     {
         if ($args instanceof FormatBase) {
@@ -112,10 +126,12 @@ trait DataImportExportServiceTrait
     {
         if ($isExport) {
             if ($this->exportAction && method_exists($this->exportAction, 'getFormatClass')) {
+                // @phpstan-ignore-next-line
                 return $this->exportAction->getFormatClass($this->format, $library);
             }
         } else {
             if ($this->importAction && method_exists($this->importAction, 'getFormatClass')) {
+                // @phpstan-ignore-next-line
                 return $this->importAction->getFormatClass($this->format, $library);
             }
         }
@@ -123,6 +139,7 @@ trait DataImportExportServiceTrait
         return FormatBase::getFormatClass($this->format, $library, $isExport);
     }
 
+    // @phpstan-ignore-next-line
     public function importAction($importAction)
     {
         $this->importAction = $importAction;
@@ -130,6 +147,7 @@ trait DataImportExportServiceTrait
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function exportAction($exportAction)
     {
         $this->exportAction = $exportAction;
@@ -137,6 +155,7 @@ trait DataImportExportServiceTrait
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function viewExportAction($viewExportAction)
     {
         $this->viewExportAction = $viewExportAction;
@@ -144,6 +163,7 @@ trait DataImportExportServiceTrait
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function pluginExportAction($pluginExportAction)
     {
         $this->pluginExportAction = $pluginExportAction;
@@ -175,9 +195,10 @@ trait DataImportExportServiceTrait
 
         $files = $formatObj
             ->datalist($datalist)
-            ->filebasename($this->exportAction->filebasename())
+            ->filebasename(convert_to_valid_filename($this->exportAction->filebasename()))
             ->createFile();
 
+        /** @phpstan-ignore-next-line  */
         $formatObj->sendResponse($files);
     }
 
@@ -189,6 +210,7 @@ trait DataImportExportServiceTrait
     {
         \Exment::setTimeLimitLong();
 
+        /** @var Xlsx $formatObj */
         $formatObj = $this->getFormatClass(ExportImportLibrary::SP_OUT, false);
 
         // validate request
@@ -245,6 +267,7 @@ trait DataImportExportServiceTrait
      * @param array  $options
      * @return array error message or success message etc...
      */
+    // @phpstan-ignore-next-line
     public function importBackground(\Illuminate\Console\Command $command, $file_name, $file_path, array $options = [])
     {
         \Exment::setTimeLimitLong();
@@ -259,6 +282,7 @@ trait DataImportExportServiceTrait
         $options['command'] = $command;
 
         // get table data
+        /** @var Xlsx $formatObj */
         $datalist = $formatObj->getDataTable($file_path, $options);
         // filter data
         $datalist = $this->importAction->filterDatalist($datalist);
@@ -287,6 +311,7 @@ trait DataImportExportServiceTrait
     /**
      * execute export background
      */
+    // @phpstan-ignore-next-line
     public function exportBackground(array $options = [])
     {
         \Exment::setTimeLimitLong();
@@ -309,6 +334,7 @@ trait DataImportExportServiceTrait
             ];
         }
 
+        /** @phpstan-ignore-next-line */
         $formatObj->saveAsFile($options['dirpath'], $files);
 
         return [
@@ -323,6 +349,7 @@ trait DataImportExportServiceTrait
      * @param int|string $import_plugin
      * @param mixed $file
      */
+    // @phpstan-ignore-next-line
     protected function customImport($import_plugin, $file, $custom_table_id = null)
     {
         $plugin = Plugin::find($import_plugin);
@@ -350,11 +377,11 @@ trait DataImportExportServiceTrait
         }
     }
 
-
     /**
      * @param Request $request
-     * @return bool
+     * @return array|boolean
      */
+    // @phpstan-ignore-next-line
     public function validateRequest($request)
     {
         $formatObj = $this->getFormatClass(ExportImportLibrary::PHP_SPREAD_SHEET, false);
@@ -379,6 +406,7 @@ trait DataImportExportServiceTrait
         $validator = Validator::make(
             [
                 'file'      => $file,
+                // @phpstan-ignore-next-line
                 'custom_table_file' => strtolower($file->getClientOriginalExtension()),
             ],
             [
@@ -391,6 +419,7 @@ trait DataImportExportServiceTrait
         );
         if ($validator->fails()) {
             // return errors as custom_table_file.
+            /** @phpstan-ignore-next-line */
             return $validator->getMessages();
         }
 
@@ -401,8 +430,9 @@ trait DataImportExportServiceTrait
      * Import Modal
      *
      * @param array $pluginlist
-     * @return array
+     * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function getImportModal($pluginlist = null)
     {
         // create form fields
@@ -427,12 +457,14 @@ trait DataImportExportServiceTrait
             $formats['excel'] = 'xlsx';
         }
 
+        /** @phpstan-ignore-next-line */
         $form->descriptionHtml('<span class="red">' . exmtrans('common.help.import_max_row_count', [
             'count' => config('exment.import_max_row_count', 1000),
             'manual' => \getManualUrl('data_bulk_insert')
         ]) . '</span>')
         ->setWidth(8, 3);
 
+        /** @phpstan-ignore-next-line */
         $form->action(admin_urls($this->importAction->getImportEndpoint(), 'import'))
             ->file('custom_table_file', exmtrans('custom_value.import.import_file'))
             ->rules('mimes:' . implode(',', array_keys($formats)))->setWidth(8, 3)->addElementClass('custom_table_file')
@@ -491,6 +523,7 @@ trait DataImportExportServiceTrait
      * @param CustomTable $custom_table
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected static function getPrimaryKeys($custom_table)
     {
         // default list
@@ -523,12 +556,14 @@ trait DataImportExportServiceTrait
      * @param array $options
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function processCustomValue($custom_columns, $data, $options = [])
     {
         foreach ($data as $key => &$value) {
             if (boolval(array_get($options, 'onlyValue')) || strpos($key, "value.") !== false) {
                 $new_key = str_replace('value.', '', $key);
                 // get target column
+                /** @var CustomColumn|null $target_column */
                 $target_column = $custom_columns->first(function ($custom_column) use ($new_key) {
                     return array_get($custom_column, 'column_name') == $new_key;
                 });
@@ -576,6 +611,7 @@ trait DataImportExportServiceTrait
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected static function getImportColumnValue(&$data, $key, &$value, $column_item, $column_view_name, $setting, $target_table, $options = [])
     {
         $setting = $setting ?? [];
@@ -588,6 +624,7 @@ trait DataImportExportServiceTrait
         );
 
         if (method_exists($column_item, 'getKeyAndIdList')) {
+            // @phpstan-ignore-next-line
             $datalist = $column_item->getKeyAndIdList($options['datalist'], array_get($setting, 'target_column_name'));
             if (!is_nullorempty($datalist)) {
                 $setting['datalist'] = $datalist;

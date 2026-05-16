@@ -14,10 +14,18 @@ trait BetweenTrait
     /**
      * where null query closure.
      *
-     * @var \Closure
+     * @var \Closure|null
      */
     protected $whereNull;
 
+    /**
+     * Construct the filter.
+     *
+     * @param \Closure $query
+     * @param string $label
+     * @param string|null $column
+     * @return void
+     */
     protected function construct(\Closure $query, $label, $column = null)
     {
         $this->where = $query;
@@ -59,9 +67,7 @@ trait BetweenTrait
     /**
      * Get query where null condition from filter.
      *
-     * @param array $inputs
-     *
-     * @return array|mixed|null
+     * @return array<string, mixed>|mixed|null
      */
     public function whereNullCondition()
     {

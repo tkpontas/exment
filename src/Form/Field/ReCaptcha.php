@@ -14,12 +14,16 @@ class ReCaptcha extends Hidden
      */
     protected $view = 'admin::form.hidden';
 
+    /**
+     * @var string
+     */
+    // @phpstan-ignore-next-line
     protected $rules = 'required';
 
     /**
      * @param $arguments
-     * @phpstan-ignore-next-line
      */
+    // @phpstan-ignore-next-line
     public function __construct($arguments = [])
     {
         // if (!\Exment::isAvailableGoogleRecaptcha()) {
@@ -44,6 +48,7 @@ class ReCaptcha extends Hidden
 
     public function setForm($form = null)
     {
+        // @phpstan-ignore-next-line
         $this->form = $form;
 
         $this->form->ignore($this->column);

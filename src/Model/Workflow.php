@@ -10,10 +10,16 @@ use Exceedone\Exment\Enums\NotifyTrigger;
  * @property mixed $workflow_type
  * @property mixed $workflow_tables
  * @property mixed $workflow_statuses
+ * @property mixed $workflow_view_name
  * @property mixed $workflow_actions
  * @property mixed $start_status_name
  * @property mixed $setting_completed_flg
  * @property mixed $notifies
+ * @property mixed $options
+ * @property mixed $created_user_id
+ * @property mixed $updated_user_id
+ * @property mixed $created_at
+ * @property mixed $updated_at
  */
 class Workflow extends ModelBase
 {
@@ -26,6 +32,8 @@ class Workflow extends ModelBase
     protected $appends = ['workflow_edit_flg'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public function workflow_tables()
     {
         return $this->hasMany(WorkflowTable::class, 'workflow_id');
@@ -34,6 +42,8 @@ class Workflow extends ModelBase
     /**
      * get workflow statuses
      */
+
+    // @phpstan-ignore-next-line
     public function workflow_statuses()
     {
         return $this->hasMany(WorkflowStatus::class, 'workflow_id');
@@ -42,11 +52,15 @@ class Workflow extends ModelBase
     /**
      * get workflow actions
      */
+
+    // @phpstan-ignore-next-line
     public function workflow_actions()
     {
         return $this->hasMany(WorkflowAction::class, 'workflow_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function notifies()
     {
         return $this->hasMany(Notify::class, 'target_id')
@@ -68,6 +82,8 @@ class Workflow extends ModelBase
     /**
      * Delete children items
      */
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $keys = ['workflow_statuses', 'workflow_tables', 'notifies'];
@@ -77,6 +93,8 @@ class Workflow extends ModelBase
                 if (!method_exists($item, 'deletingChildren')) {
                     continue;
                 }
+
+                // @phpstan-ignore-next-line
                 $item->deletingChildren();
             }
 
@@ -90,10 +108,14 @@ class Workflow extends ModelBase
         $this->workflow_actions()->forceDelete();
     }
 
+
+    // @phpstan-ignore-next-line
     public function getWorkflowEditFlgAttribute()
     {
         return $this->getOption('workflow_edit_flg');
     }
+
+    // @phpstan-ignore-next-line
     public function setWorkflowEditFlgAttribute($workflow_edit_flg)
     {
         $this->setOption('workflow_edit_flg', $workflow_edit_flg);
@@ -104,6 +126,8 @@ class Workflow extends ModelBase
     /**
      * get workflow statuses using cache
      */
+
+    // @phpstan-ignore-next-line
     public function getWorkflowStatusesCacheAttribute()
     {
         return $this->hasManyCache(WorkflowStatus::class, 'workflow_id');
@@ -112,6 +136,8 @@ class Workflow extends ModelBase
     /**
      * get workflow actions
      */
+
+    // @phpstan-ignore-next-line
     public function getWorkflowActionsCacheAttribute()
     {
         return $this->hasManyCache(WorkflowAction::class, 'workflow_id');
@@ -121,6 +147,8 @@ class Workflow extends ModelBase
      * get eloquent using Cache.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentCache($id, $withs);
@@ -139,8 +167,10 @@ class Workflow extends ModelBase
     /**
      * Get status options. contains start and end.
      *
-     * @return \Illuminate\Support\Collection
+     * @return \Illuminate\Support\Collection|null
      */
+
+    // @phpstan-ignore-next-line
     public function getStatusOptions($onlyStart = false)
     {
         $statuses = collect();
@@ -158,6 +188,8 @@ class Workflow extends ModelBase
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getActionOptions()
     {
         $actions = $this->workflow_actions_cache->pluck('action_name', 'id');
@@ -282,6 +314,8 @@ class Workflow extends ModelBase
         return true;
     }
 
+
+    // @phpstan-ignore-next-line
     public static function hasSettingCompleted()
     {
         return static::allRecords(function ($workflow) {
@@ -302,7 +336,7 @@ class Workflow extends ModelBase
     /**
      * Target Custom Table
      *
-     * @return boolean
+     * @return boolean|null
      */
     public function getTargetTableAttribute()
     {

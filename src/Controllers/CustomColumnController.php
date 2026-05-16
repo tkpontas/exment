@@ -47,7 +47,7 @@ class CustomColumnController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -58,15 +58,14 @@ class CustomColumnController extends AdminControllerTableBase
         return parent::index($request, $content);
     }
 
-
     /**
      * Edit
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|Response
+     * @param $tableKey
+     * @param $id
+     * @return Content|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -81,9 +80,39 @@ class CustomColumnController extends AdminControllerTableBase
     }
 
     /**
+     * Update the specified resource in storage.
+     *
+     * @param int $id
+     *
+     * @return \Illuminate\Http\Response|void
+     */
+    // @phpstan-ignore-next-line
+    public function update($tableKey, $id)
+    {   
+        //Validation table value
+        if (!$this->validateTable($this->custom_table, Permission::CUSTOM_TABLE)) {
+            return;
+        }
+        if (!$this->validateTableAndId(CustomColumn::class, $id, 'column')) {
+            return;
+        }
+        if (request()->has('column_type')) {
+            $column_type = request()->get('column_type');
+            $column = $this->custom_columns->first(function ($value) use ($id) {
+                return $value->id == $id;
+            });
+            if (!$this->validateEditColumnType($column, $column_type)) {
+                return;
+            }
+        }
+
+        return $this->form($id)->update($id);
+    }
+
+    /**
      * Create interface.
      *
-     * @return Content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -135,6 +164,7 @@ class CustomColumnController extends AdminControllerTableBase
         });
 
         $grid->tools(function (Grid\Tools $tools) {
+            // @phpstan-ignore-next-line
             $tools->append(new Tools\CustomTableMenuButton('column', $this->custom_table));
         });
 
@@ -170,8 +200,12 @@ class CustomColumnController extends AdminControllerTableBase
     /**
      * Make a form builder.
      *
+     * @param $id
      * @return Form
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new CustomColumn());
@@ -343,11 +377,13 @@ class CustomColumnController extends AdminControllerTableBase
             if (isset($id) && boolval(CustomColumn::getEloquent($id)->disabled_delete)) {
                 $tools->disableDelete();
             }
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('column', $custom_table));
         });
         return $form;
     }
 
+    // @phpstan-ignore-next-line
     public function calcModal(Request $request, $tableKey, $id = null)
     {
         // get other columns
@@ -377,6 +413,7 @@ class CustomColumnController extends AdminControllerTableBase
     /**
      * add column form and view after saved
      */
+    // @phpstan-ignore-next-line
     protected function addColumnAfterSaved($model)
     {
         // set custom form columns --------------------------------------------------
@@ -401,6 +438,7 @@ class CustomColumnController extends AdminControllerTableBase
                 $order++;
 
                 // get width
+                // @phpstan-ignore-next-line
                 $width = $form_block->custom_form_columns()
                     ->where('row_no', 1)
                     ->where('column_no', 1)
@@ -479,6 +517,7 @@ class CustomColumnController extends AdminControllerTableBase
      * @param Request $request
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function columnTypeHtml(Request $request)
     {
         $val = $request->get('val');
@@ -508,6 +547,7 @@ class CustomColumnController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getCustomItem(Request $request, $id, $column_type)
     {
         return CustomItem::getItem(new CustomColumn([

@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Tests\Unit;
 
+use Exceedone\Exment\Model\CustomViewColumn;
 use Exceedone\Exment\Tests\DatabaseTransactions;
 use Encore\Admin\Grid;
 use Exceedone\Exment\Enums\ConditionType;
@@ -18,6 +19,9 @@ class CustomViewTest extends UnitTestBase
     use CustomViewTrait;
     use DatabaseTransactions;
 
+    /**
+     * @return void
+     */
     public function testFuncGetMatchedCustomView1()
     {
         $array = $this->getData('custom_value_edit_all', 'custom_value_edit_all-view-and');
@@ -26,6 +30,9 @@ class CustomViewTest extends UnitTestBase
         }
     }
 
+    /**
+     * @return void
+     */
     public function testFuncGetMatchedCustomView2()
     {
         $array = $this->getData('custom_value_edit_all', 'custom_value_edit_all-view-or');
@@ -38,6 +45,9 @@ class CustomViewTest extends UnitTestBase
         $this->assertTrue($andCount != $array->count());
     }
 
+    /**
+     * @return void
+     */
     public function testFuncGetSortedByParent1()
     {
         $array = $this->getData('child_table', 'child_table-parent-sort');
@@ -50,6 +60,9 @@ class CustomViewTest extends UnitTestBase
         }
     }
 
+    /**
+     * @return void
+     */
     public function testFuncGetSortedByParent2()
     {
         $array = $this->getData('child_table', 'child_table-parent-sort-mix');
@@ -62,6 +75,9 @@ class CustomViewTest extends UnitTestBase
         }
     }
 
+    /**
+     * @return void
+     */
     public function testFuncGetSortedBySelectTable()
     {
         $array = $this->getData('all_columns_table_fortest', 'all_columns_table_fortest-select-table-1');
@@ -76,6 +92,8 @@ class CustomViewTest extends UnitTestBase
 
     /**
      * show all columns refered parent_table
+     *
+     * @return void
      */
     public function testFuncParentTableAllColumns()
     {
@@ -119,6 +137,8 @@ class CustomViewTest extends UnitTestBase
 
     /**
      * show all columns refered parent_table
+     *
+     * @return void
      */
     public function testFuncParentTableNNAllColumns()
     {
@@ -160,6 +180,13 @@ class CustomViewTest extends UnitTestBase
         $this->checkSelectColumns($custom_table, $custom_view, $array, $relations->first());
     }
 
+    /**
+     * @param mixed $custom_table
+     * @param mixed $custom_view
+     * @param array<mixed> $array
+     * @param mixed $relation
+     * @return void
+     */
     protected function checkSelectColumns($custom_table, $custom_view, $array, $relation = null)
     {
         foreach ($array as $index => $data) {
@@ -168,6 +195,7 @@ class CustomViewTest extends UnitTestBase
             if (isset($relation)) {
                 $parent_value = $custom_value->getParentValue($relation);
             }
+            /** @var CustomViewColumn $custom_view_column */
             foreach ($custom_view->custom_view_columns as $custom_view_column) {
                 // get grid show value
                 $text = $custom_view_column->column_item->options([
@@ -199,6 +227,11 @@ class CustomViewTest extends UnitTestBase
         }
     }
 
+    /**
+     * @param mixed $custom_view_column
+     * @param mixed $compare_value
+     * @return mixed
+     */
     protected function getCompareValue($custom_view_column, $compare_value)
     {
         if ($custom_view_column->view_column_type == ConditionType::COLUMN) {
@@ -216,6 +249,8 @@ class CustomViewTest extends UnitTestBase
 
     /**
      * show all columns refered by select_table
+     *
+     * @return void
      */
     public function testFuncSelectTableAllColumns()
     {
@@ -262,6 +297,8 @@ class CustomViewTest extends UnitTestBase
     /**
      * show select table id in custom view
      * -- bug fixed confirm test
+     *
+     * @return void
      */
     public function testFuncSelectTableId()
     {
@@ -308,6 +345,8 @@ class CustomViewTest extends UnitTestBase
     /**
      * show select table text in custom view
      * -- bug fixed confirm test
+     *
+     * @return void
      */
     public function testFuncSelectTableText()
     {
@@ -360,6 +399,8 @@ class CustomViewTest extends UnitTestBase
     /**
      * show select table created_at in custom view
      * -- bug fixed confirm test
+     *
+     * @return void
      */
     public function testFuncSelectTableCreatedAt()
     {
@@ -399,6 +440,12 @@ class CustomViewTest extends UnitTestBase
         }
     }
 
+    /**
+     * @param mixed $table_name
+     * @param mixed $view_name
+     * @param int $page_count
+     * @return mixed
+     */
     protected function getData($table_name, $view_name, $page_count = 100)
     {
         $this->be(LoginUser::find(1));
@@ -419,18 +466,34 @@ class CustomViewTest extends UnitTestBase
 
         return $result;
     }
+
+    /**
+     * @param array<mixed> $data
+     * @return bool
+     */
     protected function andWhere($data)
     {
         return array_get($data, 'value.odd_even') != 'odd' &&
         array_get($data, 'value.multiples_of_3') == 1 &&
         array_get($data, 'value.user') == 2;
     }
+
+    /**
+     * @param array<mixed> $data
+     * @return bool
+     */
     protected function orWhere($data)
     {
         return array_get($data, 'value.odd_even') != 'odd' ||
         array_get($data, 'value.multiples_of_3') == 1 ||
         array_get($data, 'value.user') == 2;
     }
+
+    /**
+     * @param mixed $prev_data
+     * @param mixed $data
+     * @return bool
+     */
     protected function sortParent($prev_data, $data)
     {
         $prev_parent = $prev_data->getParentValue();
@@ -444,6 +507,12 @@ class CustomViewTest extends UnitTestBase
 
         return false;
     }
+
+    /**
+     * @param mixed $prev_data
+     * @param mixed $data
+     * @return bool
+     */
     protected function sortParentMix($prev_data, $data)
     {
         $prev_parent = $prev_data->getParentValue();
@@ -460,6 +529,12 @@ class CustomViewTest extends UnitTestBase
 
         return false;
     }
+
+    /**
+     * @param mixed $prev_data
+     * @param mixed $data
+     * @return bool
+     */
     protected function sortSelectTable($prev_data, $data)
     {
         $select_table_prev = $prev_data->getValue('select_table');

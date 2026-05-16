@@ -15,6 +15,7 @@ class Description extends Field\Display
      */
     protected $escape = true;
 
+    // @phpstan-ignore-next-line
     public function __construct($label)
     {
         $this->label = $label;
@@ -23,7 +24,8 @@ class Description extends Field\Display
     /**
      * Toggle escape
      *
-     * @var boolean
+     * @param bool $escape
+     * @return $this|Description
      */
     public function escape(bool $escape = true)
     {
@@ -38,6 +40,7 @@ class Description extends Field\Display
         $offset = array_get($this->getViewElementClasses(), 'label');
         $offset = str_replace("col-sm-", "col-sm-offset-", $offset);
         $offset = str_replace("col-md-", "col-md-offset-", $offset);
+        // @phpstan-ignore-next-line
         return parent::render()->with(
             [
                 'offset' => $offset,

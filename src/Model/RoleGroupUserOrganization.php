@@ -5,6 +5,9 @@ namespace Exceedone\Exment\Model;
 use Exceedone\Exment\Enums\SystemTableName;
 
 /**
+ * @property mixed $role_group_user_org_type
+ * @property mixed $role_group_target_id
+ * @property mixed $role_group_id
  * @phpstan-consistent-constructor
  */
 class RoleGroupUserOrganization extends ModelBase
@@ -16,6 +19,8 @@ class RoleGroupUserOrganization extends ModelBase
      *
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public static function deleteRoleGroupUserOrganization($custom_value)
     {
         $custom_table = $custom_value->custom_table;

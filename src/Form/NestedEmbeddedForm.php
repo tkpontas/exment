@@ -7,6 +7,7 @@ use Encore\Admin\Form\Field;
 
 class NestedEmbeddedForm extends EmbeddedForm
 {
+    // @phpstan-ignore-next-line
     protected $data_key;
 
     /**
@@ -14,6 +15,7 @@ class NestedEmbeddedForm extends EmbeddedForm
      *
      * @param string $column
      */
+    // @phpstan-ignore-next-line
     public function __construct($column, $data_key = null)
     {
         $this->data_key = $data_key;
@@ -47,7 +49,9 @@ class NestedEmbeddedForm extends EmbeddedForm
             $errorKey = "$errPrefix.$jsonKey";
         }
 
+        // @phpstan-ignore-next-line
         $field->setElementName($elementName)
+            // @phpstan-ignore-next-line
             ->setErrorKey($errorKey);
 
         // set class
@@ -76,8 +80,9 @@ class NestedEmbeddedForm extends EmbeddedForm
     /**
      * Get script of template.
      *
-     * @return string
+     * @return string|array
      */
+    // @phpstan-ignore-next-line
     public function getScripts()
     {
         $scripts = [];
@@ -88,6 +93,7 @@ class NestedEmbeddedForm extends EmbeddedForm
             $field->render();
 
             /*
+             // Laravel Admin facade not recognized
              * Get and remove the last script of Admin::$script stack.
              */
             if ($field->getScript()) {
@@ -102,10 +108,11 @@ class NestedEmbeddedForm extends EmbeddedForm
     /**
      * Set original values for fields.
      *
-     * @param array $data
+     * @param array|string $data
      *
      * @return $this
      */
+    // @phpstan-ignore-next-line
     public function setOriginal($data)
     {
         if (empty($data)) {

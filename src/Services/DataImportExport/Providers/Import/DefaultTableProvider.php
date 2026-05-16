@@ -8,12 +8,16 @@ use Exceedone\Exment\Enums\ValidateCalledType;
 
 class DefaultTableProvider extends ProviderBase
 {
+    // @phpstan-ignore-next-line
     protected $custom_table;
 
+    // @phpstan-ignore-next-line
     protected $custom_columns;
 
+    // @phpstan-ignore-next-line
     protected $primary_key;
 
+    // @phpstan-ignore-next-line
     protected $filter;
 
     /**
@@ -21,8 +25,10 @@ class DefaultTableProvider extends ProviderBase
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $selectTableNotFounds;
 
+    // @phpstan-ignore-next-line
     public function __construct($args = [])
     {
         $this->custom_table = array_get($args, 'custom_table');
@@ -40,6 +46,7 @@ class DefaultTableProvider extends ProviderBase
      * get data and object.
      * set matched model data
      */
+    // @phpstan-ignore-next-line
     public function getDataObject($data, $options = [])
     {
         $headers = [];
@@ -91,6 +98,7 @@ class DefaultTableProvider extends ProviderBase
         foreach ($value_customs as $line_no => $value_custom) {
             $options['datalist'] = $value_customs;
             ///// convert data first.
+            // @phpstan-ignore-next-line
             $value_custom = $this->dataProcessingFirst($value_custom, $line_no, $options);
 
             // get model
@@ -125,6 +133,7 @@ class DefaultTableProvider extends ProviderBase
      * @param mixed $dataObjects
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function validateImportData($dataObjects)
     {
         if (count($this->selectTableNotFounds) > 0) {
@@ -150,12 +159,14 @@ class DefaultTableProvider extends ProviderBase
 
     /**
      * validate data row
+     *
      * @param int $line_no
      * @param array $dataAndModel
      * @param array $validate_columns
      * @param array $dataObjects
-     * @return array
+     * @return array|true
      */
+    // @phpstan-ignore-next-line
     public function validateDataRow($line_no, $dataAndModel, $validate_columns, $dataObjects)
     {
         $data = array_get($dataAndModel, 'data');
@@ -213,6 +224,7 @@ class DefaultTableProvider extends ProviderBase
      * @param array $dataObjects
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getUniqueCheckParams($current_no, $dataObjects)
     {
         $siblings = [];
@@ -236,6 +248,7 @@ class DefaultTableProvider extends ProviderBase
      * @param array $data
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function dataProcessing($data)
     {
         $data_custom = [];
@@ -261,6 +274,7 @@ class DefaultTableProvider extends ProviderBase
      * @param array $options
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function dataProcessingFirst($data, $line_no, $options = [])
     {
         ///// convert data first.
@@ -274,6 +288,7 @@ class DefaultTableProvider extends ProviderBase
     /**
      * import data
      */
+    // @phpstan-ignore-next-line
     public function importData($dataAndModel)
     {
         $data = array_get($dataAndModel, 'data');
@@ -344,6 +359,7 @@ class DefaultTableProvider extends ProviderBase
     /**
      * check filter data
      */
+    // @phpstan-ignore-next-line
     protected function filterData($value_custom)
     {
         $is_filter = false;

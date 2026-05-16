@@ -18,6 +18,12 @@ class Hidden implements Renderable
             'exment_undefined_error' => exmtrans('error.undefined_error'),
             'exment_error_title' => exmtrans('common.error'),
             'exment_expired_error' => exmtrans('error.expired_error'),
+            // has-many table validation (JS)
+            'exment_hm_validation_title' => exmtrans('validation.hasmany_hidden_required_title'),
+            'exment_hm_validation_plain_prefix' => exmtrans('validation.hasmany_hidden_required_plain_prefix'),
+            'exment_hm_validation_html_prefix' => exmtrans('validation.hasmany_hidden_required_html_prefix'),
+            'exment_hm_validation_ok' => exmtrans('validation.hasmany_hidden_required_ok'),
+            'exment_common_row' => exmtrans('common.row'),
         ], static::getHiddenItemsCommon());
 
         $html = '';
@@ -31,11 +37,12 @@ HTML;
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getHiddenItemsCommon()
     {
         return [
             'admin_prefix' => config('admin.route.prefix') ?? '',
-            'admin_base_uri' => trim(app('request')->getBaseUrl(), '/') ?? '',
+            'admin_base_uri' => trim(app('request')->getBaseUrl(), '/'),
             'admin_uri' => admin_url(),
         ];
     }

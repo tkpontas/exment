@@ -57,19 +57,28 @@ class ChangeField extends Field
     /**
      * decide admin field element Closure fucntioon
      *
-     * @var \Closure
+     * @var \Closure|null
      */
     protected $adminField;
 
     /**
      * filter kind (view, workflow, form)
      *
-     * @var bool
+     * @var bool|null
      */
     protected $filterKind = null;
 
+    /**
+     * allow null
+     *
+     * @var bool
+     */
+    protected $allowNull = false;
+
+    // @phpstan-ignore-next-line
     protected static $scripts = [];
 
+    // @phpstan-ignore-next-line
     protected function getElementClass()
     {
         if (preg_match('/(^[^\[\]]+)\[([^\[\]]+)\]\[([^\[\]]+)\]$/', $this->elementName, $array_result)) {
@@ -80,6 +89,7 @@ class ChangeField extends Field
         return [];
     }
 
+    // @phpstan-ignore-next-line
     public function filterKind($filterKind = null)
     {
         if (isset($filterKind)) {
@@ -89,9 +99,18 @@ class ChangeField extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function ajax($ajax)
     {
         $this->ajax = $ajax;
+
+        return $this;
+    }
+
+    // @phpstan-ignore-next-line
+    public function allowNull($allowNull = true)
+    {
+        $this->allowNull = $allowNull;
 
         return $this;
     }
@@ -125,7 +144,7 @@ class ChangeField extends Field
     /**
      * Show Condition Key
      *
-     * @param string $showConditionKey
+     * @param bool $showConditionKey
      * @return $this
      */
     public function showConditionKey($showConditionKey)
@@ -150,6 +169,7 @@ class ChangeField extends Field
 
     /**
      */
+    // @phpstan-ignore-next-line
     public function replaceSearch($replaceSearch)
     {
         $this->replaceSearch = $replaceSearch;
@@ -159,6 +179,7 @@ class ChangeField extends Field
 
     /**
      */
+    // @phpstan-ignore-next-line
     public function replaceWord($replaceWord)
     {
         $this->replaceWord = $replaceWord;
@@ -166,6 +187,7 @@ class ChangeField extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     protected function script()
     {
         $ajax = $this->ajax;
@@ -188,7 +210,7 @@ EOT;
     {
         $script = collect(static::$scripts)->filter()->unique()->implode("");
         //static::$scripts = [];
-        \Admin::script($script);
+        //\Admin::script($script);
         return $script;
     }
 
@@ -203,7 +225,8 @@ EOT;
 
         if (isset($field)) {
             if (!($field instanceof \Exceedone\Exment\Form\Field\SwitchField) &&
-                !($field instanceof \Exceedone\Exment\Form\Field\Checkboxone)) {
+                !($field instanceof \Exceedone\Exment\Form\Field\Checkboxone) &&
+                !$this->allowNull) {
                 // required if visible
                 $field->required();
             }
@@ -219,16 +242,19 @@ EOT;
             static::$scripts[] = $field->getScript();
             return $view;
         } else {
+            $this->script = $this->getScript();
             return parent::render();
         }
     }
 
+    // @phpstan-ignore-next-line
     public function adminField($adminField): self
     {
         $this->adminField = $adminField;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function prepareRecord($value, $record)
     {
         if (isset($this->adminField)) {

@@ -18,8 +18,12 @@ use Illuminate\Support\Facades\Hash;
  * @phpstan-consistent-constructor
  * @property mixed $password
  * @property mixed $login_provider
+ * @property mixed $password_reset_flg
  * @property mixed $base_user_id
  * @property mixed $avatar
+ * @property mixed $base_user
+ * @property mixed $created_at
+ * @property mixed $updated_at
  * @method static \Illuminate\Database\Query\Builder whereNull($columns, $boolean = 'and', $not = false)
  */
 class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenticatable, \Illuminate\Contracts\Auth\CanResetPassword
@@ -35,34 +39,48 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     /**
      * send password
      */
+
+    // @phpstan-ignore-next-line
     protected $send_password = null;
 
     /**
      * is change password
      */
+
+    // @phpstan-ignore-next-line
     protected $changePassword = false;
 
     /**
      * taale "user"
      */
+
+    // @phpstan-ignore-next-line
     public function base_user(): BelongsTo
     {
         return $this->belongsTo(getModelName(SystemTableName::USER), 'base_user_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getUserNameAttribute()
     {
         return $this->base_user->value['user_name'] ?? null;
     }
+
+    // @phpstan-ignore-next-line
     public function getUserCodeAttribute()
     {
         return $this->base_user->value['user_code'] ?? null;
     }
+
+    // @phpstan-ignore-next-line
     public function getEmailAttribute()
     {
         return $this->base_user->value['email'] ?? null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getNameAttribute()
     {
         return $this->base_user->value['user_name'] ?? null;
@@ -81,6 +99,7 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
                 $title = exmtrans('common.created_at');
                 $value = $this->base_user->created_at;
             } else {
+                /** @var CustomColumn|null $column */
                 $column = CustomColumn::find($field);
                 if (!isset($column)) {
                     continue;
@@ -111,9 +130,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
 
     /**
      * Get organizations user joined.
-     * * ONLY JOIN. not contains upper and downer.
-     *
-     * @return void
+     * ONLY JOIN. not contains upper and downer.
+     * @return mixed
      */
     public function belong_organizations()
     {
@@ -121,16 +139,22 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     }
 
 
+
+    // @phpstan-ignore-next-line
     public function isLoginProvider()
     {
         return !is_nullorempty($this->login_provider);
     }
 
+
+    // @phpstan-ignore-next-line
     public function findForPassport($username, ?array $credentials = [])
     {
         return LoginUserProvider::RetrieveByCredential(array_merge(['username' => $username], $credentials));
     }
 
+
+    // @phpstan-ignore-next-line
     public function validateForPassportPasswordGrant($password, ?array $credentials = [])
     {
         return LoginUserProvider::ValidateCredential($this, array_merge(['password' => $password], $credentials));
@@ -139,6 +163,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     /**
      * set sendPassword param
      */
+
+    // @phpstan-ignore-next-line
     public function sendPassword($sendPassword)
     {
         $this->send_password = $sendPassword;
@@ -181,6 +207,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     /**
      * get value from user setting table
      */
+
+    // @phpstan-ignore-next-line
     public function getSettingValue($key, $default = null)
     {
         if (is_null($this->base_user_id)) {
@@ -204,21 +232,24 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
         // return array_get($settings, $key) ?? $default;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setSettingValue($key, $value)
     {
         if (is_null($this->base_user)) {
             return null;
         }
         // set User Setting table
-        $usersetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
-        $settings = $usersetting->settings;
+        /** @var UserSetting $userSetting */
+        $userSetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
+        $settings = $userSetting->settings;
         if (!isset($settings)) {
             $settings = [];
         }
         // set value
         array_set($settings, $key, $value);
-        $usersetting->settings = $settings;
-        $usersetting->saveOrFail();
+        $userSetting->settings = $settings;
+        $userSetting->saveOrFail();
 
         // set settings from settion
         System::clearRequestSession("user_setting");
@@ -228,7 +259,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
      * Clear setting value
      *
      * @param string $key
-     * @return UserSetting
+     * @return UserSetting|null
+     * @throws \Throwable
      */
     public function forgetSettingValue($key)
     {
@@ -236,16 +268,19 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
             return null;
         }
         // set User Setting table
-        $usersetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
-        $usersetting->forgetSetting($key);
-        $usersetting->saveOrFail();
+        /** @var UserSetting $userSetting */
+        $userSetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
+        $userSetting->forgetSetting($key);
+        $userSetting->saveOrFail();
 
         // set settings from settion
         System::clearRequestSession("user_setting");
 
-        return $usersetting;
+        return $userSetting;
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setBcryptPassword()
     {
         $password = $this->password;

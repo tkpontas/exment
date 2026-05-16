@@ -2,7 +2,11 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\AbstractPaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Model\CustomTable;
@@ -28,6 +32,9 @@ class ApiController extends AdminControllerBase
 
     /**
      * get Exment version
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function version(Request $request)
     {
@@ -37,7 +44,7 @@ class ApiController extends AdminControllerBase
     /**
      * get login user info
      * @param Request $request
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public function me(Request $request)
     {
@@ -56,8 +63,9 @@ class ApiController extends AdminControllerBase
 
     /**
      * get login user avatar
+     *
      * @param Request $request
-     * @return null|\Symfony\Component\HttpFoundation\StreamedResponse
+     * @return \Illuminate\Http\JsonResponse|\Symfony\Component\HttpFoundation\StreamedResponse|null
      */
     public function avatar(Request $request)
     {
@@ -146,6 +154,9 @@ class ApiController extends AdminControllerBase
 
     /**
      * get column list
+     *
+     * @param Request $request
+     * @param bool $onlyIndex
      * @return mixed
      */
     protected function _getcolumns(Request $request, $onlyIndex = true)
@@ -233,6 +244,7 @@ class ApiController extends AdminControllerBase
      */
     public function column($id, Request $request)
     {
+        // @phpstan-ignore-next-line
         return $this->responseColumn($request, CustomColumn::find($id));
     }
 
@@ -262,6 +274,7 @@ class ApiController extends AdminControllerBase
      * 3. get columns that belongs to target table
      * @param mixed $id select_table custon_column id
      */
+    // @phpstan-ignore-next-line
     public function targetBelongsColumns($id)
     {
         if (!isset($id)) {
@@ -291,6 +304,7 @@ class ApiController extends AdminControllerBase
     /**
      * get auth logs
      */
+    // @phpstan-ignore-next-line
     public function authLogs(Request $request)
     {
         $login_user = \Exment::user();
@@ -341,6 +355,7 @@ class ApiController extends AdminControllerBase
         $query->orderBy('created_at', 'desc');
         $paginator = $query->paginate($count);
 
+        // @phpstan-ignore-next-line
         $paginator->appends($request->all([
             'login_user_id',
             'base_user_id',
@@ -358,6 +373,7 @@ class ApiController extends AdminControllerBase
     /**
      * get auth log
      */
+    // @phpstan-ignore-next-line
     public function authLog(Request $request, $id)
     {
         $login_user = \Exment::user();
@@ -379,6 +395,7 @@ class ApiController extends AdminControllerBase
     /**
      * create notify
      */
+    // @phpstan-ignore-next-line
     public function notifyCreate(Request $request)
     {
         $is_single = false;
@@ -440,7 +457,7 @@ class ApiController extends AdminControllerBase
      * Get notify List
      *
      * @param Request $request
-     * @return void
+     * @return \Illuminate\Config\Repository|\Illuminate\Contracts\Foundation\Application|mixed|Response|null
      */
     public function notifyList(Request $request)
     {
@@ -475,8 +492,9 @@ class ApiController extends AdminControllerBase
      * Get notify for page
      *
      * @param Request $request
-     * @return void
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function notifyPage(Request $request)
     {
         // get notify NotifyNavbar list
@@ -513,7 +531,7 @@ class ApiController extends AdminControllerBase
      * Get user or organization for select
      *
      * @param Request $request
-     * @return void
+     * @return \Illuminate\Config\Repository|\Illuminate\Contracts\Foundation\Application|LengthAwarePaginator|mixed|Response|null
      */
     public function userOrganizationSelect(Request $request)
     {

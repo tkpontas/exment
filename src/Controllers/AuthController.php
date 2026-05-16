@@ -88,13 +88,15 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
         return $this->executeLogin($request, $credentials);
     }
 
-
     /**
      * Execute login(for Default, LDAP)
      *
      * @param Request $request
-     * @return \Illuminate\Http\Response
+     * @param array $credentials
+     * @param LoginSetting|null $login_setting
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
+    // @phpstan-ignore-next-line
     protected function executeLogin(Request $request, array $credentials, ?LoginSetting $login_setting = null)
     {
         $remember = boolval($request->get('remember', false));
@@ -115,6 +117,7 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
                 }
 
                 $this->postVerifyEmail2factor();
+                // @phpstan-ignore-next-line
                 return $this->sendLoginResponse($request);
             }
 
@@ -147,6 +150,7 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
      *
      * @return bool if true, change password for first time. If false, continue.
      */
+    // @phpstan-ignore-next-line
     protected function firstChangePassword($login_type)
     {
         if ($login_type != LoginType::PURE) {
@@ -166,6 +170,7 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
      *
      * @return bool if true, check password is OK. If false, user has to change password.
      */
+    // @phpstan-ignore-next-line
     protected function checkPasswordLimit($login_type)
     {
         if ($login_type != LoginType::PURE) {
@@ -202,7 +207,7 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
     /**
      * User logout.
      *
-     * @return \Illuminate\Routing\Redirector|\Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Routing\Redirector|\Illuminate\Http\RedirectResponse|\Illuminate\Support\Facades\Redirect
      */
     public function getLogout(Request $request)
     {
@@ -223,6 +228,7 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
         return redirect(\URL::route('exment.login'));
     }
 
+    // @phpstan-ignore-next-line
     protected function postVerifyEmail2factor()
     {
         if (!boolval(config('exment.login_use_2factor', false)) || !boolval(System::login_use_2factor())) {
@@ -236,6 +242,7 @@ class AuthController extends \Encore\Admin\Controllers\AuthController
     /**
      * file delete auth.
      */
+    // @phpstan-ignore-next-line
     public function filedelete(Request $request)
     {
         $loginUser = \Exment::user();

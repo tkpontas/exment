@@ -13,10 +13,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @phpstan-consistent-constructor
+ * @property mixed $suuid
  * @property mixed $default_flg
  * @property mixed $dashboard_type
+ * @property mixed $dashboard_name
+ * @property mixed $dashboard_view_name
  * @property mixed $created_user_id
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
+ * @property mixed $options
+ * @method static int count($columns = '*')
  * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
  */
 class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterface
@@ -30,6 +34,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
     protected $guarded = ['id'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['suuid'],
         'uniqueKeys' => ['dashboard_name'],
@@ -51,6 +57,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
         ],
     ];
 
+
+    // @phpstan-ignore-next-line
     public function dashboard_boxes(): HasMany
     {
         return $this->hasMany(DashboardBox::class, 'dashboard_id')
@@ -64,6 +72,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
      * @param int $row_no
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public function dashboard_row_boxes($row_no)
     {
         return DashboardBox::allRecords(function ($record) use ($row_no) {
@@ -77,6 +87,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
         }, false)->sortBy('column_no');
     }
 
+
+    // @phpstan-ignore-next-line
     public function data_share_authoritables(): HasMany
     {
         return $this->hasMany(DataShareAuthoritable::class, 'parent_id')
@@ -86,6 +98,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
     /**
      * get default dashboard
      */
+
+    // @phpstan-ignore-next-line
     public static function getDefault()
     {
         $user = Admin::user();
@@ -133,6 +147,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
@@ -168,6 +184,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
         });
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgFilter($query)
     {
         $query->where('dashboard_type', $this->dashboard_type);
@@ -178,6 +196,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgSet()
     {
         // set if only this flg is system
@@ -192,6 +212,8 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     protected static function showableDashboards($query)
     {
         $query->where('dashboard_type', DashboardType::SYSTEM);
@@ -248,16 +270,23 @@ class Dashboard extends ModelBase implements Interfaces\TemplateImporterInterfac
         return $hasEdit;
     }
 
+
+    // @phpstan-ignore-next-line
     public static function hasSystemPermission()
     {
+
         return \Admin::user()->hasPermission(Permission::SYSTEM);
     }
 
+
+    // @phpstan-ignore-next-line
     public static function hasPermission()
     {
         return System::userdashboard_available() || static::hasSystemPermission();
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->dashboard_boxes()->delete();

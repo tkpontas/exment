@@ -11,13 +11,15 @@ trait DataShareTrait
     /**
      * get listbox options contains user and org
      *
-     * @param CustomTable $custom_table
+     * @param CustomTable|null $custom_table
      * @param ?array $permission
      * @param bool $ignoreLoginUser if true, ignore login user id from options
      * @param ?string $default default setting
      * @param bool $all if true, get value for all
      * @return array $options : Select Options, $ajax : ajax url
      */
+
+    // @phpstan-ignore-next-line
     public static function getUserOrgSelectOptions($custom_table, $permission = null, $ignoreLoginUser = false, $default = null, $all = false)
     {
         $options = collect();
@@ -45,6 +47,7 @@ trait DataShareTrait
             ]);
 
             if ($ignoreLoginUser && $key == SystemTableName::USER) {
+
                 $user_id = \Exment::getUserId();
                 $optionItem = $optionItem->filter(function ($user, $id) use ($user_id) {
                     return $id != $user_id;
