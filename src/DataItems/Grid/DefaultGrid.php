@@ -2,33 +2,33 @@
 
 namespace Exceedone\Exment\DataItems\Grid;
 
+use Encore\Admin\Form;
 use Encore\Admin\Grid;
 use Encore\Admin\Grid\Column;
 use Encore\Admin\Grid\Linker;
-use Exceedone\Exment\Grid\Tools as GridTools;
-use Exceedone\Exment\Form\Tools;
-use Exceedone\Exment\Form\Widgets\SelectItemBox;
-use Exceedone\Exment\Model\RelationTable;
-use Exceedone\Exment\Model\System;
-use Exceedone\Exment\Model\Define;
-use Exceedone\Exment\Model\CustomTable;
-use Exceedone\Exment\Model\CustomRelation;
-use Exceedone\Exment\Model\CustomView;
-use Exceedone\Exment\Model\CustomColumn;
-use Exceedone\Exment\Model\Plugin;
-use Exceedone\Exment\Model\Workflow;
-use Exceedone\Exment\Services\DataImportExport;
 use Exceedone\Exment\ColumnItems;
 use Exceedone\Exment\Enums;
-use Exceedone\Exment\Enums\SystemColumn;
-use Exceedone\Exment\Enums\SearchType;
 use Exceedone\Exment\Enums\PluginEventTrigger;
+use Exceedone\Exment\Enums\SearchType;
+use Exceedone\Exment\Enums\SystemColumn;
+use Exceedone\Exment\Form\Tools;
+use Exceedone\Exment\Form\Widgets\SelectItemBox;
+use Exceedone\Exment\Grid\Tools as GridTools;
+use Exceedone\Exment\Model\CustomColumn;
+use Exceedone\Exment\Model\CustomRelation;
+use Exceedone\Exment\Model\CustomTable;
+use Exceedone\Exment\Model\CustomView;
+use Exceedone\Exment\Model\Define;
+use Exceedone\Exment\Model\Plugin;
+use Exceedone\Exment\Model\RelationTable;
+use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Model\Workflow;
+use Exceedone\Exment\Services\DataImportExport;
 use Exceedone\Exment\Services\PartialCrudService;
-use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Encore\Admin\Form;
 
 class DefaultGrid extends GridBase
 {
@@ -53,6 +53,7 @@ class DefaultGrid extends GridBase
             $this->gridFilterForModal($grid, $this->callback);
 
             $db_table_name = getDBTableName($this->custom_table);
+
             $grid->model()->select("$db_table_name.*");
         } else {
             $this->custom_view->filterSortModel(
@@ -86,7 +87,7 @@ class DefaultGrid extends GridBase
 
     /**
      * @param mixed $query
-     * @param array<string, mixed> $options
+     * @param array<string,mixed> $options
      * @return mixed
      */
     public function getQuery($query, array $options = [])
@@ -95,9 +96,10 @@ class DefaultGrid extends GridBase
     }
 
     /**
+     * @param mixed $grid
      * @return void
      */
-    public function setGrid(Grid $grid): void
+    public function setGrid($grid): void
     {
         $custom_table = $this->custom_table;
 
@@ -105,8 +107,9 @@ class DefaultGrid extends GridBase
             $this->custom_view->getHeaderOptions()
         );
 
-        /** @var iterable<int, mixed> $custom_view_columns */
-        $custom_view_columns = $this->custom_view->custom_view_columns_cache;
+        /** @var iterable<int,mixed> $custom_view_columns */
+        $custom_view_columns =
+            $this->custom_view->custom_view_columns_cache;
 
         foreach ($custom_view_columns as $custom_view_column) {
 
@@ -137,44 +140,50 @@ class DefaultGrid extends GridBase
             )
                 ->sort($item->sortable())
                 ->sortName($item->getSortName())
-                /**
-                 * @param EloquentBuilder|Model $query
-                 * @param array<int, string> $args
-                 */
-                ->sortCallback(function (&$query, $args) use ($custom_view_column): void {
+                ->sortCallback(
+                    /**
+                     * @param EloquentBuilder|Model $query
+                     * @param array<int,string> $args
+                     * @return void
+                     */
+                    function (&$query, $args) use ($custom_view_column): void {
 
-                    if ($query instanceof Model) {
-                        $query = $query->newQuery();
+                        if ($query instanceof Model) {
+                            $query = $query->newQuery();
+                        }
+
+                        if (!$query instanceof EloquentBuilder) {
+                            return;
+                        }
+
+                        $direction = count($args) > 0
+                            ? $args[0]
+                            : 'asc';
+
+                        $this->custom_view
+                            ->getSearchService()
+                            ->setQuery($query)
+                            ->addSelect()
+                            ->orderByCustomViewColumn(
+                                $custom_view_column,
+                                $direction
+                            );
                     }
-
-                    if (!$query instanceof EloquentBuilder) {
-                        return;
-                    }
-
-                    $direction = count($args) > 0
-                        ? $args[0]
-                        : 'asc';
-
-                    $this->custom_view
-                        ->getSearchService()
-                        ->setQuery($query)
-                        ->addSelect()
-                        ->orderByCustomViewColumn(
-                            $custom_view_column,
-                            $direction
-                        );
-                })
+                )
                 ->style($item->gridStyle())
                 ->setClasses([$className])
                 ->setHeaderStyle($item->gridHeaderStyle())
-                /**
-                 * @param mixed $v
-                 */
-                ->display(function ($v) use ($item): string {
-                    return (string)$item
-                        ->setCustomValue($this)
-                        ->html();
-                })
+                ->display(
+                    /**
+                     * @param mixed $v
+                     * @return string
+                     */
+                    function ($v) use ($item): string {
+                        return (string) $item
+                            ->setCustomValue($this)
+                            ->html();
+                    }
+                )
                 ->escape(false);
 
             $this->setGridColumn($column, $custom_view_column);
@@ -210,10 +219,152 @@ class DefaultGrid extends GridBase
     /**
      * @param Column $column
      * @param mixed $custom_view_column
+     * @return void
      */
     protected function setGridColumn(
         Column $column,
         $custom_view_column
     ): void {
+    }
+
+    /**
+     * @param mixed $grid
+     * @param callable|null $filter_func
+     * @return void
+     */
+    protected function gridFilterForModal(
+        $grid,
+        $filter_func
+    ): void {
+        System::setRequestSession(
+            Define::SYSTEM_KEY_SESSION_DISABLE_DATA_URL_TAG,
+            true
+        );
+    }
+
+    /**
+     * @return array<string,string|null>
+     */
+    public function getFilterHtml(): array
+    {
+        return [
+            'html' => null,
+            'script' => null,
+        ];
+    }
+
+    /**
+     * @param mixed $grid
+     * @param bool $ajax
+     * @return void
+     */
+    protected function setCustomGridFilters(
+        $grid,
+        bool $ajax = false
+    ): void {
+    }
+
+    /**
+     * @param mixed $filter
+     * @return Collection<int,mixed>
+     */
+    protected function getFilterColumns($filter): Collection
+    {
+        return new Collection([]);
+    }
+
+    /**
+     * @param array<int,mixed> $filterItems
+     * @return void
+     */
+    protected function setRelationFilter(
+        array &$filterItems
+    ): void {
+    }
+
+    /**
+     * @param array<int,mixed> $filterItems
+     * @return void
+     */
+    protected function setColumnFilter(
+        array &$filterItems
+    ): void {
+    }
+
+    /**
+     * @param mixed $grid
+     * @return void
+     */
+    protected function manageMenuToolButton($grid): void
+    {
+    }
+
+    /**
+     * @param mixed $grid
+     * @return void
+     */
+    protected function manageRowAction($grid): void
+    {
+    }
+
+    /**
+     * @return mixed
+     */
+    public function import(Request $request)
+    {
+        return null;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function renderModalFrame()
+    {
+        return null;
+    }
+
+    /**
+     * @param mixed $grid
+     * @return mixed
+     */
+    public function renderModal($grid)
+    {
+        return null;
+    }
+
+    /**
+     * @param mixed $view_kind_type
+     * @param mixed $form
+     * @param mixed $custom_table
+     * @param array<string,mixed> $options
+     * @return void
+     */
+    public static function setViewForm(
+        $view_kind_type,
+        $form,
+        $custom_table,
+        array $options = []
+    ): void {
+    }
+
+    /**
+     * @param mixed $form
+     * @param mixed $custom_table
+     * @param array<string,mixed> $column_options
+     * @return void
+     */
+    public static function setGridFilterFields(
+        &$form,
+        $custom_table,
+        array $column_options = []
+    ): void {
+    }
+
+    /**
+     * @param mixed $grid
+     * @return void
+     */
+    protected function appendSelectItemButton($grid): void
+    {
     }
 }
