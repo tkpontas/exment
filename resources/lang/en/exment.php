@@ -1902,6 +1902,7 @@ return [
             'create_sum' => 'Create Summary View',
             'create_calendar' => 'Calendar view new creation',
             'create_filter' => 'Create condition view new',
+            'create_expansion' => 'Create a new parent-child view.',
             
             'help' => [
                 'current_view_edit' => 'Change the settings of the currently displayed view.',
@@ -1910,6 +1911,7 @@ return [
                 'create_sum' => 'Create a new aggregation view that groups data items and aggregates and displays the total and maximum values.',
                 'create_calendar' => 'Create a new calendar view that displays the date of data in calendar format.',
                 'create_filter' => 'Create a new condition view that sets the conditions for notification and the conditions to be displayed in the form options.',
+                'create_expansion' => 'We will create a new parent-child view that displays parent and child data together in a list format.',
             ],
         ],
         'message' => [
@@ -1931,6 +1933,7 @@ return [
             'filter' => 'Filter view',
             'plugin' => 'Unique view',
             'alldata' => 'All data view',
+            'expansion' => 'Parent-Child View',
         ],
     ],
 
