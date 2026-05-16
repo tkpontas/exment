@@ -5,8 +5,6 @@ namespace Exceedone\Exment\DataItems\Grid;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\CustomView;
-use Exceedone\Exment\Model\CustomViewColumn;
-use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Enums\RelationType;
 use Encore\Admin\Form;
 Use Encore\Admin\Widgets\Table;
@@ -14,55 +12,121 @@ Use Encore\Admin\Widgets\Table;
 class ExpansionGrid extends DefaultGrid
 {
     /**
-     * set laravel-admin grid column specific setting for expand grid
-     */
-    protected function setGridColumn(
-        CustomViewColumn $custom_view_column,
-        CustomColumn $grid_column
-    ): void
-    {
-        if (isset($custom_view_column->child_table_id)) {
-            $child_table_id = $custom_view_column->child_table_id;
-            $relation = CustomRelation::getRelationByParentChild($this->custom_table, $child_table_id, RelationType::ONE_TO_MANY);
-            if (!$relation) {
-                return;
+ * set laravel-admin grid column specific setting for expand grid
+ *
+ * @param Column $grid_column
+ * @param mixed $custom_view_column
+ * @return void
+ */
+protected function setGridColumn($grid_column, $custom_view_column): void
+{
+    if (!isset($custom_view_column->child_table_id)) {
+        return;
+    }
+
+    $child_table_id = $custom_view_column->child_table_id;
+
+    $relation = CustomRelation::getRelationByParentChild(
+        $this->custom_table,
+        $child_table_id,
+        RelationType::ONE_TO_MANY
+    );
+
+    if ($relation === null) {
+        return;
+    }
+
+    $child_view = CustomView::getAllData($child_table_id);
+
+    $grid_column->expand(
+        /**
+         * @param mixed $model
+         * @return Table
+         */
+        function ($model) use ($relation, $child_view): Table {
+
+            $child_values = [];
+
+            $child_expand_count = (int)config(
+                'exment.max_child_expand_count',
+                10
+            );
+
+            $children_values = $model
+                ->getChildrenValues($relation)
+                ->take($child_expand_count);
+
+            foreach ($children_values as $children_value) {
+
+                /** @var Collection<int, mixed> $columns */
+                $columns = $child_view->custom_view_columns;
+
+                $child_values[] = $columns
+                    ->map(
+                        /**
+                         * @return string|null
+                         */
+                        function ($child_view_column) use (
+                            $child_view,
+                            $children_value
+                        ): ?string {
+
+                            /** @var mixed $item */
+                            $item = $child_view_column->column_item;
+
+                            if ($item === null) {
+                                return null;
+                            }
+
+                            $item = $item->options([
+                                'grid_column' => true,
+                                'view_pivot_column' =>
+                                    $child_view_column->view_pivot_column_id ?? null,
+                                'view_pivot_table' =>
+                                    $child_view_column->view_pivot_table_id ?? null,
+                                'header_align' =>
+                                    $child_view->header_align ?? null,
+                            ]);
+
+                            return (string)$item
+                                ->setCustomValue($children_value)
+                                ->html();
+                        }
+                    )
+                    ->toArray();
             }
-            $child_view = CustomView::getAllData($child_table_id);
 
-            $grid_column->expand(function ($model) use($relation, $child_view) {
-                $child_values = [];
-                $child_expand_count = config('exment.max_child_expand_count', 10);
+            $child_labels = $child_view
+                ->custom_view_columns
+                ->map(
+                    /**
+                     * @return string|null
+                     */
+                    function ($child_view_column): ?string {
 
-                $children_values = $model->getChildrenValues($relation)->take($child_expand_count);
-                foreach ($children_values as $children_value) {
-                    $child_values[] = $child_view->custom_view_columns->map(function($child_view_column) use($child_view, $children_value){
+                        /** @var mixed $item */
                         $item = $child_view_column->column_item;
-                        if (!isset($item)) {
+
+                        if ($item === null) {
                             return null;
                         }
-                        $item = $item->options([
-                                'grid_column' => true,
-                                'view_pivot_column' => $child_view_column->view_pivot_column_id ?? null,
-                                'view_pivot_table' => $child_view_column->view_pivot_table_id ?? null,
-                                'header_align' => $child_view->header_align ?? null,
-                            ]);
-                        return $item->setCustomValue($children_value)->html();
-                    });
-                }
 
-                $child_labels = $child_view->custom_view_columns->map(function($child_view_column) {
-                    $item = $child_view_column->column_item;
-                    if (!isset($item)) {
-                        return null;
+                        $item = $item->label(
+                            array_get(
+                                $child_view_column,
+                                'view_column_name'
+                            )
+                        );
+
+                        return $item->label();
                     }
-                    $item = $item->label(array_get($child_view_column, 'view_column_name'));
-                    return $item->label();
-                });
-            
-                return new Table($child_labels, $child_values);
-            });
+                )
+                ->toArray();
+
+            return new Table($child_labels, $child_values);
         }
-    }
+    );
+}
 
     /**
      * Set custom view columns form. For controller.
@@ -71,17 +135,7 @@ class ExpansionGrid extends DefaultGrid
      * @param CustomTable $custom_table
      * @return void
      */
-    
-    /**
-     * @param array<string, mixed> $options
-     */
-    public static function setViewForm(
-        string $view_kind_type,
-        Form $form,
-        CustomTable $custom_table,
-        array $options = []
-    ): void
-    
+    public static function setViewForm($view_kind_type, $form, $custom_table, array $options = [])
     {
         static::setViewInfoboxFields($form);
 
