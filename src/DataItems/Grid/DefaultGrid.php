@@ -14,6 +14,7 @@ use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\CustomView;
 use Exceedone\Exment\Model\CustomColumn;
+use Exceedone\Exment\Model\CustomViewColumn;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\Workflow;
 use Exceedone\Exment\Services\DataImportExport;
@@ -171,9 +172,10 @@ class DefaultGrid extends GridBase
     /**
      * set laravel-admin grid column specific setting for grid type
      */
-    protected function setGridColumn($column, $custom_view_column): void
-    {
-    }
+    protected function setGridColumn(
+        mixed $column,
+        mixed $custom_view_column
+    ): void
 
     /**
      * execute filter for modal
