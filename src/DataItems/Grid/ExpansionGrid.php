@@ -14,7 +14,7 @@ class ExpansionGrid extends DefaultGrid
     /**
      * set laravel-admin grid column specific setting for expand grid
      */
-    protected function setGridColumn($grid_column, $custom_view_column)
+    protected function setGridColumn($grid_column, $custom_view_column): void
     {
         if (isset($custom_view_column->child_table_id)) {
             $child_table_id = $custom_view_column->child_table_id;
@@ -66,7 +66,17 @@ class ExpansionGrid extends DefaultGrid
      * @param CustomTable $custom_table
      * @return void
      */
-    public static function setViewForm($view_kind_type, $form, $custom_table, array $options = [])
+    
+    /**
+     * @param array<string, mixed> $options
+     */
+    public static function setViewForm(
+        $view_kind_type,
+        $form,
+        $custom_table,
+        array $options = []
+    ): void
+    
     {
         static::setViewInfoboxFields($form);
 
