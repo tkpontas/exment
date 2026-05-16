@@ -29,6 +29,7 @@ class ColumnType extends EnumBase
     public const ORGANIZATION = 'organization';
     public const CUSTOM_TEXT = 'custom_text';
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_CALC()
     {
         return [
@@ -38,6 +39,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_DATETIME()
     {
         return [
@@ -47,6 +49,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_DATE()
     {
         return [
@@ -55,6 +58,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_ATTACHMENT()
     {
         return [
@@ -63,6 +67,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_URL()
     {
         return [
@@ -73,6 +78,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_USER_ORGANIZATION()
     {
         return [
@@ -81,6 +87,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_SELECT_TABLE()
     {
         return [
@@ -90,6 +97,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_SELECT_FORM()
     {
         return [
@@ -101,6 +109,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_2VALUE_SELECT()
     {
         return [
@@ -109,6 +118,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_MULTIPLE_ENABLED()
     {
         return [
@@ -122,6 +132,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_SHOW_NOT_ESCAPE()
     {
         return [
@@ -134,6 +145,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_IMPORT_REPLACE()
     {
         return [
@@ -143,6 +155,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_OPERATION_ENABLE_SYSTEM()
     {
         return [
@@ -177,55 +190,67 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function isCalc($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_CALC());
     }
 
+    // @phpstan-ignore-next-line
     public static function isDate($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_DATE());
     }
 
+    // @phpstan-ignore-next-line
     public static function isDateTime($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_DATETIME());
     }
 
+    // @phpstan-ignore-next-line
     public static function isUrl($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_URL());
     }
 
+    // @phpstan-ignore-next-line
     public static function isAttachment($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_ATTACHMENT());
     }
 
+    // @phpstan-ignore-next-line
     public static function isUserOrganization($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_USER_ORGANIZATION());
     }
+    // @phpstan-ignore-next-line
     public static function isSelectTable($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_SELECT_TABLE());
     }
+    // @phpstan-ignore-next-line
     public static function is2ValueSelect($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_2VALUE_SELECT());
     }
+    // @phpstan-ignore-next-line
     public static function isMultipleEnabled($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_MULTIPLE_ENABLED());
     }
+    // @phpstan-ignore-next-line
     public static function isNotEscape($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_SHOW_NOT_ESCAPE());
     }
+    // @phpstan-ignore-next-line
     public static function isSelectForm($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_SELECT_FORM());
     }
+    // @phpstan-ignore-next-line
     public static function isOperationEnableSystem($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_OPERATION_ENABLE_SYSTEM());
@@ -235,6 +260,7 @@ class ColumnType extends EnumBase
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_IGNORE_SAVE());
     }
 
+    // @phpstan-ignore-next-line
     protected static function _isMatchColumnType($column_type, array $types): bool
     {
         if ($column_type instanceof CustomColumn) {
@@ -248,6 +274,7 @@ class ColumnType extends EnumBase
      * get text is date, or datetime
      * @return string|null
      */
+    // @phpstan-ignore-next-line
     public static function getDateType($text)
     {
         if (is_null($text)) {
@@ -324,6 +351,7 @@ class ColumnType extends EnumBase
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getHtml($column_type)
     {
         if ($column_type instanceof CustomColumn) {

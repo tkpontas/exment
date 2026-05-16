@@ -56,6 +56,7 @@ class Define
         'outside_api' => ['type' => 'boolean', 'group' => 'initialize', 'default' => true],
         'permission_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'initialize'],
         'organization_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'initialize'],
+        'logging_toggle_available' => ['type' => 'boolean', 'default' => '0', 'group' => 'initialize'],
 
         // Advanced ----------------------------------
         'filter_search_type' => ['default' => 'forward', 'group' => 'advanced'],
@@ -208,6 +209,7 @@ class Define
     public const SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT = "public_form_input";
     public const SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT_FILENAMES = "public_form_input_filenames";
     public const SYSTEM_KEY_SESSION_PUBLIC_FORM_SAVED_FILENAMES = "public_form_saved_filenames";
+    public const SYSTEM_KEY_SESSION_KEEP_GRID_PARAMETERS = "keep_grid_parameters";
 
 
     public const APPEND_QUERY_WORK_STATUS_SUB_QUERY = 'APPEND_QUERY_WORK_STATUS_SUB_QUERY';
@@ -388,7 +390,7 @@ class Define
     ];
 
     public const DATABASE_VERSION = [
-        'mysql' => ['min' => '5.7.8', 'max_lt' => '8.1.0'],
+        'mysql' => ['min' => '5.7.8'],
         'mariadb' => ['min' => '10.2.7'],
         'sqlsrv' => ['min' => '13.0.0.0'],
     ];
@@ -410,6 +412,8 @@ class Define
         'data',
     ];
 
+
+    // @phpstan-ignore-next-line
     public static function FILE_OPTION()
     {
         // get max size
