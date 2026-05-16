@@ -209,8 +209,6 @@ class CustomViewColumn extends ModelBase
     public function setChildTableIdAttribute(int|string|null $val): void
     {
         $this->setOption('child_table_id', $val);
-
-        return $this;
     }
   
     /**
