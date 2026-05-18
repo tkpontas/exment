@@ -171,6 +171,7 @@ class DefaultGrid extends GridBase
     /**
      * set laravel-admin grid column specific setting for grid type
      */
+    // @phpstan-ignore-next-line
     protected function setGridColumn($column, $custom_view_column)
     {
     }
