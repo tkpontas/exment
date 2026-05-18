@@ -79,7 +79,7 @@ class OAuthLoginTest extends UnitTestBase
             $result = LoginService::executeLogin(request(), $custom_login_user);
         } catch (\Exception $ex) {
             $this->assertTrue($ex instanceof SsoLoginErrorException);
-            $this->assertMatchRegex('/ユーザーが存在しません/', $ex->getMessage());
+            $this->assertMatchRegex('/利用は許可されていません/', $ex->getMessage());
         }
     }
 
@@ -100,7 +100,7 @@ class OAuthLoginTest extends UnitTestBase
             $result = LoginService::executeLogin(request(), $custom_login_user);
         } catch (\Exception $ex) {
             $this->assertTrue($ex instanceof SsoLoginErrorException);
-            $this->assertMatchRegex('/ユーザーが存在しません/', $ex->getMessage());
+            $this->assertMatchRegex('/利用は許可されていません/', $ex->getMessage());
         }
     }
 
