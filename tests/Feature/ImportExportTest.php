@@ -447,11 +447,11 @@ class ImportExportTest extends FeatureTestBase
                     }
                     // if file column, get url
                     elseif (!is_null($file = $this->getFileColumnValue($header, $colvalue, $custom_table))) {
-                        return $file;
+                        $colvalue = $file;
                     }
                     
                     if ($colvalue instanceof \Carbon\CarbonInterface) {
-                        $colvalue = $colvalue->format('Y-m-d H:i:s');
+                        $colvalue = $colvalue->toDateTimeString();
                     }
                     
                     $this->assertEquals($colvalue, $file_data[$colno]);
