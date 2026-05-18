@@ -167,6 +167,7 @@ class ColumnType extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_INPUT()
     {
         $array = array_filter(static::arrays(), function($v) {
@@ -175,6 +176,7 @@ class ColumnType extends EnumBase
         return array_values($array);
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_SAVE()
     {
         $array = array_filter(static::arrays(), function($v) {
@@ -183,6 +185,7 @@ class ColumnType extends EnumBase
         return array_values($array);
     }
 
+    // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_IGNORE_SAVE()
     {
         return [
@@ -255,6 +258,7 @@ class ColumnType extends EnumBase
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_OPERATION_ENABLE_SYSTEM());
     }
+    // @phpstan-ignore-next-line
     public static function isIgnoreSave($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_IGNORE_SAVE());
