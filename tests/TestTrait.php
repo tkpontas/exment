@@ -316,16 +316,16 @@ trait TestTrait
 
     //     static::assertThat($array, $constraint, $message);
     // }
+
     /**
-     * Assert that the json is Exment style.
+     * Assert that the expected error array is a subset of the actual validation messages.
      *
-     * @param  array<mixed>  $expected
-     * @param  array<mixed>  $actual
-     * @param  string  $message
+     * @param array<mixed> $errors expected errors, e.g. ['field' => ['message']]
+     * @param array<mixed> $messages actual messages from validator->getMessages()
      * @return void
      */
-    protected function assertJsonExment(array $expected, array $actual, string $message = ''): void
+    protected function assertJsonExment(array $errors, array $messages): void
     {
-        $this->assertArraySubset($expected, $actual, $message);
+        $this->assertArraySubset($errors, $messages);
     }
 }
