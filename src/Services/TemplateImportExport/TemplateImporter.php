@@ -178,14 +178,7 @@ class TemplateImporter
                 if (isset($json['thumbnail'])) {
                     $thumbnail_path = path_join($dirname, $json['thumbnail']);
                     if ($disk->exists($thumbnail_path)) {
-                        // if local, get path
-                        if ($diskItem->isDriverLocal()) {
-                            $json['thumbnail_file'] = base64_encode(file_get_contents(path_join($diskItem->dirFullPath(), $thumbnail_path)));
-                        }
-                        // if crowd, get url
-                        else {
-                            $json['thumbnail_file'] = base64_encode($disk->get($thumbnail_path));
-                        }
+                        $json['thumbnail_file'] = base64_encode($disk->get($thumbnail_path));
                     }
                 }
 
