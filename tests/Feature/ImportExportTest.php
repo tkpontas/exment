@@ -449,6 +449,11 @@ class ImportExportTest extends FeatureTestBase
                     elseif (!is_null($file = $this->getFileColumnValue($header, $colvalue, $custom_table))) {
                         return $file;
                     }
+                    
+                    if ($colvalue instanceof \Carbon\CarbonInterface) {
+                        $colvalue = $colvalue->format('Y-m-d H:i:s');
+                    }
+                    
                     $this->assertEquals($colvalue, $file_data[$colno]);
                 }
             }
