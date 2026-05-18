@@ -201,11 +201,13 @@ class CustomViewColumn extends ModelBase
         return $this->getOption('end_date_type');
     }
 
+    // @phpstan-ignore-next-line
     public function getChildTableIdAttribute()
     {
         return $this->getOption('child_table_id');
     }
 
+    // @phpstan-ignore-next-line
     public function setChildTableIdAttribute($val)
     {
         $this->setOption('child_table_id', $val);
