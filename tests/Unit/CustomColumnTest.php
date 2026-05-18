@@ -1231,6 +1231,7 @@ class CustomColumnTest extends UnitTestBase
      * @param mixed $value_type
      * @return void
      */
+    // @phpstan-ignore-next-line
     public function _testCustomText($value_type, $format, $matchedValue)
     {
         $custom_column = $this->getCustomColumnModel(ColumnType::CUSTOM_TEXT, [
