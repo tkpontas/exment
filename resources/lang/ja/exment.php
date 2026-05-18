@@ -50,7 +50,7 @@ return [
         'attachment' => '添付ファイル',
         'max_file_size' => 'アップロード上限サイズ',
         'comment' => 'コメント',
-        'separate_word' => ' ',
+        'separate_word' => '、',
         'format_keyvalue' => '%s:%s',
         'yes' => 'はい',
         'no' => 'いいえ',
