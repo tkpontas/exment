@@ -11,11 +11,13 @@ use Illuminate\Support\Str;
 
 class CustomText extends CustomItem
 {
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return null;
     }
 
+    // @phpstan-ignore-next-line
     public function setCustomValue($custom_value)
     {
         $this->custom_value = $this->getTargetCustomValue($custom_value);
