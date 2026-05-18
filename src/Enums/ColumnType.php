@@ -27,6 +27,7 @@ class ColumnType extends EnumBase
     public const FILE = 'file';
     public const USER = 'user';
     public const ORGANIZATION = 'organization';
+    public const CUSTOM_TEXT = 'custom_text';
 
     // @phpstan-ignore-next-line
     public static function COLUMN_TYPE_CALC()
@@ -167,6 +168,32 @@ class ColumnType extends EnumBase
     }
 
     // @phpstan-ignore-next-line
+    public static function COLUMN_TYPE_INPUT()
+    {
+        $array = array_filter(static::arrays(), function($v) {
+            return $v !== static::AUTO_NUMBER && $v !== static::CUSTOM_TEXT;
+        });
+        return array_values($array);
+    }
+
+    // @phpstan-ignore-next-line
+    public static function COLUMN_TYPE_SAVE()
+    {
+        $array = array_filter(static::arrays(), function($v) {
+            return $v !== static::CUSTOM_TEXT;
+        });
+        return array_values($array);
+    }
+
+    // @phpstan-ignore-next-line
+    public static function COLUMN_TYPE_IGNORE_SAVE()
+    {
+        return [
+            ColumnType::CUSTOM_TEXT,
+        ];
+    }
+
+    // @phpstan-ignore-next-line
     public static function isCalc($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_CALC());
@@ -230,6 +257,11 @@ class ColumnType extends EnumBase
     public static function isOperationEnableSystem($column_type)
     {
         return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_OPERATION_ENABLE_SYSTEM());
+    }
+    // @phpstan-ignore-next-line
+    public static function isIgnoreSave($column_type)
+    {
+        return static::_isMatchColumnType($column_type, static::COLUMN_TYPE_IGNORE_SAVE());
     }
 
     // @phpstan-ignore-next-line
@@ -315,6 +347,8 @@ class ColumnType extends EnumBase
                 return 'fa-user';
             case static::ORGANIZATION:
                 return 'fa-users';
+            case static::CUSTOM_TEXT:
+                return 'fa-wrench';
         }
 
         return null;

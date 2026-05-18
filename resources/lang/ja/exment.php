@@ -723,6 +723,7 @@ return [
             'button' => 'ボタン',
             'view' => 'ビュー',
             'crud' => 'CRUDページ',
+            'format' => 'フォーマット',
         ],
     ],
 
@@ -1453,6 +1454,10 @@ return [
             'free_input' => '自由に入力可能にする',
             'accept_extensions' => 'アップロード許可する拡張子',
             'required_yes' => 'YES必須',
+            'plugin_format' => '%s(プラグイン)',
+            'custom_text_format_type' => '表示テキストの種類',
+            'custom_text_type_format' => 'フォーマット',
+            'custom_text_format' => 'フォーマット',
         ],
         'align_type_options' => [
             "left" => "左寄せ",
@@ -1487,6 +1492,7 @@ return [
             "file" => "ファイル",
             "user" => "ユーザー",
             "organization" => "組織",
+            "custom_text" => "カスタム（表示専用）",
         ],
         'help' => [
             'column_type' => 'この列の種類を選択してください。データ入力時に、列種類に合わせてフォームが変更されます。保存後、変更はできません。',
@@ -1525,6 +1531,7 @@ return [
             'suggest_input' => 'YESにすることで、すでに登録しているデータから、入力候補を一覧表示できます。<br/>※使用する場合、「検索インデックス」をYESにしてください。',
             'regex_validate' => '（上級者向け）入力できる内容を正規表現で設定します。この項目に値を設定した場合、上記の「使用可能文字」の設定は無効になります。詳細は&nbsp;<a href="%s" target="_blank">こちら<i class="fa fa-external-link"></i></a>&nbsp;をご参照ください。',
             'auto_number_format' => '登録する採番のルールを設定します。詳細のルールは&nbsp;<a href="%s" target="_blank">こちら<i class="fa fa-external-link"></i></a>&nbsp;をご参照ください。',
+            'custom_text_format' => '表示テキストの編集フォーマットを設定します。使用できるパラメータは&nbsp;<a href="%s" target="_blank">こちら<i class="fa fa-external-link"></i></a>&nbsp;をご参照ください。',
             'calc_formula' => '他のフィールドを使用した、計算式を設定することができます。データ入力画面で項目を入力時に、設定した計算式を用いて、自動的に計算されます。',
             'currency_symbol' => '画面に表示する通貨の形式を選択してください。',
             'add_custom_form_flg' => '新規作成後、既定のフォームに列を追加することができます。追加する場合はYESにしてください。<br/>※列の新規作成時のみ設定できます。更新時は「フォーム」画面より設定してください。',
@@ -1902,6 +1909,7 @@ return [
         'view_column_target' => '対象列',
         'view_column_start_date' => '開始日',
         'view_column_end_date' => '終了日',
+        'child_table_id' => '子テーブル',
         'color' => '表示色',
         'font_color' => '文字色',
         'order' => '表示順',
@@ -1937,6 +1945,7 @@ return [
             'use_view_infobox' => 'YESにすることで、ビューの上部に、業務内容や、ユーザーへのメッセージなどを記入できる、情報ボックスを設定することができます。',
             'view_infobox_title' => '情報ボックスに表示するタイトルを記入してください。',
             'view_infobox' => '情報ボックスに表示するHTMLを記入してください。※画像、スクリプトは入力できません。',
+            'child_table_id' => '子テーブルを設定した列を一覧画面でクリックすると子テーブルの情報がアコーディオン表示されます。',
             'order' => 'カスタムビューのメニューボタンの表示順です。',
         ],
 
@@ -2009,6 +2018,7 @@ return [
             'create_sum' => '集計ビュー新規作成',
             'create_calendar' => 'カレンダービュー新規作成',
             'create_filter' => '条件ビュー新規作成',
+            'create_expansion' => '親子ビュー新規作成',
 
             'help' => [
                 'current_view_edit' => '現在表示しているビューの設定を変更します。',
@@ -2017,6 +2027,7 @@ return [
                 'create_sum' => 'データの項目をグループ化し、合計値や最大値を集計し表示する、集計ビューを新規作成します。',
                 'create_calendar' => 'データの日付をカレンダー形式で表示する、カレンダービューを新規作成します。',
                 'create_filter' => '通知を実施する条件や、フォームの選択肢に表示するための条件を設定する、条件ビューを新規作成します。',
+                'create_expansion' => '親子データを合わせて一覧表示する、親子ビューを新規作成します。',
             ],
         ],
         'message' => [
@@ -2035,6 +2046,7 @@ return [
             'default' => '通常ビュー',
             'aggregate' => '集計ビュー',
             'calendar' => 'カレンダービュー',
+            'expansion' => '親子ビュー',
             'filter' => '条件ビュー',
             'plugin' => '独自ビュー',
             'alldata' => '全件ビュー',

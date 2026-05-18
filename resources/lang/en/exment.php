@@ -722,7 +722,8 @@ return [
             'event' => 'Event',
             'button' => 'Button',
             'view' => 'View',
-            'crud' => 'CRUDページ',
+            'crud' => 'CRUD Page',
+            'format' => 'Format',
         ],
     ],
 
@@ -1452,6 +1453,10 @@ return [
             'free_input' => 'Make it freely input',
             'accept_extensions' => 'Extensions that allow uploading',
             'required_yes' => 'Required YES',
+            'plugin_format' => '%s(Plugin)',
+            'custom_text_format_type' => 'Type of display format',
+            'custom_text_type_format' => 'Format',
+            'custom_text_format' => 'Format',
         ],
         'align_type_options' => [
             "left" => "Left",
@@ -1486,6 +1491,7 @@ return [
             "file" => "File",
             "user" => "User",
             "organization" => "Organization",
+            "custom_text" => "Custom(display only)",
         ],
         'help' => [
             'column_type' => 'Please select this column type. When entering data, the form changes according to the column type.',
@@ -1524,6 +1530,7 @@ return [
             'suggest_input' => 'If set to YES, you can display a list of input candidates from already registered data. <br/> * If you want to use, please set "Search index" to YES.',
             'regex_validate' => '(For advanced users) Set the contents that can be input as a regular expression. If you set a value to this item, the setting of "Available Characters" above will be disabled. Please refer to &nbsp;<a href="%s" target="_blank">here<i class="fa fa-external-link"></i></a>&nbsp; for details.',
             'auto_number_format' => 'Set the numbering rule to be registered. For details of rules, please refer to <a href="%s" target="_blank">here<i class="fa fa-external-link"></i></a>.',
+            'custom_text_format' => 'Sets the edit format for the displayed text.See <a href="%s" target="_blank">here<i class="fa fa-external-link"></i></a>for available parameters.',
             'calc_formula' => 'Enter the calculation formula using other fields. *It is currently beta version.',
             'currency_symbol' => 'Please select the format of the currency displayed on the page.',
             'add_custom_form_flg' => 'After creating custom column, you can add it to the default custom form. To add it, please set it to YES.<br />*It can be set only when new column is created. When updating please set it from "Form" page.',
@@ -1901,6 +1908,7 @@ return [
         'view_column_target' => 'View target column',
         'view_column_start_date' => 'Start date',
         'view_column_end_date' => 'End date',
+        'child_table_id' => 'Child table id',
         'color' => 'Display color',
         'font_color' => 'Letter color',
         'order' => 'Order',
@@ -1936,6 +1944,7 @@ return [
             'use_view_infobox' => 'By setting YES, you can set an information box at the top of the view where you can enter business details and messages to users.',
             'view_infobox_title' => 'Enter the title to be displayed in the information box.',
             'view_infobox' => 'Please fill in the HTML to be displayed in the information box. *Images and scripts cannot be entered.',
+            'child_table_id' => 'When you click a column for which a child table has been set on the list screen, the child table data will be displayed in accordion style.',
             'order' => 'Display order of custom view menu buttons.',
         ],
 
@@ -2008,6 +2017,7 @@ return [
             'create_sum' => 'Create Summary View',
             'create_calendar' => 'Calendar view new creation',
             'create_filter' => 'Create condition view new',
+            'create_expansion' => 'Create a new parent-child view.',
             
             'help' => [
                 'current_view_edit' => 'Change the settings of the currently displayed view.',
@@ -2016,6 +2026,7 @@ return [
                 'create_sum' => 'Create a new aggregation view that groups data items and aggregates and displays the total and maximum values.',
                 'create_calendar' => 'Create a new calendar view that displays the date of data in calendar format.',
                 'create_filter' => 'Create a new condition view that sets the conditions for notification and the conditions to be displayed in the form options.',
+                'create_expansion' => 'We will create a new parent-child view that displays parent and child data together in a list format.',
             ],
         ],
         'message' => [
@@ -2037,6 +2048,7 @@ return [
             'filter' => 'Filter view',
             'plugin' => 'Unique view',
             'alldata' => 'All data view',
+            'expansion' => 'Parent-Child View',
         ],
     ],
 
