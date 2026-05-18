@@ -43,6 +43,7 @@ class PluginFormatBase
      * @param array $options
      *      'called_type' => Whether this plugin is called.
      */
+    // @phpstan-ignore-next-line
     public function __construct(PluginModel $plugin, ?CustomTable $custom_table, $custom_value, array $options = [])
     {
         $this->plugin = $plugin;
@@ -56,6 +57,7 @@ class PluginFormatBase
         }
     }
 
+    // @phpstan-ignore-next-line
     public function format()
     {
     }
