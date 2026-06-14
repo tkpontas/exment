@@ -126,6 +126,16 @@ class Define
         'backup_automatic_executed' => ['type' => 'datetime'],
         'backup_history_files' => ['type' => 'int', 'default' => '0', 'group' => 'backup'],
 
+        // Operation log auto-delete
+        'operation_log_enable_automatic' => ['type' => 'boolean', 'default' => '1', 'group' => 'operation_log'],
+        'operation_log_keep_days' => ['type' => 'int', 'default' => '180', 'group' => 'operation_log'],
+        'operation_log_automatic_week' => ['group' => 'operation_log'],
+        'operation_log_automatic_month' => ['group' => 'operation_log'],
+        'operation_log_automatic_day' => ['group' => 'operation_log'],
+        'operation_log_automatic_hour' => ['group' => 'operation_log'],
+        'operation_log_automatic_minute' => ['group' => 'operation_log'],
+        'operation_log_automatic_executed' => ['type' => 'datetime'],
+
         // 2factor ----------------------------------
         'login_use_2factor' => ['type' => 'boolean', 'default' => '0', 'group' => '2factor'],
         'login_2factor_provider' => ['default' => 'email', 'group' => '2factor'],
