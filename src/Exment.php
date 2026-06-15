@@ -301,7 +301,12 @@ class Exment
                 }
 
                 // sort by timestamp
-                $sortedPackages = collect($packages)->sortByDesc('version_normalized');
+                $sortedPackages = collect($packages)->sort(function ($a, $b) {
+                    return version_compare(
+                        array_get($b, 'version_normalized'),
+                        array_get($a, 'version_normalized')
+                    );
+                });
                 foreach ($sortedPackages as $key => $package) {
                     // if version is "dev-", continue
                     if (substr($key, 0, 4) == 'dev-') {
@@ -352,7 +357,7 @@ class Exment
             return SystemVersion::ERROR;
         } elseif (strpos($current, 'dev-') === 0) {
             return SystemVersion::DEV;
-        } elseif ($latest === $current) {
+        } elseif (version_compare($latest, $current, '<=')) {
             return SystemVersion::LATEST;
 // Unreachable statement - code above always terminates.
 //            $message = exmtrans("system.version_latest");
