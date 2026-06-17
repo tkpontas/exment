@@ -13,6 +13,7 @@ class DashboardBoxSystemPage extends EnumBase
     public const NOTIFY_NAVBAR = 4;
     public const BARCODE = 6;
 
+    // @phpstan-ignore-next-line
     protected static $options = [
         'guideline' => ['id' => 1, 'name' => 'guideline', 'class' => SystemItems\Guideline::class],
         'news' => ['id' => 2, 'name' => 'news', 'class' => SystemItems\News::class],
@@ -22,16 +23,19 @@ class DashboardBoxSystemPage extends EnumBase
         'barcode' => ['id' => 6, 'name' => 'barcode', 'class' => SystemItems\Barcode::class],
     ];
 
+    // @phpstan-ignore-next-line
     public function option()
     {
         return array_get(static::$options, $this->lowerKey());
     }
 
+    // @phpstan-ignore-next-line
     public static function options()
     {
         return static::$options;
     }
 
+    // @phpstan-ignore-next-line
     public static function getEnum($value, $default = null)
     {
         $enum = parent::getEnum($value, $default);

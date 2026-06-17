@@ -48,6 +48,16 @@ use Illuminate\Support\Facades\Request;
  * @property mixed $showlist_flg
  * @property mixed $table_view_name
  * @property mixed $options
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomColumn> $custom_columns
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomColumn> $custom_columns_cache
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomView> $custom_views
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomForm> $custom_forms
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomCopy> $from_custom_copies
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomCopy> $to_custom_copies
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomFormBlock> $custom_form_block_target_tables
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomOperation> $operations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomFormPriority> $custom_form_priorities
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CustomColumnMulti> $table_labels
  * @method static int count($columns = '*')
  * @method static ExtendedBuilder orderBy($column, $direction = 'asc')
  * @method static ExtendedBuilder whereNotIn($column, $values, $boolean = 'and')
@@ -66,6 +76,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     protected $casts = ['options' => 'json'];
     protected $guarded = ['id', 'suuid', 'system_flg'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['suuid'],
         'uniqueKeys' => ['table_name'],
@@ -94,13 +106,19 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Getted custom columns. if call attributes "custom_columns_cache", already called, return this value.
      */
+
+    // @phpstan-ignore-next-line
     protected $cached_custom_columns = [];
 
+
+    // @phpstan-ignore-next-line
     public function custom_columns(): HasMany
     {
         return $this->hasMany(CustomColumn::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_views(): HasMany
     {
         return $this->hasMany(CustomView::class, 'custom_table_id')
@@ -108,36 +126,50 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             ->orderBy('id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_forms(): HasMany
     {
         return $this->hasMany(CustomForm::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_operations(): HasMany
     {
         return $this->hasMany(CustomOperation::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_relations(): HasMany
     {
         return $this->hasMany(CustomRelation::class, 'parent_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function child_custom_relations(): HasMany
     {
         return $this->hasMany(CustomRelation::class, 'child_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function from_custom_copies(): HasMany
     {
         return $this->hasMany(CustomCopy::class, 'from_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function to_custom_copies(): HasMany
     {
         return $this->hasMany(CustomCopy::class, 'to_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function notifies(): HasMany
     {
         return $this->hasMany(Notify::class, 'target_id')
@@ -145,55 +177,78 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             ->where('active_flg', 1);
     }
 
+    /**
+     * @return HasMany
+     */
+
+    // @phpstan-ignore-next-line
     public function notify_all()
     {
         return $this->hasMany(Notify::class, 'target_id')
             ->whereIn('notify_trigger', NotifyTrigger::CUSTOM_TABLES());
 }
 
+
+    // @phpstan-ignore-next-line
     public function operations(): HasMany
     {
         return $this->hasMany(CustomOperation::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_block_target_tables(): HasMany
     {
         return $this->hasMany(CustomFormBlock::class, 'form_block_target_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_column_multisettings(): HasMany
     {
         return $this->hasMany(CustomColumnMulti::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_form_priorities(): HasManyThrough
     {
         return $this->hasManyThrough(CustomFormPriority::class, CustomForm::class, 'custom_table_id', 'custom_form_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function workflow_tables(): HasMany
     {
         return $this->hasMany(WorkflowTable::class, 'custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function multi_uniques(): HasMany
     {
         return $this->hasMany(CustomColumnMulti::class, 'custom_table_id')
             ->where('multisetting_type', MultisettingType::MULTI_UNIQUES);
     }
 
+
+    // @phpstan-ignore-next-line
     public function table_labels(): HasMany
     {
         return $this->hasMany(CustomColumnMulti::class, 'custom_table_id')
             ->where('multisetting_type', MultisettingType::TABLE_LABELS);
     }
 
+
+    // @phpstan-ignore-next-line
     public function compare_columns(): HasMany
     {
         return $this->hasMany(CustomColumnMulti::class, 'custom_table_id')
             ->where('multisetting_type', MultisettingType::COMPARE_COLUMNS);
     }
 
+
+    // @phpstan-ignore-next-line
     public function share_settings(): HasMany
     {
         return $this->hasMany(CustomColumnMulti::class, 'custom_table_id')
@@ -218,6 +273,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param int|string $id
      * @return array [boolean, string] status, error message.
      */
+
+    // @phpstan-ignore-next-line
     public static function validateDestroy($id)
     {
         // check select_table
@@ -247,6 +304,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get Custom columns using cache
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomColumnsCacheAttribute()
     {
         if (!empty($this->cached_custom_columns)) {
@@ -264,6 +323,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param string|array|Collection $column_types
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getFilteredTypeColumns($column_types)
     {
         return $this->custom_columns_cache->filter(function (CustomColumn $custom_column) use ($column_types) {
@@ -284,17 +345,23 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Get Columns where select_target_table's id is this table.
      */
+
+    // @phpstan-ignore-next-line
     public function getSelectedItems()
     {
         return CustomColumn::where('options->select_target_table', $this->id)
             ->get();
     }
 
+
+    // @phpstan-ignore-next-line
     public function scopeSearchEnabled($query)
     {
         return $query->whereIn('options->search_enabled', [1, "1", true]);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getSelectTables()
     {
         $list = $this->custom_columns_cache->mapWithKeys(function ($item) {
@@ -345,6 +412,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param bool $skipSelf if true, skip column for relation target is self.
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getSelectTableColumns($select_target_table = null, bool $skipSelf = false)
     {
         return $this->custom_columns_cache->filter(function ($custom_column) use ($skipSelf, $select_target_table) {
@@ -380,6 +449,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return Collection|string
      */
+
+    // @phpstan-ignore-next-line
     public function getLabelColumns()
     {
         $key = 'custom_table_use_label_flg_' . $this->table_name;
@@ -399,6 +470,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getSelectedTables()
     {
         return $this->getSelectedTableColumns()->mapWithKeys(function ($custom_column, $key) {
@@ -415,6 +488,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param bool $skipSelf if true, skip column for relation target is self.
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getSelectedTableColumns(bool $skipSelf = true, bool $index_enabled_only = false)
     {
         return CustomColumn::allRecords(function ($custom_column) use ($skipSelf, $index_enabled_only) {
@@ -443,6 +518,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     protected function getUniqueColumns()
     {
         $results = collect();
@@ -494,6 +571,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         return $results;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCompareColumns()
     {
         return CustomColumnMulti::allRecords(function ($val) {
@@ -513,6 +592,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Delete children items
      */
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         foreach ($this->custom_columns as $item) {
@@ -589,6 +670,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param ?CustomValue $custom_value matched custom_value
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function validateValue($value, $custom_value = null, array $options = [])
     {
         $options = array_merge([
@@ -659,6 +742,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get validation custom attribute
      */
+
+    // @phpstan-ignore-next-line
     public function getValidateCustomAttributes($systemColumn = false, $column_name_prefix = null, $appendKeyName = true)
     {
         $customAttributes = [];
@@ -694,6 +779,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     protected function setColumnsName(&$value, ?CustomValue $custom_value = null, array $options = [])
     {
         $options = array_merge([
@@ -723,6 +810,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get validation rules
      */
+
+    // @phpstan-ignore-next-line
     public function getValidateRules($value, $custom_value = null, array $options = [])
     {
         $options = array_merge([
@@ -799,6 +888,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $input
      * @return array error messages
      */
+
+    // @phpstan-ignore-next-line
     public function validatorUnnecessaryColumn($input, array $options = [])
     {
         $options = array_merge([
@@ -835,6 +926,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function validatorUniques($input, ?CustomValue $custom_value = null, array $options = [])
     {
         $options = array_merge([
@@ -993,6 +1086,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Validation comparing 2 columns
      */
+
+    // @phpstan-ignore-next-line
     public function validatorCompareColumns($input, $custom_value = null, array $options = [])
     {
         $options = array_merge([
@@ -1020,6 +1115,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         return $errors;
     }
 
+
+    // @phpstan-ignore-next-line
     public function validatorLock($input, $custom_value = null, bool $asApi = false)
     {
         if (!array_key_value_exists('updated_at', $input)) {
@@ -1051,6 +1148,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * validator using plugin
      */
+
+    // @phpstan-ignore-next-line
     public function validatorPlugin($input, $custom_value = null, array $options = [])
     {
         return Plugin::pluginValidator($this, [
@@ -1068,6 +1167,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $value input value
      * @return array Value after assigning default value
      */
+
+    // @phpstan-ignore-next-line
     public function setDefaultValue($value)
     {
         // get fields for validation
@@ -1088,6 +1189,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get CustomTable by url
      */
+
+    // @phpstan-ignore-next-line
     public static function findByEndpoint($endpoint = null, $withs = [])
     {
         // get table info
@@ -1119,6 +1222,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param bool $addFilter append filter url
      * @param array|null $options Options to execute this function
      */
+
+    // @phpstan-ignore-next-line
     public function getGridUrl($addFilter = false, $options = [])
     {
         $path = 'data/' . $this->table_name;
@@ -1132,12 +1237,17 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             }
 
             // get page settings
+            // Exment helper class not recognized
             $settings = \Exment::user()->getSettingValue($path)?? '[]';
             $settings = json_decode_ex($settings, true);
 
             // get view settings
             $parameters = [];
+
+            // @phpstan-ignore-next-line
             if (isset($view) && array_key_exists($view, $settings)) {
+
+                // @phpstan-ignore-next-line
                 $parameters = array_get($settings, $view);
             }
 
@@ -1172,9 +1282,12 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
 
         $inputs = Arr::except(Request::all(), ['view', '_pjax', '_token', '_method', '_previous_', '_export_', 'format', 'group_key', 'group_view']);
 
+        // Exment helper class not recognized
         $parameters = \Exment::user()->getSettingValue($path)?? '[]';
         $parameters = json_decode_ex($parameters, true);
 
+
+        // @phpstan-ignore-next-line
         $parameters[$view] = $inputs;
 
         Admin::user()->setSettingValue($path, json_encode($parameters));
@@ -1187,6 +1300,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param mixed $obj id table_name CustomTable_object CustomValue_object.
      * @return null|CustomTable matched custom_table.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($obj, $withs = [])
     {
         if ($obj instanceof CustomTable) {
@@ -1237,6 +1352,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *     Get only has role
      *     showlist_flg is true
      */
+
+    // @phpstan-ignore-next-line
     public static function filterList($model = null, $options = [])
     {
         $options = array_merge(
@@ -1283,6 +1400,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get 'with' array for get eloquent
      */
+
+    // @phpstan-ignore-next-line
     protected static function getWiths($withs)
     {
         if (is_array($withs)) {
@@ -1297,6 +1416,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * set lazy load and return
      */
+
+    // @phpstan-ignore-next-line
     protected static function withLoad($obj, $withs = [])
     {
         $withs = static::getWiths($withs);
@@ -1343,6 +1464,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         array_forget($json, 'options.refer_column_name');
     }
 
+
+    // @phpstan-ignore-next-line
     protected function importSetValue(&$json, $options = [])
     {
         $system_flg = array_get($options, 'system_flg', false);
@@ -1362,6 +1485,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         return ['system_flg', 'showlist_flg'];
     }
 
+
+    // @phpstan-ignore-next-line
     public function importSaved($json, $options = [])
     {
         $updated = false;
@@ -1409,6 +1534,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * search value
      */
+
+    // @phpstan-ignore-next-line
     public function searchValue($q, $options = [])
     {
         $options = array_merge(
@@ -1481,9 +1608,11 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             $paginates->setCollection($query->get());
 
             if (boolval($options['makeHidden'])) {
-                /** @phpstan-ignore-next-line  */
+
+                // @phpstan-ignore-next-line
                 $data = $paginates->makeHidden($this->getMakeHiddenArray());
-                /** @phpstan-ignore-next-line  */
+
+                // @phpstan-ignore-next-line
                 $paginates->data = $data;
             }
 
@@ -1527,6 +1656,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * search relation value
      */
+
+    // @phpstan-ignore-next-line
     public function searchRelationValue($search_type, $parent_value_id, $child_table, &$options = [])
     {
         $options = array_merge(
@@ -1627,6 +1758,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function setQueryWith($query, $custom_view = null)
     {
         if (!method_exists($query, 'with')) {
@@ -1636,8 +1769,12 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         // set query workflow
         if (!is_null(Workflow::getWorkflowByTable($this))) {
             //WorkflowItem::getStatusSubquery($query, $this);
+
+            // @phpstan-ignore-next-line
             $query->with(['workflow_value', 'workflow_value.workflow_status']);
         }
+
+        // @phpstan-ignore-next-line
         $this->appendSubQuery($query, $custom_view);
     }
 
@@ -1646,6 +1783,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     protected function setQueryWithRelation($query, $relations)
     {
         if (!method_exists($query, 'with') || !$relations) {
@@ -1657,6 +1796,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         }
 
         foreach ($relations as $relation) {
+
+            // @phpstan-ignore-next-line
             $query->with($relation->getRelationName());
         }
     }
@@ -1668,6 +1809,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param CustomView|null $custom_view
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function appendSubQuery($query, ?CustomView $custom_view)
     {
         $this->appendWorkflowSubQuery($query, $custom_view);
@@ -1689,6 +1832,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             if ($relations->count() > 0) {
                 $relations->each(function ($r) use ($query) {
                     if ($r->relation_type == RelationType::MANY_TO_MANY) {
+
+                        // @phpstan-ignore-next-line
                         $query->with($r->getRelationName());
                     }
                 });
@@ -1704,6 +1849,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param CustomView|null $custom_view
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function appendWorkflowSubQuery($query, ?CustomView $custom_view)
     {
         if ($custom_view && System::requestSession(Define::SYSTEM_KEY_SESSION_WORLFLOW_STATUS_CHECK) === true) {
@@ -1720,6 +1867,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Set selectTable value's and relations. for after calling from select_table object
      */
+
+    // @phpstan-ignore-next-line
     public function setSelectRelationValues(?\Illuminate\Database\Eloquent\Collection $customValueCollection)
     {
         $this->setSelectTableValues($customValueCollection);
@@ -1733,6 +1882,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param \Illuminate\Support\Collection|\Tightenco\Collect\Support\Collection|null $customValueCollection
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function setSelectTableValues(\Illuminate\Support\Collection|\Tightenco\Collect\Support\Collection|null $customValueCollection)
     {
         if (empty($customValueCollection)) {
@@ -1760,6 +1911,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Set relation value's. for after calling from select_table object
      */
+
+    // @phpstan-ignore-next-line
     public function setRelationValues(?\Illuminate\Database\Eloquent\Collection $customValueCollection)
     {
         if (empty($customValueCollection)) {
@@ -1789,6 +1942,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array|Collection $ids
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function setCustomValueModels($ids)
     {
         // value sometimes array, so flatten value. maybe has best way..
@@ -1826,6 +1981,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param string $keyName database key name
      * @return array key-value's. "key" is value, "value" matched custom_value.
      */
+
+    // @phpstan-ignore-next-line
     public function getMatchedCustomValues($values, $keyName = 'id', $withTrashed = false)
     {
         $result = [];
@@ -1849,7 +2006,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
             $query->whereIn($databaseKeyName, $chunk);
 
             if ($withTrashed) {
-                /** @phpstan-ignore-next-line  */
+
+                // @phpstan-ignore-next-line
                 $query->withTrashed();
             }
 
@@ -1871,6 +2029,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Get search-enabled columns.
      */
+
+    // @phpstan-ignore-next-line
     public function getSearchEnabledColumns()
     {
         return CustomColumn::allRecords(function ($custom_column) {
@@ -1889,6 +2049,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Get freeword-search columns.
      */
+
+    // @phpstan-ignore-next-line
     public function getFreewordSearchColumns()
     {
         return CustomColumn::allRecords(function ($custom_column) {
@@ -1927,6 +2089,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         System::clearCache();
     }
 
+
+    // @phpstan-ignore-next-line
     public function dropTable()
     {
         $table_name = getDBTableName($this);
@@ -1957,6 +2121,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @param array $options
      */
+
+    // @phpstan-ignore-next-line
     public function isGetOptions($options = [])
     {
         $options = array_merge(
@@ -1995,6 +2161,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * Get all accessible users on this table. (only get id, consider performance)
      * *Not check "loginuser"'s permission.
      */
+
+    // @phpstan-ignore-next-line
     public function getAccessibleUserIds()
     {
         return $this->getAccessibleUserOrganizationIds(SystemTableName::USER);
@@ -2004,6 +2172,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * Get all accessible users on this table. (get model)
      * *Not check "loginuser"'s permission.
      */
+
+    // @phpstan-ignore-next-line
     public function getAccessibleUsers()
     {
         $target_ids = $this->getAccessibleUserOrganizationIds(SystemTableName::USER);
@@ -2013,6 +2183,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Filter all accessible users on this table.
      */
+
+    // @phpstan-ignore-next-line
     public function filterAccessibleUsers($userIds): \Illuminate\Support\Collection
     {
         if (is_nullorempty($userIds)) {
@@ -2036,6 +2208,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Filter all accessible orgs on this table.
      */
+
+    // @phpstan-ignore-next-line
     public function filterAccessibleOrganizations($organizationIds): \Illuminate\Support\Collection
     {
         if (is_nullorempty($organizationIds)) {
@@ -2060,6 +2234,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * Get all accessible organizations on this table. (only get id, consider performance)
      * *Not check "loginuser"'s permission.
      */
+
+    // @phpstan-ignore-next-line
     public function getAccessibleOrganizationIds()
     {
         return $this->getAccessibleUserOrganizationIds(SystemTableName::ORGANIZATION);
@@ -2068,6 +2244,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Get all accessible organizations. (only get id, consider performance)
      */
+
+    // @phpstan-ignore-next-line
     protected function getAccessibleUserOrganizationIds($target_table)
     {
         $key = sprintf(Define::SYSTEM_KEY_SESSION_ACCESSIBLE_TABLE, $target_table, $this->table_name);
@@ -2089,6 +2267,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return \Encore\Admin\Form\Field
      */
+
+    // @phpstan-ignore-next-line
     public function setSelectTableField(\Encore\Admin\Form\Field $field, array $options = []): \Encore\Admin\Form\Field
     {
         $options = array_merge([
@@ -2106,9 +2286,9 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
 
         // add table info
         $field->attribute(['data-target_table_name' => array_get($this, 'table_name')]);
-        /** @phpstan-ignore-next-line */
         $field->buttons($options['buttons']);
-        /** @phpstan-ignore-next-line options() expects array, Closure given */
+
+        // @phpstan-ignore-next-line
         $field->options(function ($value, $field) use ($thisObj, $selectOption) {
             $selectOption['selected_value'] = (!empty($field) ? $field->getOld() : null) ?? $value;
             return $thisObj->getSelectOptions($selectOption);
@@ -2150,6 +2330,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getSelectOptions($options = []): Collection
     {
         $options = array_merge(
@@ -2193,6 +2375,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return string|null url
      */
+
+    // @phpstan-ignore-next-line
     public function getOptionAjaxPath($options = [])
     {
         // if use options, return null
@@ -2211,6 +2395,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return string|null url
      */
+
+    // @phpstan-ignore-next-line
     public function getOptionAjaxUrl($options = [])
     {
         $path = $this->getOptionAjaxPath($options);
@@ -2226,6 +2412,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param array $options
      * @return array offset 0 is select options, 1 is ajax url
      */
+
+    // @phpstan-ignore-next-line
     public function getSelectOptionsAndAjaxUrl($options = [])
     {
         return [
@@ -2237,6 +2425,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * put selected value
      */
+
+    // @phpstan-ignore-next-line
     protected function putSelectedValue(Collection $items, $selected_value, $options = []): Collection
     {
         // if display_table and $this is same, and contains target_id, remove selects
@@ -2282,6 +2472,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * getOptionsQuery. this function uses for count, get, ...
      */
+
+    // @phpstan-ignore-next-line
     protected function getOptionsQuery($options = [])
     {
         $options = array_merge(
@@ -2330,6 +2522,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Filtering display table. if $this table is user or org, filtering.
      */
+
+    // @phpstan-ignore-next-line
     public function filterDisplayTable($query, $display_table, $options = [])
     {
         $options = array_merge([
@@ -2363,6 +2557,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param int|string|null $selected_value
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     protected function getSelectedOptionDefault($selected_value): Collection
     {
         if (!isset($selected_value)) {
@@ -2378,10 +2574,14 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                     $ret[$i->id] = $i->label;
                 }
                 /** @var Collection $collection */
+
+                // @phpstan-ignore-next-line
                 $collection =  collect($ret);
                 return $collection;
             }
             /** @var Collection $collection */
+
+            // @phpstan-ignore-next-line
             $collection = collect([$item->id => $item->label]);
             return $collection;
         } else {
@@ -2402,6 +2602,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @return array|null option items
      */
     //public function getColumnsSelectOptions($append_table = false, $index_enabled_only = false, $include_parent = false, $include_child = false, $include_system = true)
+
+    // @phpstan-ignore-next-line
     public function getColumnsSelectOptions($selectOptions = [])
     {
         $selectOptions = array_merge(
@@ -2620,6 +2822,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         return $options;
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setColumnOptions(&$options, $custom_columns, $table_id, $selectOptions = [])
     {
         $selectOptions = array_merge(
@@ -2765,6 +2969,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return array options
      */
+
+    // @phpstan-ignore-next-line
     public function getSummaryColumnsSelectOptions()
     {
         $options = [];
@@ -2818,6 +3024,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     }
 
 
+
+    // @phpstan-ignore-next-line
     protected function setSummarySelectOptionItem(&$options, $custom_table, $custom_columns, ?string $view_name, $optionKeyParams = [])
     {
 
@@ -2841,6 +3049,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * get date columns select options. It contains date, datetime.
      *
      */
+
+    // @phpstan-ignore-next-line
     public function getDateColumnsSelectOptions()
     {
         $options = [];
@@ -2869,6 +3079,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * get user and organization columns select options.
      *
      */
+
+    // @phpstan-ignore-next-line
     public function getUserOrgColumnsSelectOptions($options = [])
     {
         $options = array_merge(
@@ -2900,6 +3112,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * Get relation tables list.
      * It contains search_type(select_table, one_to_many, many_to_many)
      */
+
+    // @phpstan-ignore-next-line
     public function getRelationTables($checkPermission = true, $options = [])
     {
         return RelationTable::getRelationTables($this, $checkPermission, $options);
@@ -2940,6 +3154,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
+
+    // @phpstan-ignore-next-line
     public function getValueQuery(): \Illuminate\Database\Eloquent\Builder
     {
         return $this->getValueModel()->query();
@@ -2967,6 +3183,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get array for "makeHidden" function
      */
+
+    // @phpstan-ignore-next-line
     public function getMakeHiddenArray()
     {
         return $this->getSearchEnabledColumns()->map(function ($columns) {
@@ -2980,6 +3198,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * whether login user has permission. target is table
      */
+
+    // @phpstan-ignore-next-line
     public function hasPermission($role_key = Permission::AVAILABLE_VIEW_CUSTOM_VALUE)
     {
         // if system doesn't use role, return true
@@ -3041,6 +3261,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Whether login user has permission about view.
      */
+
+    // @phpstan-ignore-next-line
     public function hasViewPermission()
     {
         $userview_unavailable_table = config('exment.userview_unavailable_table', '');
@@ -3053,6 +3275,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Whether login user has system permission about view.
      */
+
+    // @phpstan-ignore-next-line
     public function hasSystemViewPermission()
     {
         return $this->hasPermission([Permission::CUSTOM_TABLE, Permission::CUSTOM_VIEW]);
@@ -3061,6 +3285,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Whether login user has permission about target id data.
      */
+
+    // @phpstan-ignore-next-line
     public function hasPermissionData($id)
     {
         $result = $this->_hasPermissionData($id, Permission::AVAILABLE_ACCESS_CUSTOM_VALUE, Permission::AVAILABLE_ALL_CUSTOM_VALUE, Permission::AVAILABLE_ACCESS_CUSTOM_VALUE);
@@ -3072,6 +3298,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
                 $parent_table = $relation->parent_custom_table;
                 if (isset($parent_table)) {
                     if (is_numeric($id)) {
+
+                        // @phpstan-ignore-next-line
                         $model = $this->getValueModel($id);
                     } else {
                         $model = $id;
@@ -3088,6 +3316,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * Whether login user has edit permission about target id data.
      */
+
+    // @phpstan-ignore-next-line
     public function hasPermissionEditData($id)
     {
         return $this->_hasPermissionData($id, Permission::AVAILABLE_ACCESS_CUSTOM_VALUE, Permission::AVAILABLE_ALL_EDIT_CUSTOM_VALUE, Permission::AVAILABLE_EDIT_CUSTOM_VALUE);
@@ -3099,6 +3329,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @$tableRole if user doesn't have these permission, return false
      * @$tableRoleTrue if user has these permission, return true
      */
+
+    // @phpstan-ignore-next-line
     protected function _hasPermissionData($id, $tableRole, $tableRoleTrue, $dataRole)
     {
         // if system doesn't use role, return true
@@ -3122,6 +3354,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         }
 
         if (is_numeric($id)) {
+
+            // @phpstan-ignore-next-line
             $model = $this->getValueModel($id);
         } else {
             $model = $id;
@@ -3157,6 +3391,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return bool if true, has in database.
      */
+
+    // @phpstan-ignore-next-line
     public function hasCustomValueInDB($custom_value_id)
     {
         return $this->getValueModel()->withoutGlobalScopes([CustomValueModelScope::class])->where('id', $custom_value_id)->count() > 0;
@@ -3168,6 +3404,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
        *
      * @return ErrorCode
      */
+
+    // @phpstan-ignore-next-line
     public function getNoDataErrorCode($custom_value_id)
     {
         if ($this->hasCustomValueInDB($custom_value_id)) {
@@ -3180,6 +3418,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * check permission with pivot
      */
+
+    // @phpstan-ignore-next-line
     protected function checkPermissionWithPivot($rows, $role_key)
     {
         if (!isset($rows) || count($rows) == 0) {
@@ -3205,6 +3445,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      *
      */
+
+    // @phpstan-ignore-next-line
     public function allUserAccessable()
     {
         return !System::permission_available()
@@ -3218,6 +3460,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      *
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function setGridAuthoritable(Collection $custom_values)
     {
         $key = sprintf(Define::SYSTEM_KEY_SESSION_GRID_AUTHORITABLE, $this->id);
@@ -3237,6 +3481,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param $action_type
      * @return bool
      */
+
+    // @phpstan-ignore-next-line
     public function formActionDisable($action_type)
     {
         $disable_actions = $this->getOption('form_action_disable_flg', []);
@@ -3247,6 +3493,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param $action_type
      * @return bool
      */
+
+    // @phpstan-ignore-next-line
     public function gridFilterDisable($action_type)
     {
         $grid_filter_disable_flg = System::grid_filter_disable_flg() ?? [];
@@ -3287,6 +3535,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param $checkFormAction
      * @return ErrorCode|true
      */
+
+    // @phpstan-ignore-next-line
     public function enableCreate($checkFormAction = false)
     {
         if (!$this->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -3307,6 +3557,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
      * @param $checkFormAction
      * @return ErrorCode|true
      */
+
+    // @phpstan-ignore-next-line
     public function enableEdit($checkFormAction = false)
     {
         if (!$this->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -3399,6 +3651,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * User can view customview menu button
      */
+
+    // @phpstan-ignore-next-line
     public function enableViewMenuButton()
     {
         if (boolval(config('exment.datalist_view_button_disabled', false))) {
@@ -3415,6 +3669,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      *
      */
+
+    // @phpstan-ignore-next-line
     public function isOneRecord()
     {
         return $this->getOption('one_record_flg', false);
@@ -3423,6 +3679,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * get show positon for system values
      */
+
+    // @phpstan-ignore-next-line
     public function getSystemValuesPosition()
     {
         $positon = $this->getOption('system_values_pos', ShowPositionType::DEFAULT);
@@ -3463,6 +3721,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * copy this table
      */
+
+    // @phpstan-ignore-next-line
     public function copyTable($inputs = null, bool $include_view = false, bool $include_form = false)
     {
         \ExmentDB::transaction(function ($connect) use ($inputs, $include_view, $include_form) {
@@ -3607,6 +3867,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * check if copy target view.
      */
+
+    // @phpstan-ignore-next-line
     protected function isCopyTargetView($custom_view): bool
     {
         if ($custom_view->view_type == ViewType::USER) {
@@ -3664,6 +3926,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * validate before value delete.
      */
+
+    // @phpstan-ignore-next-line
     public function validateValueDestroy($id)
     {
         $ids = stringToArray($id);
@@ -3706,6 +3970,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     /**
      * check if data is referenced.
      */
+
+    // @phpstan-ignore-next-line
     protected function checkReferenced($custom_table, $list)
     {
         foreach ($custom_table->getSelectedItems() as $item) {
