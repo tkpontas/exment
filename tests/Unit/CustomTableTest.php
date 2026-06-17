@@ -240,7 +240,6 @@ class CustomTableTest extends UnitTestBase
         $source_form = CustomForm::where('custom_table_id', $from_table->id)->first();
         if (!$source_form) {
             $this->markTestSkipped('No forms found for source table');
-            return;
         }
 
         // Set form references pointing to old table's forms
@@ -383,7 +382,9 @@ class CustomTableTest extends UnitTestBase
 
         $sourceFormColumn = collect($sourceForm->custom_form_blocks)
             ->flatMap(function ($block) {
-                return $block->custom_form_columns;
+                /** @var \Illuminate\Support\Collection $columns */
+                $columns = $block->custom_form_columns;
+                return $columns;
             })
             ->first(function ($formColumn) {
                 return $formColumn->form_column_type == FormColumnType::COLUMN && isset($formColumn->custom_column);
@@ -412,7 +413,9 @@ class CustomTableTest extends UnitTestBase
 
         $importedFormColumn = collect($importedForm->custom_form_blocks)
             ->flatMap(function ($block) {
-                return $block->custom_form_columns;
+                /** @var \Illuminate\Support\Collection $columns */
+                $columns = $block->custom_form_columns;
+                return $columns;
             })
             ->first(function ($formColumn) use ($sourceFormColumn) {
                 return $formColumn->suuid == $sourceFormColumn->suuid;
@@ -525,7 +528,7 @@ class CustomTableTest extends UnitTestBase
      * Build minimal template export payload for a single table.
      *
      * @param string $tableName
-     * @return array
+     * @return array<string, mixed>
      */
     private function createTableOnlyTemplateExportData($tableName)
     {
