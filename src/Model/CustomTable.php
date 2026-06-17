@@ -3433,9 +3433,6 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
     }
 
     /**
-     * copy this table
-     */
-    /**
      * Barcode-related option keys that should be excluded when copying a table.
      */
     protected static $barcodeOptionKeys = [
@@ -3463,6 +3460,9 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         'action_after_read_jan_code',
     ];
 
+    /**
+     * copy this table
+     */
     public function copyTable($inputs = null, bool $include_view = false, bool $include_form = false)
     {
         \ExmentDB::transaction(function ($connect) use ($inputs, $include_view, $include_form) {
