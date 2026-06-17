@@ -382,7 +382,7 @@ class CustomTableTest extends UnitTestBase
 
         $sourceFormColumn = collect($sourceForm->custom_form_blocks)
             ->flatMap(function ($block) {
-                /** @var \Illuminate\Support\Collection $columns */
+                /** @var \Illuminate\Support\Collection<int, \Exceedone\Exment\Model\CustomFormColumn> $columns */
                 $columns = $block->custom_form_columns;
                 return $columns;
             })
@@ -413,7 +413,7 @@ class CustomTableTest extends UnitTestBase
 
         $importedFormColumn = collect($importedForm->custom_form_blocks)
             ->flatMap(function ($block) {
-                /** @var \Illuminate\Support\Collection $columns */
+                /** @var \Illuminate\Support\Collection<int, \Exceedone\Exment\Model\CustomFormColumn> $columns */
                 $columns = $block->custom_form_columns;
                 return $columns;
             })

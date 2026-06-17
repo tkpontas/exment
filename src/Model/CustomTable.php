@@ -1427,6 +1427,10 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         return $obj;
     }
 
+    /**
+     * @param array<string, mixed> $json
+     * @return void
+     */
     protected static function exportReplaceJson(&$json)
     {
         foreach (static::$templateFormOptionMap as $optionKey) {
@@ -1453,6 +1457,11 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
         }
     }
 
+    /**
+     * @param array<string, mixed> $json
+     * @param array<string, mixed> $options
+     * @return void
+     */
     protected static function importReplaceJson(&$json, $options = [])
     {
         // These keys are helper metadata for template import and should not be persisted as table options.
@@ -3692,6 +3701,8 @@ class CustomTable extends ModelBase implements Interfaces\TemplateImporterInterf
 
     /**
      * Barcode-related option keys that should be excluded when copying a table.
+     *
+     * @var array<int, string>
      */
     protected static $barcodeOptionKeys = [
         // QR code settings
