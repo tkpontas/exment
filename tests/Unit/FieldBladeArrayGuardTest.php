@@ -28,7 +28,11 @@ class FieldBladeArrayGuardTest extends TestCase
     private function fieldViewDir(): string
     {
         $ref = new \ReflectionClass(ViewOnly::class); // src/Form/Field/ViewOnly.php
-        $packageRoot = dirname($ref->getFileName(), 4); // -> package root
+        $fileName = $ref->getFileName();
+        if ($fileName === false) {
+            $this->fail('Cannot resolve the file of class ' . ViewOnly::class);
+        }
+        $packageRoot = dirname($fileName, 4); // -> package root
         return $packageRoot . '/resources/views/form/field';
     }
 
@@ -41,6 +45,9 @@ class FieldBladeArrayGuardTest extends TestCase
         $this->assertDirectoryExists($dir, "Field view directory not found: {$dir}");
 
         $files = glob($dir . '/*.blade.php');
+        if ($files === false) {
+            $this->fail("Cannot list blade templates in: {$dir}");
+        }
         $this->assertNotEmpty($files, 'No field blade templates found to lint.');
 
         // The dangerous sink: a STANDALONE echo of $value / $default (the multi-value column value).
@@ -54,6 +61,9 @@ class FieldBladeArrayGuardTest extends TestCase
         $offenders = [];
         foreach ($files as $file) {
             $content = file_get_contents($file);
+            if ($content === false) {
+                $this->fail("Cannot read blade file: {$file}");
+            }
 
             $hasRawSink = false;
             foreach ($rawSinkPatterns as $p) {

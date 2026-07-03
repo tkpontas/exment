@@ -23,11 +23,17 @@ class CheckLatestVersionTest extends TestCase
 
     // ---- classifyVersion -------------------------------------------------
 
+    /**
+     * @return void
+     */
     public function testCurrentEqualsLatestIsLatest()
     {
         $this->assertSame(SystemVersion::LATEST, $this->exment()->classifyVersion('6.2.10', '6.2.10'));
     }
 
+    /**
+     * @return void
+     */
     public function testCurrentOlderThanLatestHasNext()
     {
         $this->assertSame(SystemVersion::HAS_NEXT, $this->exment()->classifyVersion('6.2.10', '6.2.9'));
@@ -36,12 +42,17 @@ class CheckLatestVersionTest extends TestCase
     /**
      * The exact regression: installed version is NEWER than packagist latest -> must be LATEST,
      * not a false "update available".
+     *
+     * @return void
      */
     public function testCurrentNewerThanLatestIsLatest()
     {
         $this->assertSame(SystemVersion::LATEST, $this->exment()->classifyVersion('6.2.9', '6.2.10'));
     }
 
+    /**
+     * @return void
+     */
     public function testDoubleDigitOrdering()
     {
         // string compare would rank 6.2.10 below 6.2.9; semantic compare must not.
@@ -49,6 +60,9 @@ class CheckLatestVersionTest extends TestCase
         $this->assertSame(SystemVersion::HAS_NEXT, $this->exment()->classifyVersion('6.2.10', '6.2.2'));
     }
 
+    /**
+     * @return void
+     */
     public function testVPrefixIsIgnored()
     {
         $this->assertSame(SystemVersion::LATEST, $this->exment()->classifyVersion('v6.2.10', '6.2.10'));
@@ -57,12 +71,17 @@ class CheckLatestVersionTest extends TestCase
 
     /**
      * @dataProvider devCurrentProvider
+     *
+     * @return void
      */
     public function testDevAndBranchAliasCurrentsAreDev(string $current)
     {
         $this->assertSame(SystemVersion::DEV, $this->exment()->classifyVersion('6.2.10', $current));
     }
 
+    /**
+     * @return array<int, array{string}>
+     */
     public static function devCurrentProvider(): array
     {
         return [
@@ -79,8 +98,10 @@ class CheckLatestVersionTest extends TestCase
      * (regression: trim(null, 'v') deprecates on PHP 8.1+ when outside_api is off / offline).
      *
      * @dataProvider emptyVersionProvider
+     *
+     * @return void
      */
-    public function testNullOrEmptyIsErrorWithoutDeprecation($latest, $current)
+    public function testNullOrEmptyIsErrorWithoutDeprecation(?string $latest, ?string $current)
     {
         set_error_handler(function ($no, $str) {
             throw new \ErrorException($str, 0, $no);
@@ -93,6 +114,9 @@ class CheckLatestVersionTest extends TestCase
         $this->assertSame(SystemVersion::ERROR, $result);
     }
 
+    /**
+     * @return array<string, array{string|null, string|null}>
+     */
     public static function emptyVersionProvider(): array
     {
         return [
@@ -105,6 +129,9 @@ class CheckLatestVersionTest extends TestCase
 
     // ---- isDevVersion ----------------------------------------------------
 
+    /**
+     * @return void
+     */
     public function testIsDevVersion()
     {
         $ex = $this->exment();
@@ -119,6 +146,9 @@ class CheckLatestVersionTest extends TestCase
 
     // ---- pickLatestStableVersion -----------------------------------------
 
+    /**
+     * @return void
+     */
     public function testPickLatestStableVersionSemanticOrder()
     {
         // "6.2.10" must win over "6.2.9" (a string sort would pick 6.2.9).
@@ -130,6 +160,9 @@ class CheckLatestVersionTest extends TestCase
         $this->assertSame('6.2.10', $this->exment()->pickLatestStableVersion($packages));
     }
 
+    /**
+     * @return void
+     */
     public function testPickLatestStableVersionSkipsDevAndPreRelease()
     {
         $packages = [
@@ -148,6 +181,8 @@ class CheckLatestVersionTest extends TestCase
      * "-patch" / "-pl" are STABLE in composer (not pre-releases), so a patch release that is
      * higher than the base release must be selectable (regression: a "strip any '-'" filter
      * would wrongly skip it and could yield null -> ERROR).
+     *
+     * @return void
      */
     public function testPickLatestStableVersionKeepsPatchRelease()
     {
@@ -163,6 +198,9 @@ class CheckLatestVersionTest extends TestCase
         ]));
     }
 
+    /**
+     * @return void
+     */
     public function testPickLatestStableVersionAllNonStableReturnsNull()
     {
         $packages = [
@@ -175,6 +213,8 @@ class CheckLatestVersionTest extends TestCase
     /**
      * A package entry without version_normalized must not emit a deprecation
      * (regression: version_compare(null, ...) deprecates on PHP 8.1+).
+     *
+     * @return void
      */
     public function testPickLatestStableVersionMissingNormalizedNoDeprecation()
     {
@@ -193,6 +233,9 @@ class CheckLatestVersionTest extends TestCase
         $this->assertSame('6.2.10', $result);
     }
 
+    /**
+     * @return void
+     */
     public function testPickLatestStableVersionEmptyReturnsNull()
     {
         $this->assertNull($this->exment()->pickLatestStableVersion([]));

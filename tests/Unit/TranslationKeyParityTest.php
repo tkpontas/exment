@@ -44,7 +44,9 @@ class TranslationKeyParityTest extends TestCase
             }
 
             // collect locales (sub directories: en, ja, ...)
-            $locales = array_values(array_filter(scandir($root), function ($d) use ($root) {
+            $entries = scandir($root);
+            $this->assertNotFalse($entries, "Cannot scan lang root: {$relRoot}");
+            $locales = array_values(array_filter($entries, function ($d) use ($root) {
                 return $d !== '.' && $d !== '..' && is_dir($root . '/' . $d);
             }));
             $this->assertGreaterThanOrEqual(2, count($locales), "Expected at least 2 locales under {$relRoot}");
@@ -52,7 +54,7 @@ class TranslationKeyParityTest extends TestCase
             // collect the union of all *.php files across locales
             $files = [];
             foreach ($locales as $locale) {
-                foreach (glob($root . '/' . $locale . '/*.php') as $path) {
+                foreach (glob($root . '/' . $locale . '/*.php') ?: [] as $path) {
                     $files[basename($path)] = true;
                 }
             }

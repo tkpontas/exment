@@ -75,11 +75,11 @@ class DisplayFieldArrayValueTest extends TestCase
         $field = new ViewOnly('value.multi_column', ['Multi column']);
         // Mirror CustomItem::getCustomField() for a view-only column.
         $field->displayText('option1, option2')->escape(false);
-        $field->value(['option1', 'option2']); // multi-value column -> ARRAY
+        // fill() is the real form flow (typed array<mixed>; value()'s docblock varies per laravel-admin version)
+        $field->fill(['value' => ['multi_column' => ['option1', 'option2']]]); // multi-value column -> ARRAY
 
         $html = $this->renderToString($field);
 
-        $this->assertIsString($html);
         $this->assertNoArrayCorruption($html, ['option1', 'option2']);
         // multi-value must round-trip as array inputs (name="...[]"), not a single "Array" string
         $this->assertStringContainsString('value[multi_column][]', $html);
@@ -95,11 +95,10 @@ class DisplayFieldArrayValueTest extends TestCase
         $this->bootAdmin();
 
         $field = new ViewOnly('value.multi_column', ['Multi column']);
-        $field->value(['option1', 'option2']); // ARRAY, no displayText -> hits {{ $value }}
+        $field->fill(['value' => ['multi_column' => ['option1', 'option2']]]); // ARRAY, no displayText -> hits {{ $value }}
 
         $html = $this->renderToString($field);
 
-        $this->assertIsString($html);
         $this->assertNoArrayCorruption($html);
     }
 
@@ -115,11 +114,10 @@ class DisplayFieldArrayValueTest extends TestCase
 
         $field = new InitOnly('value.multi_column', ['Multi column']);
         $field->default(['option1', 'option2'])->prepareDefault(); // ARRAY default
-        $field->value(['option1', 'option2']);
+        $field->fill(['value' => ['multi_column' => ['option1', 'option2']]]);
 
         $html = $this->renderToString($field);
 
-        $this->assertIsString($html);
         $this->assertNoArrayCorruption($html, ['option1', 'option2']);
     }
 }

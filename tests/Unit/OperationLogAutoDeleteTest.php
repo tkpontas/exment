@@ -30,7 +30,8 @@ class OperationLogAutoDeleteTest extends TestCase
     /** A fixed reference instant: 2026-06-25 03:30:00. */
     private function now(): Carbon
     {
-        return Carbon::create(2026, 6, 25, 3, 30, 0);
+        // new Carbon(...) is typed as Carbon (Carbon::create() is Carbon|false and trips phpstan)
+        return new Carbon('2026-06-25 03:30:00');
     }
 
     /**
@@ -126,7 +127,8 @@ class OperationLogAutoDeleteTest extends TestCase
         );
 
         // hour = 0 must be a real condition, not treated as "empty/any".
-        $midnight = Carbon::create(2026, 6, 25, 0, 0, 0);
+        // (new Carbon(...) is typed as Carbon; Carbon::create() is Carbon|false and trips phpstan)
+        $midnight = new Carbon('2026-06-25 00:00:00');
         $this->assertTrue(
             ScheduleCommand::isOperationLogClearDue(true, 180, null, null, null, '0', null, null, $midnight),
             'hour="0" at 00:xx should run (0 is a valid hour, not empty).'
