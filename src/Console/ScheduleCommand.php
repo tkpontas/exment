@@ -95,44 +95,20 @@ class ScheduleCommand extends Command
      */
     protected function clearOperationLog()
     {
-        if (!boolval(System::operation_log_enable_automatic())) {
-            return;
-        }
-
-        $keepDays = System::operation_log_keep_days();
-        if (is_nullorempty($keepDays) || (int)$keepDays <= 0) {
-            return;
-        }
-
         $now = Carbon::now();
+        $keepDays = System::operation_log_keep_days();
 
-        // Check day-of-week condition (ISO: 1=Mon, 2=Tue, ..., 7=Sun)
-        $week = System::operation_log_automatic_week();
-        if (!is_nullorempty($week) && (string)$now->dayOfWeekIso !== (string)$week) {
-            return;
-        }
-
-        // Check month condition (1–12)
-        $month = System::operation_log_automatic_month();
-        if (!is_nullorempty($month) && (string)$now->month !== (string)$month) {
-            return;
-        }
-
-        // Check day-of-month condition (1–31)
-        $day = System::operation_log_automatic_day();
-        if (!is_nullorempty($day) && (string)$now->day !== (string)$day) {
-            return;
-        }
-
-        // Check hour condition (0–23)
-        $hour = System::operation_log_automatic_hour();
-        if (!is_nullorempty($hour) && (string)$now->hour !== (string)$hour) {
-            return;
-        }
-
-        // Check minute condition (0–59)
-        $minute = System::operation_log_automatic_minute();
-        if (!is_nullorempty($minute) && (string)$now->minute !== (string)$minute) {
+        if (!self::isOperationLogClearDue(
+            boolval(System::operation_log_enable_automatic()),
+            $keepDays,
+            System::operation_log_automatic_week(),
+            System::operation_log_automatic_month(),
+            System::operation_log_automatic_day(),
+            System::operation_log_automatic_hour(),
+            System::operation_log_automatic_minute(),
+            System::operation_log_automatic_executed(),
+            $now
+        )) {
             return;
         }
 
@@ -142,8 +118,80 @@ class ScheduleCommand extends Command
         ]);
 
         if ($exitCode === 0) {
+            // Record last execution. isOperationLogClearDue() reads this back as a run-once guard
+            // so the (hourly) scheduler does not re-run the purge on every tick.
             System::operation_log_automatic_executed($now);
         }
+    }
+
+    /**
+     * Decide whether the operation-log auto-delete should run at $now.
+     *
+     * Pure function (no DB / no side effects) so the scheduling and run-once guard logic is
+     * unit-testable. NOTE: the previous implementation wrote operation_log_automatic_executed
+     * but never read it back, so with the default hourly scheduler the purge ran on every tick.
+     * This method restores the guard by honoring $lastExecuted.
+     *
+     * Empty schedule conditions mean "any". "0" is NOT empty (is_nullorempty("0") === false),
+     * so hour=0 / minute=0 are honored.
+     *
+     * @param bool $enabled
+     * @param mixed $keepDays
+     * @param mixed $week    ISO day-of-week 1(Mon)..7(Sun), or empty
+     * @param mixed $month   1..12, or empty
+     * @param mixed $day     1..31, or empty
+     * @param mixed $hour    0..23, or empty
+     * @param mixed $minute  0..59, or empty
+     * @param Carbon|null $lastExecuted
+     * @param Carbon $now
+     * @return bool
+     */
+    public static function isOperationLogClearDue(
+        bool $enabled,
+        $keepDays,
+        $week,
+        $month,
+        $day,
+        $hour,
+        $minute,
+        ?Carbon $lastExecuted,
+        Carbon $now
+    ): bool {
+        if (!$enabled) {
+            return false;
+        }
+        if (is_nullorempty($keepDays) || (int)$keepDays <= 0) {
+            return false;
+        }
+
+        // day-of-week (ISO: 1=Mon..7=Sun)
+        if (!is_nullorempty($week) && (string)$now->dayOfWeekIso !== (string)$week) {
+            return false;
+        }
+        // month (1..12)
+        if (!is_nullorempty($month) && (string)$now->month !== (string)$month) {
+            return false;
+        }
+        // day-of-month (1..31)
+        if (!is_nullorempty($day) && (string)$now->day !== (string)$day) {
+            return false;
+        }
+        // hour (0..23)
+        if (!is_nullorempty($hour) && (string)$now->hour !== (string)$hour) {
+            return false;
+        }
+        // minute (0..59)
+        if (!is_nullorempty($minute) && (string)$now->minute !== (string)$minute) {
+            return false;
+        }
+
+        // Run-once guard: never purge more than once per calendar day, even when the (hourly)
+        // scheduler fires repeatedly and the time conditions are coarse/empty.
+        if ($lastExecuted instanceof Carbon && $lastExecuted->isSameDay($now)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

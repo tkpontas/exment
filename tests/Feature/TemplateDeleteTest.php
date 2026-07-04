@@ -129,9 +129,9 @@ class TemplateDeleteTest extends FeatureTestBase
             $userTemplateName . '/config.json',
             json_encode([
                 'template_name'      => $userTemplateName,
-                'template_view_name' => 'Unit Test Template',   
+                'template_view_name' => 'Unit Test Template',
                 'template_type'      => 'user',
-            ])
+            ], JSON_THROW_ON_ERROR)
         );
 
         $response = $this->withHeaders([
@@ -143,7 +143,7 @@ class TemplateDeleteTest extends FeatureTestBase
         ]);
 
         $response->assertStatus(200);
-        $html = $response->getContent();
+        $html = (string) $response->getContent();
 
         // User templates should have a trash button with data-exment-delete.
         $this->assertStringContainsString(
@@ -191,7 +191,7 @@ class TemplateDeleteTest extends FeatureTestBase
         ]);
 
         $response->assertStatus(200);
-        $html = $response->getContent();
+        $html = (string) $response->getContent();
 
         // The number of data-exment-delete attributes in the rendered HTML must
         // equal the number of pre-existing user templates exactly.  System

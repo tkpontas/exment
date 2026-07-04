@@ -127,7 +127,9 @@ class Define
         'backup_history_files' => ['type' => 'int', 'default' => '0', 'group' => 'backup'],
 
         // Operation log auto-delete
-        'operation_log_enable_automatic' => ['type' => 'boolean', 'default' => '1', 'group' => 'operation_log'],
+        // Opt-in (default '0') like backup_enable_automatic above: a destructive housekeeping task
+        // must not silently purge audit logs on a fresh install without an explicit admin choice.
+        'operation_log_enable_automatic' => ['type' => 'boolean', 'default' => '0', 'group' => 'operation_log'],
         'operation_log_keep_days' => ['type' => 'int', 'default' => '180', 'group' => 'operation_log'],
         'operation_log_automatic_week' => ['group' => 'operation_log'],
         'operation_log_automatic_month' => ['group' => 'operation_log'],
