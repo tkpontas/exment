@@ -7,7 +7,7 @@ return [
         'success' => '成功',
         'error' => 'エラー',
         'warning' => '警告',
-        'import' => 'インポート',
+        'import' => 'データ取込',
         'plugin' => 'プラグイン',
         'copy' => '複製',
         'shared' => '共有',
@@ -386,8 +386,8 @@ return [
         
         'date_format_list' => [
             'format_default' => ['Y年m月d日', 'Y年m月d日 H:i', 'H:i'],
-            'format_slash' => ['y/m/d', 'm/d H:i', 'H:i:s'],
-            'format_local' => ['Y年m月d日', 'Y年m月d日 Ag時i分', 'Ag時i分'],
+            'format_slash' => ['m/d', 'm/d Ag:i', 'Ag:i'],
+            'format_local' => ['Y年m月d日', 'Y年m月d日 Ag:i', 'Ag:i'],
         ],
 
         'joined_org_filter_role_group_options' => [
@@ -549,8 +549,8 @@ return [
         'default_dashboard_name' => '既定のダッシュボード',
         'not_registered' => '未登録',
         'dashboard_type_options' => [
-            'system' => 'システムダッシュボード',
-            'user' => 'ユーザーダッシュボード',
+            'system' => 'パブリック',
+            'user' => 'プライベート',
         ],
         'row_options0' => 'なし',
         'row_optionsX' => '列',
@@ -1007,16 +1007,16 @@ return [
     ],
 
     '2factor' => [
-        '2factor' => '2段階認証',
+        '2factor' => '多要素認証',
         'login' => '認証',
         'submit_verify_code' => '認証コード送信',
-        'login_use_2factor' => '2段階認証を使用する',
+        'login_use_2factor' => '多要素認証を使用する',
         'login_2factor_provider' => '既定の認証方式',
-        'login_2factor_provider_user' => '2段階認証の認証方式',
+        'login_2factor_provider_user' => '多要素認証の認証方式',
         'login_2factor_verify_code' => '認証コード',
 
         'google' => [
-            'register_download' => 'Google認証システムインストール',
+            'register_download' => 'Google認証アプリインストール',
             'add_acount' => 'アカウント追加',
             'input_verify_code' => '認証コード入力',
         ],
@@ -1172,10 +1172,10 @@ return [
             'table' => 'テーブル専用',
         ],
         'work_target_type_options' => [
-            'all' => '全ユーザー実行可能',
-            'action_select' => '前アクションの実行ユーザーが選択',
+            'all' => '全員実行可能',
+            'action_select' => '前アクションの実行者が選択',
             'fix' => '事前に設定',
-            'get_by_userinfo' => '実行ユーザー情報から取得',
+            'get_by_userinfo' => '実行者情報から取得',
         ],
     ],
 
@@ -2037,10 +2037,10 @@ return [
             'used_column_error' => 'カスタム列設定の絞り込み条件ビューで使用しています。事前に削除を行ってください。',
         ],
 
-        'custom_view_button_label' => 'ビュー',
+        'custom_view_button_label' => '表示切替',
         'custom_view_type_options' => [
-            'system' => 'システムビュー',
-            'user' => 'ユーザービュー',
+            'system' => 'パブリック',
+            'user' => 'プライベート',
         ],
         'custom_view_kind_type_options' => [
             'default' => '通常ビュー',
@@ -2702,7 +2702,7 @@ return [
         'condition_key' => '条件',
         'condition_value' => '条件値',
         'condition_join' => '条件の結合',
-        'condition_reverse' => '条件の',
+        'condition_reverse' => '条件の反転',
         'condition_type_options' => [
             'user' => 'ログインユーザー',
             'organization' => 'ログインユーザーの所属組織',
@@ -2734,7 +2734,7 @@ return [
         ],
 
         'condition_reverse_options' => [
-            '1' => '条件をする',
+            '1' => '設定した条件と反対の条件を設定する',
         ],
     ],
 ];
