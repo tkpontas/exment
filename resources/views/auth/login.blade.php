@@ -22,7 +22,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="password" class="form-control" placeholder="パスワード" name="password" required>
+                        <input type="password" class="form-control" placeholder="利用者パスワード" name="password" required>
                         <span class="glyphicon glyphicon-lock form-control-feedback"></span>
                     </div>
                 </div>
