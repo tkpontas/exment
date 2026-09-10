@@ -22,7 +22,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="password" class="form-control" placeholder="利用者パスワード" name="password" required>
+                        <input type="password" class="form-control" placeholder="パスワード" name="password" required>
                         <span class="glyphicon glyphicon-lock form-control-feedback"></span>
                     </div>
                 </div>
@@ -49,7 +49,7 @@
             
             @if($show_default_login_provider)
             <div style="margin:10px 0; text-align:center;">
-                <p><a href="{{admin_url('auth/forget')}}">{{ exmtrans('login.forget_password') }}</a></p>
+                <p><a href="{{admin_url('auth/forget')}}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span> パスワード忘れの場合</a></p>
             </div>
             @endif
         @endif
