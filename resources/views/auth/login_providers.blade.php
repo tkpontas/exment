@@ -3,7 +3,7 @@
 @endforeach
 
 @if(isset($show_default_login_provider) && $show_default_login_provider)
-<button type="submit" class="btn btn-dropbox btn-block btn-flat submit_disabled"><span class="glyphicon glyphicon-log-in"></span>　MFAログイン</button>
+<button type="submit" class="btn btn-dropbox btn-block btn-flat submit_disabled"><span class="glyphicon glyphicon-log-in"></span>　ログイン(MFA方式)</button>
 @endif
 
 @foreach($form_providers as $login_provider_name => $login_provider)
