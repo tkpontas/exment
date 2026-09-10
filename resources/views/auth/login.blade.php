@@ -1,6 +1,6 @@
 @extends('exment::auth.layout') 
 @section('content')
-        <p class="login-box-msg" style="border-bottom: 2px solid green; padding: 0 0 5px; margin: 0 0 10px; font-weight: bold;">利用者ログイン</p>
+        <p class="login-box-msg" style="border-bottom: 2px solid green; padding: 0 0 5px; margin: 0 0 10px; font-weight: bold;">利用者ログイン (MFA)</p>
 
         @if($show_default_form)
             <form action="{{ admin_url('auth/login') }}" method="post">
@@ -57,7 +57,7 @@
         @if(count($login_providers) > 0)
         <div class="social-auth-links text-center">
         @if($show_default_form)
-        <hr>
+        <p style="border-bottom: 2px solid green; padding: 0 0 5px; margin: 0 0 10px; font-weight: bold;">連携アカウント (OAuth)</p>
         @endif
 
         @foreach($login_providers as $login_provider_name => $login_provider)
