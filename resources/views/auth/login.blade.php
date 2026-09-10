@@ -11,7 +11,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="text" class="form-control" placeholder="利用者コード" name="username" value="{{ old('username') }}" required>
+                        <input type="text" class="form-control" placeholder="利用者コード or 認証用メールアドレス" name="username" value="{{ old('username') }}" required>
                         <span class="glyphicon glyphicon-user form-control-feedback"></span>
                     </div>
                 </div>
@@ -22,7 +22,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="password" class="form-control" placeholder="パスワード" name="password" required>
+                        <input type="password" class="form-control" placeholder="利用者パスワード" name="password" required>
                         <span class="glyphicon glyphicon-lock form-control-feedback"></span>
                     </div>
                 </div>
