@@ -57,7 +57,7 @@
         @if(count($login_providers) > 0)
         <div class="social-auth-links text-center">
         @if($show_default_form)
-        <p style="border-bottom: 2px solid green; padding: 0 0 5px; margin: 0 0 10px; font-weight: bold;">連携アカウント (OAuth)</p>
+        <p style="border-bottom: 2px solid green; padding: 0 0 5px; margin: 0 0 10px; font-weight: bold;">利用者ログイン (OAuth)</p>
         @endif
 
         @foreach($login_providers as $login_provider_name => $login_provider)
