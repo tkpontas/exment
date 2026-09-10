@@ -1,6 +1,6 @@
 @extends('exment::auth.layout') 
 @section('content')
-        <p class="login-box-msg">{{ trans('admin.login') }}</p>
+        <p class="login-box-msg" style="border-bottom: 2px solid green; padding: 0 0 5px; margin: 0 0 10px; font-weight: bold;">利用者ログイン</p>
 
         @if($show_default_form)
             <form action="{{ admin_url('auth/login') }}" method="post">
@@ -11,7 +11,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="text" class="form-control" placeholder="{{ exmtrans('login.email_or_usercode') }}" name="username" value="{{ old('username') }}" required>
+                        <input type="text" class="form-control" placeholder="利用者コード" name="username" value="{{ old('username') }}" required>
                         <span class="glyphicon glyphicon-user form-control-feedback"></span>
                     </div>
                 </div>
@@ -22,7 +22,7 @@
                     @endforeach @endif
 
                     <div style="position:relative;">
-                        <input type="password" class="form-control" placeholder="{{ trans('admin.password') }}" name="password" required>
+                        <input type="password" class="form-control" placeholder="パスワード" name="password" required>
                         <span class="glyphicon glyphicon-lock form-control-feedback"></span>
                     </div>
                 </div>
@@ -57,7 +57,7 @@
         @if(count($login_providers) > 0)
         <div class="social-auth-links text-center">
         @if($show_default_form)
-        <p>- OR -</p>
+        <hr>
         @endif
 
         @foreach($login_providers as $login_provider_name => $login_provider)
