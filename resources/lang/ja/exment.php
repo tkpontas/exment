@@ -3,11 +3,11 @@
 return [
     'label' => '日本語',
     'common' => [
-        'home' => 'HOME',
+        'home' => 'ホーム',
         'success' => '成功',
         'error' => 'エラー',
         'warning' => '警告',
-        'import' => 'インポート',
+        'import' => '取込',
         'plugin' => 'プラグイン',
         'copy' => 'コピー',
         'shared' => '共有',
@@ -38,14 +38,14 @@ return [
         'deleted_at' => '削除日時',
         'published_at' => '公開日時',
         'published_date' => '公開日',
-        'all_user' => '全ユーザー',
-        'created_user' => '作成ユーザー',
-        'updated_user' => '更新ユーザー',
-        'deleted_user' => '削除ユーザー',
-        'executed_user' => '実行ユーザー',
-        'workflow_status' => '現在のステータス',
-        'workflow_work_users' => '現在の作業ユーザー',
-        'workflow_history' => 'ワークフロー履歴',
+        'all_user' => '全利用者',
+        'created_user' => '作成者',
+        'updated_user' => '更新者',
+        'deleted_user' => '削除者',
+        'executed_user' => '実行者',
+        'workflow_status' => '現在の進捗',
+        'workflow_work_users' => '現在の作業者',
+        'workflow_history' => '進捗履歴',
         'trashed_user' => '(削除済ユーザー)',
         'attachment' => '添付ファイル',
         'max_file_size' => 'アップロード上限サイズ',
@@ -367,9 +367,9 @@ return [
         ],
         
         'date_format_options' => [
-            'format_default' => '標準（Y-m-d H:i:s）',
-            'format_slash' => 'カスタム（Y/m/d H:i:s）',
-            'format_local' => 'ローカル（Y年m月d日 H時i分s秒）',
+            'format_default' => '標準（Y年m月d日 H:i）',
+            'format_slash' => 'カスタム（Y/m/d H:i）',
+            'format_local' => 'ローカル（Y年m月d日 H時i分）',
         ],
         
         'filter_search_type_options' => [
@@ -385,9 +385,9 @@ return [
         ],
         
         'date_format_list' => [
-            'format_default' => ['Y-m-d', 'Y-m-d H:i:s', 'H:i:s'],
-            'format_slash' => ['Y/m/d', 'Y/m/d H:i:s', 'H:i:s'],
-            'format_local' => ['Y年m月d日', 'Y年m月d日 H時i分s秒', 'H時i分s秒'],
+            'format_default' => ['Y年m月d日', 'Y年m月d日 H:i', 'H:i'],
+            'format_slash' => ['Y/m/d', 'Y/m/d H:i', 'H:i'],
+            'format_local' => ['Y年m月d日', 'Y年m月d日 H時i分', 'H時i分s.u秒'],
         ],
 
         'joined_org_filter_role_group_options' => [
