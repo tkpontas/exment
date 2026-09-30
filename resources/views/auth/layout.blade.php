@@ -57,7 +57,7 @@
               </a>
           </div>
           <!-- /.login-logo -->
-          <div class="login-box-body">
+          <div class="login-box-body" style="background-color: rgba(255,255,255,0.85);">
               @yield('content')
           </div>
           <!-- /.login-box-body -->
