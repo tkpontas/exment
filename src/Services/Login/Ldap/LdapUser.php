@@ -12,6 +12,11 @@ use Exceedone\Exment\Enums\LoginType;
  */
 class LdapUser extends CustomLoginUserBase
 {
+    /**
+     * @param \Exceedone\Exment\Model\LoginSetting $login_setting
+     * @param LdapEntry $ldapUser
+     * @return LdapUser
+     */
     public static function with($login_setting, $ldapUser)
     {
         $user = new LdapUser();
@@ -30,53 +35,22 @@ class LdapUser extends CustomLoginUserBase
     }
 
     /**
-     * Mapping saml user value
+     * Mapping ldap user value
      *
-     * @param \Adldap\Models\User $ldapuser
+     * @param LdapEntry $ldapuser
      * @param string $mappingKey
-     * @param array $replaceMaps
+     * @param array<string, string> $replaceMaps
      * @return mixed
      */
     protected static function getMappingItemValue($ldapuser, $mappingKey, $replaceMaps)
     {
         $hasValue = false;
         foreach ($replaceMaps as $replaceKey => $replaceValue) {
-            $ldap_attr = $replaceKey;
-            $method = 'get' . $ldap_attr;
-            if (method_exists($ldapuser, $method)) {
-                $mappingKey = str_replace($replaceValue, $ldapuser->$method(), $mappingKey);
+            [$found, $value] = $ldapuser->resolve($replaceKey);
+            $mappingKey = str_replace($replaceValue, (string) $value, $mappingKey);
+            if ($found) {
                 $hasValue = true;
-                continue;
             }
-
-            if (!isset($ldapuser_attrs)) {
-                $ldapuser_attrs = self::accessProtected($ldapuser, 'attributes');
-            }
-
-            $ldap_attr = strtolower($ldap_attr);
-
-            if (!isset($ldapuser_attrs[$ldap_attr])) {
-                /** @phpstan-ignore-next-line str_replace expects array|string, null given */
-                $mappingKey = str_replace($replaceValue, null, $mappingKey);
-                continue;
-            }
-
-            if (!is_array($ldapuser_attrs[$ldap_attr])) {
-                $mappingKey = str_replace($replaceValue, $ldapuser_attrs[$ldap_attr], $mappingKey);
-                $hasValue = true;
-                continue;
-            }
-
-            if (count($ldapuser_attrs[$ldap_attr]) == 0) {
-                /** @phpstan-ignore-next-line str_replace expects array|string, null given */
-                $mappingKey = str_replace($replaceValue, null, $mappingKey);
-                continue;
-            }
-
-            // now it returns the first item, but it could return
-            // a comma-separated string or any other thing that suits you better
-            $mappingKey = str_replace($replaceValue, $ldapuser_attrs[$ldap_attr][0], $mappingKey);
-            $hasValue = true;
         }
 
         // if not match all key, return null
@@ -85,13 +59,5 @@ class LdapUser extends CustomLoginUserBase
         }
 
         return $mappingKey;
-    }
-
-    protected static function accessProtected($obj, $prop)
-    {
-        $reflection = new \ReflectionClass($obj);
-        $property = $reflection->getProperty($prop);
-        $property->setAccessible(true);
-        return $property->getValue($obj);
     }
 }

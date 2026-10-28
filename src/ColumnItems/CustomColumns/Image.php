@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\ColumnItems\CustomColumns;
 
-use Encore\Admin\Form\Field as AdminField;
-use Encore\Admin\Form;
+use ExmentAdminCore\Admin\Form\Field as AdminField;
+use ExmentAdminCore\Admin\Form;
 use Exceedone\Exment\Form\Field;
 use Exceedone\Exment\Model\File as ExmentFile;
 use Exceedone\Exment\Enums\UrlTagType;
@@ -13,6 +13,7 @@ class Image extends File
     /**
      * get html. show link to image
      */
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         // If public form tmp file, return Only file name.
@@ -31,6 +32,7 @@ class Image extends File
         ]);
     }
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         if ($this->isMultipleEnabled()) {
@@ -39,6 +41,7 @@ class Image extends File
         return Field\Image::class;
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         parent::setAdminOptions($field);
@@ -46,6 +49,7 @@ class Image extends File
         $field->attribute(['accept' => "image/*"]);
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
         $validates[] = new \Exceedone\Exment\Validator\ImageRule();

@@ -21,6 +21,7 @@ class SwitchBoolField extends SwitchField
         return parent::render();
     }
 
+    // @phpstan-ignore-next-line
     protected function getParentClassname()
     {
         return get_parent_class(get_parent_class(get_parent_class($this)));

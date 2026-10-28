@@ -8,7 +8,7 @@ use Exceedone\Exment\Enums\SystemRequireResult;
 class SystemRequireTest extends UnitTestBase
 {
     /**
-     * @return null
+     * @return void
      */
     protected function init()
     {
@@ -135,6 +135,7 @@ class SystemRequireTest extends UnitTestBase
     protected function _test($classname, \Closure $exceptValueFunc, ?\Closure $resultFunc = null)
     {
         $obj = new $classname();
+        // @phpstan-ignore-next-line
         $value = $obj->getResult();
         $exceptValue = $exceptValueFunc();
 

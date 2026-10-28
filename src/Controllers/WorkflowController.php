@@ -2,13 +2,13 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Exceedone\Exment\Form\Widgets\ModalForm;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Layout\Content;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Model\Define;
@@ -41,10 +41,12 @@ use Carbon\Carbon;
 class WorkflowController extends AdminControllerBase
 {
     use WorkflowTrait;
+    use WorkflowDesignTrait;
     use HasResourceActions{
         HasResourceActions::destroy as destroyTrait;
     }
 
+    // @phpstan-ignore-next-line
     protected $exists = false;
 
     public function __construct()
@@ -100,13 +102,12 @@ class WorkflowController extends AdminControllerBase
                         'icon' => 'fa-trash',
                         'modal_title' => trans('admin.delete'),
                         'attributes' => [
-                            'data-toggle' => "tooltip",
+                            'data-bs-toggle' => "tooltip",
                         ],
                     ]
                 ))->render());
             }
 
-            /** @phpstan-ignore-next-line Cannot call method canActivate() on stdClass. */
             if ($actions->row->canActivate()) {
                 $actions->prepend((new Tools\ModalLink(
                     admin_urls('workflow', $actions->row->id, 'activateModal'),
@@ -114,7 +115,7 @@ class WorkflowController extends AdminControllerBase
                         'icon' => 'fa-check-square',
                         'modal_title' => exmtrans('workflow.setting_complete'),
                         'attributes' => [
-                            'data-toggle' => "tooltip",
+                            'data-bs-toggle' => "tooltip",
                         ],
                     ]
                 ))->render());
@@ -127,6 +128,13 @@ class WorkflowController extends AdminControllerBase
                     ->tooltip(exmtrans('notify.header'));
                 $actions->prepend($linker);
             }
+
+            // フロー図で直接編集する画面（ステップ1・2と同じ内容を扱う）
+            $linker = (new Linker())
+                ->url(admin_urls('workflow', $actions->getKey(), 'design'))
+                ->icon('fa-sitemap')
+                ->tooltip(exmtrans('workflow.design.header'));
+            $actions->prepend($linker);
 
             $linker = (new Linker())
                 ->url(admin_urls('workflow', $actions->getKey(), 'edit?action=2'))
@@ -143,6 +151,14 @@ class WorkflowController extends AdminControllerBase
         });
 
         $grid->tools(function ($tools) {
+            // ステップ1→ステップ2 と進む代わりに、フロー図から作り始める入口
+            $tools->append(view('exment::tools.button', [
+                'href' => admin_url('workflow/design/create'),
+                'label' => exmtrans('workflow.design.new_workflow'),
+                'icon' => 'fa-sitemap',
+                'btn_class' => 'btn-info',
+            ]));
+
             if (Workflow::hasSettingCompleted()) {
                 $tools->append(view('exment::tools.button', [
                     'href' => admin_url('workflow/beginning'),
@@ -176,6 +192,7 @@ class WorkflowController extends AdminControllerBase
      * @throws \Psr\Container\ContainerExceptionInterface
      * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         if (!isset($id)) {
@@ -187,12 +204,48 @@ class WorkflowController extends AdminControllerBase
 
         switch ($action) {
             case 2:
-                return $this->actionForm($id);
+                return $this->stampDesignToken($this->actionForm($id), $id);
             case 3:
                 return $this->beginningForm();
             default:
-                return $this->statusForm($id);
+                return $this->stampDesignToken($this->statusForm($id), $id);
         }
+    }
+
+    /**
+     * Move the design token whenever the standard screens save a flow.
+     *
+     * These screens and the visual designer edit the same workflow. The
+     * designer guards itself with a token built from the workflow row, but a
+     * save here can leave that token standing: the statuses and actions are
+     * child rows, so the workflow row itself need not come out dirty at all,
+     * and the embedded options form drops every key it has no field for -
+     * design_version among them. A designer tab open on the same flow would
+     * then still recognise its own token and write straight over what was
+     * just saved here.
+     *
+     * Writing a fresh stamp puts the key back and moves the token in one go,
+     * so that tab is answered with a conflict and reloads instead.
+     *
+     * The hook has to be savedInTransaction rather than saved: update() returns
+     * early on a formid request and never reaches the saved hooks.
+     *
+     * @param Form $form
+     * @param mixed $id
+     * @return Form
+     */
+    protected function stampDesignToken($form, $id)
+    {
+        $form->savedInTransaction(function ($form) use ($id) {
+            $saved = Workflow::find($id);
+            if (!$saved instanceof Workflow) {
+                return;
+            }
+            $saved->setOption('design_version', static::newDesignStamp());
+            $saved->save();
+        });
+
+        return $form;
     }
 
     /**
@@ -200,6 +253,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     public function action(Request $request, Content $content, $id)
     {
         return $this->AdminContent($content)->body($this->actionForm($id)->edit($id));
@@ -211,6 +265,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return \Illuminate\Http\JsonResponse
      */
+    // @phpstan-ignore-next-line
     public function destroy($id)
     {
         $this->isDeleteForce = true;
@@ -222,6 +277,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function statusForm($id = null)
     {
         $workflow = Workflow::getEloquent($id);
@@ -237,9 +293,11 @@ class WorkflowController extends AdminControllerBase
             $form->display('id', 'ID');
         }
 
+        // max:30 - workflows.workflow_view_name is a 30 character column, so a
+        // longer name passed validation and then failed the insert.
         $form->text('workflow_view_name', exmtrans("workflow.workflow_view_name"))
             ->required()
-            ->rules("max:40");
+            ->rules("max:30");
 
         // is create
         if (!isset($workflow)) {
@@ -311,11 +369,19 @@ class WorkflowController extends AdminControllerBase
             $model = $form->model();
 
             // get workflow_statuses and set completed fig
-            $statuses = $model->workflow_statuses()->get()->sortByDesc('order')->values();
+            // Only while the setting is not completed. After that the statuses
+            // cannot be added, removed or moved, so the last one is already
+            // the completed one - unless the workflow came with several
+            // completed statuses, which a template can ship. Recomputing then
+            // would quietly turn records sitting in those statuses back into
+            // unfinished ones, just because a name was edited here.
+            if (!boolval($model->setting_completed_flg)) {
+                $statuses = $model->workflow_statuses()->get()->sortByDesc('order')->values();
 
-            foreach ($statuses as $index => $status) {
-                $status->completed_flg = ($index === 0);
-                $status->save();
+                foreach ($statuses as $index => $status) {
+                    $status->completed_flg = ($index === 0);
+                    $status->save();
+                }
             }
 
             // save table info
@@ -335,6 +401,7 @@ class WorkflowController extends AdminControllerBase
         $self = $this;
         $form->tools(function (Form\Tools $tools) use ($self, $workflow) {
             $tools->append(new Tools\SystemChangePageMenu());
+            $self->appendDesignButton($workflow, $tools);
             $self->appendActivateButton($workflow, $tools);
             $self->appendTableSettingButton($workflow, $tools);
             $self->disableDelete($workflow, $tools);
@@ -379,6 +446,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function actionForm($id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -416,13 +484,25 @@ class WorkflowController extends AdminControllerBase
                 ->required()
                 ->default('executed_user')
             ;
+
+            // フロー プレビューで手で動かしたノードの座標。値は JSON 文字列
+            // {"enabled":true,"pos":{"<ステータスID>":{"x":0,"y":0}}} で、
+            // workflow_designer.js が書き込み、この画面の「保存」で一緒に送られる。
+            // 他の options 項目と同じ経路なので、保存前に離脱しても中途半端に残らない。
+            $form->hidden('designer_layout');
         })->disableHeader();
 
         $field = $form->hasManyTable('workflow_actions', exmtrans("workflow.workflow_actions"), function ($form) use ($id, $workflow) {
             $form->workflowStatusSelects('status_from', exmtrans("workflow.status_name"))
                 ->disableClear()
                 ->options(function ($value, $field, $workflow) {
-                    return $workflow->getStatusOptions($field->getIndex() === 0);
+                    // 1行目は「開始」からのアクション。ただしデザイナーで作った並びによって
+                    // 1行目が開始以外になった場合、選択肢に実際の値が無いと画面を開いただけで
+                    // 値が失われるため、そのときは全ステータスを出す。
+                    $onlyStart = ($field->getIndex() === 0)
+                        && (is_nullorempty($value) || $value == Define::WORKFLOW_START_KEYNAME);
+
+                    return $workflow->getStatusOptions($onlyStart);
                 });
 
             if ($workflow->workflow_type == WorkflowType::TABLE) {
@@ -538,9 +618,14 @@ class WorkflowController extends AdminControllerBase
            ->required()
            ->hideDeleteButtonRow(1);
 
+        // フロー プレビュー（右ペイン）。この html は入れ物と初期データだけで、
+        // 2ペインへの組み替えと描画は workflow_designer.js が行う。
+        $form->html($this->getDesignerHtml($workflow))->plain();
+
         $self = $this;
         $form->tools(function (Form\Tools $tools) use ($self, $workflow) {
             $tools->append(new Tools\SystemChangePageMenu());
+            $self->appendDesignButton($workflow, $tools);
             $self->appendActivateButton($workflow, $tools);
             $self->appendTableSettingButton($workflow, $tools);
             $self->disableDelete($workflow, $tools);
@@ -556,7 +641,20 @@ class WorkflowController extends AdminControllerBase
         });
 
         $form->editing(function ($form, $arr) use ($workflow) {
-            foreach ($form->model()->workflow_actions as $workflow_action) {
+            // This screen treats its first row as the action that leaves the
+            // start status: that row's work target is fixed to "preconfigured"
+            // and it has no delete button. The relation comes back in id
+            // order, and the designer can leave an action from another status
+            // with the lowest id, so the rows are put start-first here instead
+            // of trusting the ids.
+            $workflow_actions = $form->model()->workflow_actions->sort(function ($a, $b) {
+                $a_start = $a->status_from == Define::WORKFLOW_START_KEYNAME ? 0 : 1;
+                $b_start = $b->status_from == Define::WORKFLOW_START_KEYNAME ? 0 : 1;
+                return [$a_start, $a->id] <=> [$b_start, $b->id];
+            })->values();
+            $form->model()->setRelation('workflow_actions', $workflow_actions);
+
+            foreach ($workflow_actions as $workflow_action) {
                 $workflow_action->append([$workflow->workflow_type == WorkflowType::TABLE ? 'work_conditions' : 'work_condition_select']);
             }
         });
@@ -581,11 +679,46 @@ class WorkflowController extends AdminControllerBase
     }
 
     /**
+     * Get flow preview html, shown on the right side of the action form.
+     *
+     * ステータスの完了区分・ロック区分は画面のどこにも出力されていないため、
+     * ここで JSON にして JavaScript へ渡す。アクション（行）の中身は
+     * workflow_designer.js が hasManyTable の DOM から直接読み取るので、
+     * 行を編集すると図もそのまま追従する。
+     *
+     * @param Workflow $workflow
+     * @return string
+     */
+    protected function getDesignerHtml($workflow)
+    {
+        $statuses = $workflow->workflow_statuses_cache->map(function ($status) {
+            return [
+                'id' => strval($status->id),
+                'name' => strval($status->status_name),
+                'completed' => boolval($status->completed_flg),
+                'datalock' => boolval($status->datalock_flg),
+            ];
+        })->values()->toArray();
+
+        // ロケールにキーが無くても画面が落ちないよう、英語を土台にして上書きする
+        $texts = array_merge(
+            (array)trans('exment::exment.workflow.designer', [], 'en'),
+            (array)exmtrans('workflow.designer')
+        );
+
+        return view('exment::workflow.designer', [
+            'wd_statuses' => $statuses,
+            'wd_start_name' => strval($workflow->start_status_name),
+            'wd_texts' => $texts,
+        ])->render();
+    }
+
+    /**
      * Make a beginning form builder.
      *
      * @return Content
      */
-    protected function beginningForm()
+    public function beginningForm()
     {
         $content = new Content();
         $this->AdminContent($content);
@@ -596,7 +729,6 @@ class WorkflowController extends AdminControllerBase
 
         $results = [];
 
-        /** @phpstan-ignore-next-line Call to function is_null() with mixed will always evaluate to false. */
         if (is_null($results = old('workflow_tables'))) {
             $workflowTables = WorkflowTable::with(['workflow', 'custom_table'])->get()
             ->filter(function ($workflowTable) {
@@ -673,7 +805,6 @@ class WorkflowController extends AdminControllerBase
         $form->html(view('exment::workflow.beginning', [
             'items' => $results
         ])->render());
-        /** @phpstan-ignore-next-line constructor expects string, Encore\Admin\Widgets\Form given */
         $box = new Box(exmtrans('workflow.beginning'), $form);
         $box->tools(view('exment::tools.button', [
             'href' => admin_url('workflow'),
@@ -692,7 +823,7 @@ class WorkflowController extends AdminControllerBase
      * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    protected function beginningPost(Request $request)
+    public function beginningPost(Request $request)
     {
         $workflow_tables = $request->get('workflow_tables');
 
@@ -761,6 +892,7 @@ class WorkflowController extends AdminControllerBase
         return back();
     }
 
+    // @phpstan-ignore-next-line
     public function appendActivateButton($workflow, $tools)
     {
         if (isset($workflow) && $workflow->canActivate()) {
@@ -778,6 +910,7 @@ class WorkflowController extends AdminControllerBase
     /**
      * Append table setting button
      */
+    // @phpstan-ignore-next-line
     public function appendTableSettingButton($workflow, $tools)
     {
         if (isset($workflow) && boolval($workflow->setting_completed_flg)) {
@@ -790,6 +923,7 @@ class WorkflowController extends AdminControllerBase
         }
     }
 
+    // @phpstan-ignore-next-line
     public function disableDelete($workflow, $tools)
     {
         if (isset($workflow) && $workflow->disabled_delete) {
@@ -803,7 +937,7 @@ class WorkflowController extends AdminControllerBase
                     'button_class' => 'btn-danger',
                     'modal_title' => trans('admin.delete'),
                     'attributes' => [
-                        'data-toggle' => "tooltip",
+                        'data-bs-toggle' => "tooltip",
                     ]
                 ]
             ))->render());
@@ -817,6 +951,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function activate(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -858,6 +993,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|Response
      */
+    // @phpstan-ignore-next-line
     public function deactivate(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -889,6 +1025,7 @@ class WorkflowController extends AdminControllerBase
         ]);
     }
 
+    // @phpstan-ignore-next-line
     protected function appendWorkflowNotify($workflow)
     {
         // get mail template
@@ -915,6 +1052,7 @@ class WorkflowController extends AdminControllerBase
     /**
      * validate before save.
      */
+    // @phpstan-ignore-next-line
     protected function validateData(Form $form)
     {
         $request = request();
@@ -1028,6 +1166,56 @@ class WorkflowController extends AdminControllerBase
             }
         }
 
+        // An action records are waiting on is not deleted, the same as in the
+        // designer - see getPendingActionIds(). The row is hidden once its
+        // delete button is pressed, so the message goes on top of the form.
+        $removing_ids = [];
+        foreach ($workflow_actions as $workflow_action) {
+            $id = array_get($workflow_action, 'id');
+            if (boolval(array_get($workflow_action, Form::REMOVE_FLAG_NAME)) && !is_nullorempty($id)) {
+                $removing_ids[] = $id;
+            }
+        }
+        // Only for a post carrying the action rows: without them nothing is
+        // deleted or moved, and an empty list would read as "all of them".
+        if (isset($model->id) && array_key_exists('workflow_actions', $data)) {
+            $messages = collect();
+            $pending_ids = [];
+            if (count($removing_ids) > 0) {
+                $removing = WorkflowAction::where('workflow_id', $model->id)->whereIn('id', $removing_ids)->get();
+                $pending_ids = $this->getPendingActionIds($removing->pluck('id')->all());
+                $messages = $removing->filter(function ($action) use ($pending_ids) {
+                    return in_array(strval($action->id), $pending_ids, true);
+                })->map(function ($action) {
+                    return exmtrans('workflow.design.message.action_in_use', ['name' => $action->action_name]);
+                })->values()->toBase();
+            }
+
+            // nor the last action out of a status records are at, deleted or
+            // moved to another status - see getStrandingActions()
+            $kept_from = [];
+            foreach ($workflow_actions as $workflow_action) {
+                if (!boolval(array_get($workflow_action, Form::REMOVE_FLAG_NAME))) {
+                    $kept_from[] = strval(array_get($workflow_action, 'status_from'));
+                }
+            }
+            $stored = WorkflowAction::where('workflow_id', $model->id)->get();
+            $stranding = $this->getStrandingActions($stored->filter(function ($action) use ($pending_ids) {
+                return !in_array(strval($action->id), $pending_ids, true);
+            }), $kept_from);
+            $messages = $messages->merge($stranding->map(function ($action) {
+                return static::strandsRecordsMessage($action);
+            }))->values();
+
+            if ($messages->count() > 0) {
+                // the alert prints its message as html, and the names are the user's
+                admin_error(exmtrans('common.error'), $messages->map(function ($message) {
+                    return esc_html($message);
+                })->implode('<br />'));
+                $errors->add('workflow_actions', $messages->implode(' '));
+            }
+        }
+
         if (count($errors->getMessages()) > 0) {
             return back()->withErrors($errors)
                         ->withInput();
@@ -1041,6 +1229,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return Response
      */
+    // @phpstan-ignore-next-line
     public function targetModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1133,6 +1322,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return Response
      */
+    // @phpstan-ignore-next-line
     public function conditionModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1239,6 +1429,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return Response
      */
+    // @phpstan-ignore-next-line
     public function activateModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1271,6 +1462,7 @@ class WorkflowController extends AdminControllerBase
      * @param $id
      * @return Response
      */
+    // @phpstan-ignore-next-line
     public function deactivateModal(Request $request, $id)
     {
         $workflow = Workflow::getEloquent($id);
@@ -1301,6 +1493,7 @@ class WorkflowController extends AdminControllerBase
      *
      * @return ModalForm
      */
+    // @phpstan-ignore-next-line
     protected function getUserOrgModalForm(?CustomTable $custom_table, ?Workflow $workflow, $value = [], $options = [])
     {
         $options = array_merge([

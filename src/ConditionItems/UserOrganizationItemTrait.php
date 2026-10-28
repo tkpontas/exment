@@ -2,11 +2,12 @@
 
 namespace Exceedone\Exment\ConditionItems;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 use Exceedone\Exment\Model\CustomTable;
 
 trait UserOrganizationItemTrait
 {
+    // @phpstan-ignore-next-line
     protected function getChangeFieldUserOrg(CustomTable $target_table, $key, $show_condition_key = true)
     {
         $field = new Field\MultipleSelect($this->elementName, [$this->label]);

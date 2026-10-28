@@ -2,10 +2,10 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\Hidden;
+use ExmentAdminCore\Admin\Form\Field\Hidden;
 
 /**
- * Gooele ReCaptcha
+ * Google reCAPTCHA
  */
 class ReCaptcha extends Hidden
 {
@@ -16,15 +16,13 @@ class ReCaptcha extends Hidden
 
     /**
      * @var string
-     * @phpstan-ignore-next-line Property Exceedone\Exment\Form\Field\ReCaptcha::$rules (array|Closure) does not accept default value of type 'required'.
-     * it need to fix laravel-admin
      */
     protected $rules = 'required';
 
     /**
      * @param $arguments
-     * @phpstan-ignore-next-line
      */
+    // @phpstan-ignore-next-line
     public function __construct($arguments = [])
     {
         // if (!\Exment::isAvailableGoogleRecaptcha()) {
@@ -32,7 +30,7 @@ class ReCaptcha extends Hidden
         // }
 
         $this->column = 'g-recaptcha-response';
-        $this->label = 'Gooele reCaptcha';
+        $this->label = 'Google reCAPTCHA';
     }
 
 

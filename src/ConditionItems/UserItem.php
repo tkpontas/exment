@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\ConditionItems;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomValue;
 use Exceedone\Exment\Model\Condition;
@@ -16,6 +16,7 @@ class UserItem extends ConditionDetailBase implements ConditionItemInterface
 {
     use UserOrganizationItemTrait;
 
+    // @phpstan-ignore-next-line
     public function getFilterOption()
     {
         return $this->getFilterOptionConditon();
@@ -26,7 +27,7 @@ class UserItem extends ConditionDetailBase implements ConditionItemInterface
      *
      * @param string $key
      * @param bool $show_condition_key
-     * @return \Encore\Admin\Form\Field
+     * @return \ExmentAdminCore\Admin\Form\Field
      */
     public function getChangeField($key, $show_condition_key = true)
     {
@@ -85,6 +86,7 @@ class UserItem extends ConditionDetailBase implements ConditionItemInterface
         return $workflow_authority->related_id == $targetUser->id;
     }
 
+    // @phpstan-ignore-next-line
     public static function setWorkflowConditionQuery($query, $tableName, $custom_table)
     {
         $query->orWhere(function ($query) {

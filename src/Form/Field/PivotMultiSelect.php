@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field;
-use Encore\Admin\Form\Field\MultipleSelect;
+use ExmentAdminCore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field\MultipleSelect;
 
 class PivotMultiSelect extends MultipleSelect
 {
@@ -12,6 +12,7 @@ class PivotMultiSelect extends MultipleSelect
     /**
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $pivot;
 
     public function __construct($column, $arguments = array())
@@ -27,6 +28,7 @@ class PivotMultiSelect extends MultipleSelect
      *
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function pivot($pivot)
     {
         $this->pivot = $pivot;

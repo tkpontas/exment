@@ -3,7 +3,7 @@
 namespace Exceedone\Exment\Services\FormSetting\FormColumn;
 
 use Exceedone\Exment\Services\FormSetting\FormBlock\BlockBase;
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 
 /**
  */
@@ -14,6 +14,7 @@ class Html extends OtherBase
      *
      * @return WidgetForm
      */
+    // @phpstan-ignore-next-line
     public function getSettingModalForm(BlockBase $block_item, array $parameters): WidgetForm
     {
         $form = new WidgetForm($parameters);
@@ -32,6 +33,7 @@ class Html extends OtherBase
      * @param array $options
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function prepareSavingOptions(array $options): array
     {
         return array_filter($options, function ($option, $key) {
@@ -46,6 +48,7 @@ class Html extends OtherBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getValidationRules(): array
     {
         return ['html' => 'required'];

@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Layout\Content;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Services\Installer\InstallService;
@@ -23,6 +23,7 @@ class InitializeController extends Controller
      * submit
      * @param Request $request
      */
+    // @phpstan-ignore-next-line
     public function post(Request $request)
     {
         return InstallService::post();

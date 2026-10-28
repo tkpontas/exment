@@ -2,26 +2,32 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-class Number extends \Encore\Admin\Form\Field\Number
+class Number extends \ExmentAdminCore\Admin\Form\Field\Number
 {
     //protected $rules = [];
 
+    // @phpstan-ignore-next-line
     protected $disableUpdown = false;
+    // @phpstan-ignore-next-line
     protected $defaultEmpty = false;
+    // @phpstan-ignore-next-line
     protected $fieldWidth = 100;
 
+    // @phpstan-ignore-next-line
     public function disableUpdown()
     {
         $this->disableUpdown = true;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function defaultEmpty()
     {
         $this->defaultEmpty = true;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function setFieldWidth($fieldWidth)
     {
         $this->fieldWidth = $fieldWidth;

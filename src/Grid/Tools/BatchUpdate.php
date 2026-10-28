@@ -2,14 +2,19 @@
 
 namespace Exceedone\Exment\Grid\Tools;
 
-use Encore\Admin\Grid\Tools\BatchAction;
+use ExmentAdminCore\Admin\Grid\Tools\BatchAction;
 
 class BatchUpdate extends BatchAction
 {
+    /**
+     * @var mixed
+     */
     protected $operation;
 
     /**
      * Create a new Tools instance.
+     *
+     * @param mixed $operation
      */
     public function __construct($operation)
     {
@@ -17,7 +22,23 @@ class BatchUpdate extends BatchAction
     }
 
     /**
+     * A batch update is a CustomOperation execution. Marking it with an
+     * "action" icon keeps the copied bulk action bar visually paired
+     * with delete / restore rather than showing a lone text button. The
+     * icon rides through both the dropdown link and the bar copy, so no
+     * client-side icon lookup is needed.
+     *
+     * @return string
+     */
+    public function render()
+    {
+        return '<i class="fa fa-magic"></i>&nbsp;' . e((string)$this->getTitle());
+    }
+
+    /**
      * Script of batch delete action.
+     *
+     * @return string
      */
     public function script()
     {
@@ -38,7 +59,7 @@ class BatchUpdate extends BatchAction
      *
      * @param string $title
      *
-     * @return $this
+     * @return static
      */
     public function setTitle($title)
     {
@@ -47,6 +68,12 @@ class BatchUpdate extends BatchAction
         return $this;
     }
 
+    /**
+     * Generate script for Swal dialog.
+     *
+     * @param string $suuid
+     * @return string
+     */
     protected function scriptSwal($suuid)
     {
         $url = url($this->resource);
@@ -61,6 +88,7 @@ class BatchUpdate extends BatchAction
         return <<<EOT
 
 $('{$this->getElementClass()}').on('click', function() {
+    event.preventDefault(); 
     var url = '{$url}/operationClick';
     Exment.CommonEvent.ShowSwal(url, {
         title: "$label",
@@ -79,6 +107,12 @@ $('{$this->getElementClass()}').on('click', function() {
 EOT;
     }
 
+    /**
+     * Generate script for Modal dialog.
+     *
+     * @param string $suuid
+     * @return string
+     */
     protected function scriptModal($suuid)
     {
         $url = url($this->resource);

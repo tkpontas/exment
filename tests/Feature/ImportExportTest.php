@@ -402,6 +402,7 @@ class ImportExportTest extends FeatureTestBase
             foreach ($db_array as $index => $db_data) {
                 $db_text = $custom_view_column->column_item->setCustomValue($db_data)
                     ->options(['disable_currency_symbol' => true])->text();
+                // @phpstan-ignore-next-line
                 $file_text = $file_array[$index + 2][$colno];
                 $this->assertEquals($db_text, $file_text);
             }
@@ -432,7 +433,7 @@ class ImportExportTest extends FeatureTestBase
                     if ($colvalue instanceof CustomValue) {
                         $colvalue = array_get($colvalue, 'id');
                     }
-                    if (is_list($colvalue)) {
+                    if (is_array($colvalue) || $colvalue instanceof \Illuminate\Support\Collection) {
                         $colvalue = collect($colvalue)->map(function ($item) use ($header, $custom_table) {
                             if ($item instanceof CustomValue) {
                                 return array_get($item, 'id');

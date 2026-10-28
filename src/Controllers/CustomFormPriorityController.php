@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Enums\FilterKind;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Model\CustomFormPriority;
@@ -40,12 +40,12 @@ class CustomFormPriorityController extends AdminControllerTableBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new CustomFormPriority());
         $custom_table = $this->custom_table;
         $form->select('custom_form_id', exmtrans("custom_form_priority.custom_form_id"))->required()
-            /** @phpstan-ignore-next-line :options() expects array, Closure given */
             ->options(function ($value) use ($custom_table) {
                 return $custom_table->custom_forms->mapWithKeys(function ($item) {
                     return [$item['id'] => $item['form_view_name']];
@@ -85,7 +85,7 @@ class CustomFormPriorityController extends AdminControllerTableBase
             ->option(exmtrans("condition.condition_reverse_options"));
 
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
-            /** @phpstan-ignore-next-line add() expects string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('form', $custom_table));
             $tools->setListPath(admin_urls('form', $custom_table->table_name));
         });

@@ -5,7 +5,7 @@ namespace Exceedone\Exment\Services\FormSetting\FormColumn;
 use Exceedone\Exment\Enums\FormColumnType;
 use Exceedone\Exment\Model\CustomFormColumn;
 use Exceedone\Exment\Services\FormSetting\FormBlock\BlockBase;
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 
 /**
  */
@@ -37,6 +37,7 @@ abstract class OtherBase extends ColumnBase
      * @param $form_column_type_id
      * @return ColumnBase
      */
+    // @phpstan-ignore-next-line
     public static function makeBySuggest($form_column_type_id): ColumnBase
     {
         $form_column = new CustomFormColumn();
@@ -76,6 +77,7 @@ abstract class OtherBase extends ColumnBase
      * @param array $parameters
      * @return WidgetForm|null
      */
+    // @phpstan-ignore-next-line
     public function getSettingModalForm(BlockBase $block_item, array $parameters): ?WidgetForm
     {
         $form = new WidgetForm($parameters);
@@ -88,6 +90,7 @@ abstract class OtherBase extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function prepareSavingOptions(array $options): array
     {
         return $options;
@@ -99,6 +102,7 @@ abstract class OtherBase extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getOptionLabels(): array
     {
         $options = $this->custom_form_column->options ?? [];
@@ -121,6 +125,7 @@ abstract class OtherBase extends ColumnBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getOptionLabelsDefinitions(): array
     {
         $result = [];

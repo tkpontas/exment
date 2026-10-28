@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\ConditionItems;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 use Illuminate\Database\Eloquent\Collection;
 use Exceedone\Exment\Enums\FilterOption;
 use Exceedone\Exment\Model\CustomValue;
@@ -12,6 +12,7 @@ use Exceedone\Exment\Model\Interfaces\WorkflowAuthorityInterface;
 
 class RoleGroupItem extends ConditionDetailBase implements ConditionItemInterface
 {
+    // @phpstan-ignore-next-line
     public function getFilterOption()
     {
         return $this->getFilterOptionConditon();
@@ -43,12 +44,15 @@ class RoleGroupItem extends ConditionDetailBase implements ConditionItemInterfac
     public function getText($key, $value, $showFilter = true)
     {
         $model = RoleGroup::find($value);
-        /** @phpstan-ignore-next-line Instanceof between Exceedone\Exment\Model\RoleGroup|null and Illuminate\Database\Eloquent\Collection will always evaluate to false. */
+        // @phpstan-ignore-next-line
         if ($model instanceof Collection) {
             $result = $model->map(function ($row) {
                 return $row->role_group_view_name;
             })->implode(',');
         } else {
+            if (!isset($model)) {
+                return null;
+            }
             $result = $model->role_group_view_name;
         }
         return $result . ($showFilter ? FilterOption::getConditionKeyText($key) : '');
@@ -59,7 +63,7 @@ class RoleGroupItem extends ConditionDetailBase implements ConditionItemInterfac
      *
      * @param string $key
      * @param bool $show_condition_key
-     * @return \Encore\Admin\Form\Field
+     * @return \ExmentAdminCore\Admin\Form\Field
      */
     public function getChangeField($key, $show_condition_key = true)
     {

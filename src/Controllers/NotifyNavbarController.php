@@ -2,16 +2,18 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Model\CustomValue;
 use Illuminate\Http\Request;
-use Encore\Admin\Show;
+use ExmentAdminCore\Admin\Show;
 use Exceedone\Exment\Form\Tools\SwalMenuButton;
 use Exceedone\Exment\Grid\Tools\BatchCheck;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\NotifyNavbar;
+use Exceedone\Exment\Model\Plugin;
+use Exceedone\Exment\Enums\PluginType;
 
 class NotifyNavbarController extends AdminControllerBase
 {
@@ -46,7 +48,7 @@ class NotifyNavbarController extends AdminControllerBase
         $grid->disableExport();
 
         $grid->tools(function (Grid\Tools $tools) {
-            /** @phpstan-ignore-next-line append() expects Encore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\SwalMenuButton given */
+            /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\SwalMenuButton given */
             $tools->append(new SwalMenuButton($this->getMenuList()));
             $tools->batch(function (Grid\Tools\BatchActions $batch) {
                 $batch->add(exmtrans('notify_navbar.all_check'), new BatchCheck());
@@ -76,8 +78,10 @@ class NotifyNavbarController extends AdminControllerBase
             ];
             $filter->equal('read_flg', exmtrans("notify_navbar.read_flg"))->radio($options);
 
+            // Options are the tables of the login user's own notifications (value: table_name, as stored in parent_type),
+            // not the tables the login user has permission on.
             $filter->equal('parent_type', exmtrans("notify_navbar.parent_type"))->select(function ($val) {
-                return CustomTable::filterList()->pluck('table_view_name', 'table_view_name');
+                return NotifyNavbar::getTargetTableOptions();
             });
 
             $filter->like('notify_subject', exmtrans("notify_navbar.notify_subject"));
@@ -92,6 +96,7 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getMenuList(): array
     {
         $menulist = [];
@@ -130,6 +135,7 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         return new Form(new NotifyNavbar());
@@ -149,7 +155,9 @@ class NotifyNavbarController extends AdminControllerBase
             abort(404);
         }
 
+        // @phpstan-ignore-next-line
         if ($model->read_flg == 0) {
+            // @phpstan-ignore-next-line
             $model->update(['read_flg' => true]);
         }
 
@@ -162,6 +170,7 @@ class NotifyNavbarController extends AdminControllerBase
             }
         }
 
+        // @phpstan-ignore-next-line
         return new Show($model, function (Show $show) use ($id, $parent_type, $custom_value, $custom_table) {
             if (isset($parent_type)) {
                 $show->field('parent_type', exmtrans('notify_navbar.parent_type'))->as(function ($parent_type) use ($custom_table) {
@@ -174,8 +183,9 @@ class NotifyNavbarController extends AdminControllerBase
 
             if (isset($custom_value)) {
                 $show->field('target_custom_value', exmtrans('notify_navbar.target_custom_value'))->as(function ($v) use ($custom_value) {
+                    // getLabel() is plain text built from record values; let the Show field HTML-escape it to prevent stored XSS
                     return $custom_value->getLabel();
-                })->setEscape(false);
+                });
             }
             $show->field('notify_subject', exmtrans('notify_navbar.notify_subject'));
             $show->field('notify_body', exmtrans('notify_navbar.notify_body'))
@@ -246,6 +256,7 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @param mixed   $id
      */
+    // @phpstan-ignore-next-line
     public function redirectTargetData(Request $request, $id = null)
     {
         $model = NotifyNavbar::find($id);
@@ -255,20 +266,32 @@ class NotifyNavbarController extends AdminControllerBase
         }
 
         // update read_flg
+        // @phpstan-ignore-next-line
         if ($model->read_flg == 0) {
+            // @phpstan-ignore-next-line
             $model->update(['read_flg' => true]);
         }
 
+        // @phpstan-ignore-next-line
         $custom_table = getModelName($model->parent_type);
 
         if (is_nullorempty($custom_table)) {
             return back();
         }
 
+        // @phpstan-ignore-next-line
         $custom_value = $custom_table::find($model->parent_id);
 
         if (!isset($custom_value)) {
             return back();
+        }
+
+        // A plugin can own the screen for a table - the project portal does -
+        // and then the bell should open that screen instead of the raw data
+        // page. Falls through to the data page when no plugin claims the row.
+        $portal_url = $this->pluginRecordUrl($custom_value);
+        if (isset($portal_url)) {
+            return redirect($portal_url);
         }
 
         // redirect custom value page
@@ -276,10 +299,48 @@ class NotifyNavbarController extends AdminControllerBase
     }
 
     /**
+     * Ask the installed page plugins whether one of them owns this record.
+     *
+     * Plugin classes are autoloaded lazily, so each plugin is required before
+     * its definition class can be looked up. A plugin opts in by exposing
+     * {namespace}\PortalDefinition::portalRecordUrl().
+     *
+     * @param mixed $custom_value
+     * @return string|null
+     */
+    protected function pluginRecordUrl($custom_value): ?string
+    {
+        // The plugin records, not their page classes: requirePlugin() and
+        // getNameSpace() exist only on the record.
+        foreach (Plugin::getByPluginTypes(PluginType::PAGE) as $plugin) {
+            try {
+                $plugin->requirePlugin();
+
+                $class = $plugin->getNameSpace() . '\\PortalDefinition';
+                if (!method_exists($class, 'portalRecordUrl')) {
+                    continue;
+                }
+
+                $url = $class::portalRecordUrl($custom_value);
+            } catch (\Throwable $ex) {
+                // A broken plugin must not stop the bell from opening the record.
+                \Log::error($ex);
+                continue;
+            }
+            if (isset($url)) {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * update read_flg when row checked
      *
      * @param mixed   $id
      */
+    // @phpstan-ignore-next-line
     public function rowCheck(Request $request, $id = null)
     {
         if (!isset($id)) {

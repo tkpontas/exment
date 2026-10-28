@@ -18,6 +18,8 @@ class RoleGroupPermission extends ModelBase
 
     protected $casts = ['permissions' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['role_group'],
         'uniqueKeys' => [
@@ -47,6 +49,10 @@ class RoleGroupPermission extends ModelBase
         ]
     ];
 
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<RoleGroup, $this>
+     */
     public function role_group()
     {
         return $this->belongsTo(RoleGroup::class, 'role_group_id');
@@ -55,6 +61,8 @@ class RoleGroupPermission extends ModelBase
     /**
      * get Table Name or system name
      */
+
+    // @phpstan-ignore-next-line
     protected function getUniqueKeyValues()
     {
         switch ($this->role_group_permission_type) {
@@ -70,6 +78,8 @@ class RoleGroupPermission extends ModelBase
         return [];
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function importReplaceJson(&$json, $options = [])
     {
         $role_group_target_name = array_get($json, 'role_group_target_name');

@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\Form;
 
-use Encore\Admin\Form\Field;
-use Encore\Admin\Form\EmbeddedForm as EmbeddedFormBase;
+use ExmentAdminCore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\EmbeddedForm as EmbeddedFormBase;
 
 /**
  * Class EmbeddedForm.
@@ -57,7 +57,7 @@ class EmbeddedForm extends EmbeddedFormBase
      *     'options' => [], // Set row no, column no, width
      *     'field' => AdminField, // Set adminfield
      * ]
-     * @var array
+     * @var array<int, array<string, mixed>>
      */
     protected $fieldAndOptions = [];
 
@@ -65,7 +65,7 @@ class EmbeddedForm extends EmbeddedFormBase
      * Push field and set for grid
      *
      * @param Field $field
-     * @param array $options
+     * @param array<string, mixed> $options
      * @return $this
      */
     public function pushFieldAndOption(Field $field, array $options)
@@ -83,7 +83,7 @@ class EmbeddedForm extends EmbeddedFormBase
     /**
      * Get field and options
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     public function getFieldAndOptions()
     {
@@ -97,6 +97,7 @@ class EmbeddedForm extends EmbeddedFormBase
      *
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function prepare($input, bool $asConfirm = false)
     {
         if (is_null($input)) {

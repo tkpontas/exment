@@ -2,9 +2,9 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Auth\Permission as Checker;
 use Exceedone\Exment\Model;
 use Exceedone\Exment\Model\Define;
@@ -58,6 +58,7 @@ class PluginController extends AdminControllerBase
      * @param $id
      * @return false|\Illuminate\Http\RedirectResponse
      */
+    // @phpstan-ignore-next-line
     public function executeBatch(Request $request, $id)
     {
         if (!\Exment::user()->hasPermission(Permission::PLUGIN_ACCESS)) {
@@ -123,7 +124,7 @@ class PluginController extends AdminControllerBase
     }
 
     //Function use to upload file and update or add new record
-    protected function store(Request $request)
+    public function store(Request $request)
     {
         //Check file existed in Request
         if ($request->hasfile('fileUpload')) {
@@ -134,9 +135,10 @@ class PluginController extends AdminControllerBase
     }
 
     //Delete record from database (one or multi records)
-    protected function destroy($id)
+    public function destroy($id)
     {
         foreach (stringToArray($id) as $i) {
+            // @phpstan-ignore-next-line
             if ($this->form($i, true)->destroy($i)) {
                 $this->deleteFolder($i);
             } else {
@@ -153,7 +155,7 @@ class PluginController extends AdminControllerBase
     }
 
     //Delete one or multi folder corresponds to the plugins
-    protected function deleteFolder($id)
+    public function deleteFolder($id)
     {
         $idlist = explode(",", $id);
         foreach ($idlist as $id) {
@@ -172,22 +174,23 @@ class PluginController extends AdminControllerBase
     }
 
     //Check request when edit record to delete null values in event_triggers
-    protected function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         $plugin = Plugin::getEloquent($id);
-        if (!$plugin->hasPermission(Permission::PLUGIN_SETTING)) {
-            Checker::error();
+        if (!$plugin || !$plugin->hasPermission(Permission::PLUGIN_SETTING)) {
+            Checker::notFoundOrDeny();
             return false;
         }
 
         if (isset($request->get('options')['event_triggers']) === true) {
             $event_triggers = $request->get('options')['event_triggers'];
             $options = $request->get('options');
-            /** @phpstan-ignore-next-line array_filter expects (callable(mixed): bool)|null, 'strlen' given */
+            // @phpstan-ignore-next-line
             $event_triggers = array_filter($event_triggers, 'strlen');
             $options['event_triggers'] = $event_triggers;
             $request->merge(['options' => $options]);
         }
+        // @phpstan-ignore-next-line
         return $this->form($id)->update($id);
     }
 
@@ -198,6 +201,7 @@ class PluginController extends AdminControllerBase
      * @param $isDelete
      * @return Form|false
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null, $isDelete = false)
     {
         $plugin = Plugin::getEloquent($id);
@@ -217,7 +221,8 @@ class PluginController extends AdminControllerBase
         // create as label
         $form->display('plugin_types', exmtrans("plugin.plugin_type"))->with(function ($plugin_types) {
             return implode(exmtrans('common.separate_word'), collect($plugin_types)->map(function ($plugin_type) {
-                return PluginType::getEnum($plugin_type)->transKey("plugin.plugin_type_options") ?? null;
+                $enum = PluginType::getEnum($plugin_type);
+                return $enum ? $enum->transKey("plugin.plugin_type_options") : null;
             })->toArray());
         });
         $form->display('author', exmtrans("plugin.author"));
@@ -397,6 +402,7 @@ class PluginController extends AdminControllerBase
      * @param Plugin|null $plugin
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setCustomOptionForm($plugin, &$form)
     {
         $pluginClass = $this->getPluginClass($plugin);
@@ -421,6 +427,7 @@ class PluginController extends AdminControllerBase
      *
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     protected function getPluginClass($plugin)
     {
         if (!isset($plugin)) {

@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 use Exceedone\Exment\Enums\FilterKind;
 
 /**
@@ -75,9 +75,10 @@ class ChangeField extends Field
      */
     protected $allowNull = false;
 
+    // @phpstan-ignore-next-line
     protected static $scripts = [];
 
-    protected function getElementClass()
+    public function getElementClass(): array
     {
         if (preg_match('/(^[^\[\]]+)\[([^\[\]]+)\]\[([^\[\]]+)\]$/', $this->elementName, $array_result)) {
             array_shift($array_result);
@@ -87,6 +88,7 @@ class ChangeField extends Field
         return [];
     }
 
+    // @phpstan-ignore-next-line
     public function filterKind($filterKind = null)
     {
         if (isset($filterKind)) {
@@ -96,6 +98,7 @@ class ChangeField extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function ajax($ajax)
     {
         $this->ajax = $ajax;
@@ -103,6 +106,7 @@ class ChangeField extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function allowNull($allowNull = true)
     {
         $this->allowNull = $allowNull;
@@ -164,6 +168,7 @@ class ChangeField extends Field
 
     /**
      */
+    // @phpstan-ignore-next-line
     public function replaceSearch($replaceSearch)
     {
         $this->replaceSearch = $replaceSearch;
@@ -173,6 +178,7 @@ class ChangeField extends Field
 
     /**
      */
+    // @phpstan-ignore-next-line
     public function replaceWord($replaceWord)
     {
         $this->replaceWord = $replaceWord;
@@ -180,6 +186,7 @@ class ChangeField extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     protected function script()
     {
         $ajax = $this->ajax;
@@ -198,7 +205,7 @@ EOT;
         static::$scripts[] = $script;
     }
 
-    public function getScript()
+    public function getScript(): string
     {
         $script = collect(static::$scripts)->filter()->unique()->implode("");
         //static::$scripts = [];
@@ -239,12 +246,14 @@ EOT;
         }
     }
 
+    // @phpstan-ignore-next-line
     public function adminField($adminField): self
     {
         $this->adminField = $adminField;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function prepareRecord($value, $record)
     {
         if (isset($this->adminField)) {

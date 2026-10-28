@@ -35,6 +35,7 @@ class LoginService
      * @return \Illuminate\Http\RedirectResponse|void
      * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public static function resetPassword($user, array $options = [])
     {
         $options = array_merge([
@@ -73,7 +74,7 @@ class LoginService
                 catch (TransportExceptionInterface $ex) {
                     \Log::error($ex);
                     admin_error(exmtrans('error.header'), exmtrans('error.mailsend_failed'));
-                    return back()->withInput();
+                    return back()->withInput(get_flash_input());
                 }
             }
             $login_user->save();
@@ -83,6 +84,7 @@ class LoginService
     }
 
 
+    // @phpstan-ignore-next-line
     public static function setToken()
     {
         // get custom login user
@@ -105,6 +107,7 @@ class LoginService
      *
      * @return array access_token, refresh_token, provider
      */
+    // @phpstan-ignore-next-line
     public static function getToken()
     {
         $session = session(Define::SYSTEM_KEY_SESSION_PROVIDER_TOKEN);
@@ -176,6 +179,7 @@ class LoginService
      * @param CustomLoginUserBase $custom_login_user
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function validateUniques(CustomLoginUserBase $custom_login_user)
     {
         // get target user
@@ -209,6 +213,7 @@ class LoginService
      * @param array $rules
      * @return array updated rules
      */
+    // @phpstan-ignore-next-line
     protected static function removeInitRule(CustomLoginUserBase $custom_login_user, ?CustomValue $exment_user, array $rules)
     {
         if (static::needCheck($custom_login_user, $exment_user)) {
@@ -251,6 +256,7 @@ class LoginService
      * @param CustomLoginUserBase $custom_login_user
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function getLoginResult($result, $messages, $adminMessages = null, ?CustomLoginUserBase $custom_login_user = null)
     {
         if (is_nullorempty($adminMessages)) {
@@ -263,6 +269,7 @@ class LoginService
         return [$result, $message, $adminMessage, $custom_login_user];
     }
 
+    // @phpstan-ignore-next-line
     protected static function convertErrorMessage($result, $messages, ?CustomLoginUserBase $custom_login_user = null)
     {
         $message = [];
@@ -334,6 +341,7 @@ class LoginService
         return $form;
     }
 
+    // @phpstan-ignore-next-line
     public static function appendActivateSwalButtonSso($tools, LoginSetting $login_setting)
     {
         if (!$login_setting->active_flg) {
@@ -341,7 +349,7 @@ class LoginService
                 'url' => route('exment.login_activate', ['id' => $login_setting->id]),
                 'label' => exmtrans('common.activate'),
                 'icon' => 'fa-check-circle',
-                'btn_class' => 'btn-success',
+                'btn_class' => 'btn-success p-2',
                 'title' => exmtrans('common.activate'),
                 'text' => exmtrans('login.help.activate'),
                 'method' => 'post',
@@ -351,7 +359,7 @@ class LoginService
             $tools->append(new Tools\SwalInputButton([
                 'url' => route('exment.login_deactivate', ['id' => $login_setting->id]),
                 'label' => exmtrans('common.deactivate'),
-                'icon' => 'fa-check-circle',
+                'icon' => 'fa-check-circle p-2',
                 'btn_class' => 'btn-default',
                 'title' => exmtrans('common.deactivate'),
                 'text' => exmtrans('login.help.deactivate'),
@@ -502,7 +510,6 @@ class LoginService
      */
     public static function getLoginUser(CustomLoginUserBase $custom_login_user, $exment_user, $socialiteProvider = null): LoginUser
     {
-        $hasLoginUser = false;
         // get login_user
         $login_user = LoginUserProvider::findByCredential(
             [
@@ -512,9 +519,9 @@ class LoginService
                 'login_type' => $custom_login_user->login_type,
             ]
         );
+        $hasLoginUser = !is_null($login_user);
 
         // if don't has, create loginuser or match email
-        /** @phpstan-ignore-next-line $hasLoginUser Negated boolean expression is always true. */
         if (!$hasLoginUser) {
             $login_user = LoginUser::firstOrNew([
                 'base_user_id' => $exment_user->getUserId(),
@@ -527,7 +534,6 @@ class LoginService
         }
 
         // get avatar
-        /** @phpstan-ignore-next-line $hasLoginUser Negated boolean expression is always true. */
         if (!$hasLoginUser || boolval($custom_login_user->login_setting->getOption('update_user_info'))) {
             $avatar  = static::getAvatar($custom_login_user, $socialiteProvider = null);
             if (isset($avatar)) {
@@ -539,12 +545,14 @@ class LoginService
         return $login_user;
     }
 
+    // @phpstan-ignore-next-line
     public static function getAvatar(CustomLoginUserBase $custom_login_user, $socialiteProvider = null)
     {
         try {
             // if socialiteProvider implements ProviderAvatar, call getAvatar
             if (isset($socialiteProvider) && is_subclass_of($socialiteProvider, \Exceedone\Exment\Auth\ProviderAvatar::class)) {
                 /** @var OAuthUser $custom_login_user */
+                // @phpstan-ignore-next-line
                 $stream = $socialiteProvider->getAvatar($custom_login_user->token);
             }
             // if user obj has avatar, download avatar.
@@ -567,6 +575,7 @@ class LoginService
         return null;
     }
 
+    // @phpstan-ignore-next-line
     protected static function getUserColumns()
     {
         return CustomTable::getEloquent(SystemTableName::USER)->custom_columns_cache;

@@ -2,13 +2,14 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 use Illuminate\Contracts\Support\Arrayable;
 
 class Tile extends Field
 {
     protected $view = 'exment::form.field.tile';
 
+    // @phpstan-ignore-next-line
     protected $multipled;
 
     /**
@@ -32,6 +33,7 @@ class Tile extends Field
      *
      * @return $this|mixed
      */
+    // @phpstan-ignore-next-line
     public function options($options = [])
     {
         // remote options
@@ -44,6 +46,7 @@ class Tile extends Field
         }
 
         if (is_callable($options)) {
+            // @phpstan-ignore-next-line
             $this->options = $options;
         } else {
             $this->options = (array) $options;
@@ -52,6 +55,7 @@ class Tile extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function overlay($overlay = true)
     {
         $this->overlay = $overlay;
@@ -59,6 +63,7 @@ class Tile extends Field
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function multiple()
     {
         $this->multipled = true;
@@ -79,9 +84,8 @@ class Tile extends Field
     }
     public function render()
     {
-        /** @phpstan-ignore-next-line Instanceof between array and Closure will always evaluate to false. it needs to fix laravel-admin */
         if ($this->options instanceof \Closure) {
-            /** @phpstan-ignore-next-line Left side of && is always true and Right side of && is always true */
+            // @phpstan-ignore-next-line
             if ($this->form && $this->form->model()) {
                 $this->options = $this->options->bindTo($this->form->model());
             }
@@ -121,6 +125,7 @@ class Tile extends Field
 
 EOT;
 
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'options'  => $this->options,
             'overlay' => $this->overlay,

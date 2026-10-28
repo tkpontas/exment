@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Services\Plugin\PluginCrud;
 
-use Encore\Admin\Widgets\Grid\Grid;
+use ExmentAdminCore\Admin\Widgets\Grid\Grid;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Services\DataImportExport;
 use Exceedone\Exment\Form\Tools;
@@ -189,6 +189,7 @@ class CrudGrid extends CrudBase
 
 
     // create import and exporter
+    // @phpstan-ignore-next-line
     protected function getImportExportService(Grid $grid)
     {
         $service = (new DataImportExport\DataImportExportWidgetService())

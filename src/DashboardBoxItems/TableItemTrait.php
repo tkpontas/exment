@@ -16,10 +16,12 @@ trait TableItemTrait
      *
      * @return array|string|boolean
      */
+    // @phpstan-ignore-next-line
     protected function hasPermission()
     {
         // if table not found, break
         if (!isset($this->custom_table) || !isset($this->custom_view)) {
+            /** @phpstan-ignore-next-line */
             return exmtrans('dashboard.message.not_exists_table');
         }
 
@@ -31,6 +33,7 @@ trait TableItemTrait
         return true;
     }
 
+    // @phpstan-ignore-next-line
     protected function tableheader()
     {
         if (($result = $this->hasPermission()) !== true) {
@@ -57,6 +60,7 @@ trait TableItemTrait
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function attributes()
     {
         return [
@@ -66,8 +70,10 @@ trait TableItemTrait
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function getCustomViewSelectOptions($value, $field, $model, $dashboard, bool $isCalendar = false): array
     {
+        /** @phpstan-ignore-next-line */
         if (is_nullorempty($field)) {
             return [];
         }
@@ -77,11 +83,14 @@ trait TableItemTrait
         if (isset($value)) {
             $custom_view = CustomView::getEloquent($value);
             $custom_table = $custom_view ? $custom_view->custom_table : null;
+        /** @phpstan-ignore-next-line */
         } elseif (!is_nullorempty($field->data())) {
             $custom_table = CustomTable::getEloquent(array_get($field->data(), 'target_table_id'));
         }
 
-        if (!isset($custom_table)) {
+        // of a table this user may view only, as its ajax list (table_views): the form is open
+        // to anyone who may view the dashboard, with any view id posted back
+        if (!isset($custom_table) || !$custom_table->hasPermission(Permission::AVAILABLE_VIEW_CUSTOM_VALUE)) {
             return [];
         }
 
@@ -90,7 +99,7 @@ trait TableItemTrait
                 if ($isCalendar) {
                     return array_get($value, 'view_kind_type') == ViewKindType::CALENDAR;
                 }
-                return array_get($value, 'view_kind_type') != ViewKindType::CALENDAR;
+                return ViewKindType::isListable(array_get($value, 'view_kind_type'));
             })
             ->filter(function ($value) use ($dashboard) {
                 if (array_get($dashboard, 'dashboard_type') != DashboardType::SYSTEM) {

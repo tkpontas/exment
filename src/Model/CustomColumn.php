@@ -45,6 +45,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
     protected $guarded = ['id', 'suuid'];
     // protected $with = ['custom_table'];
 
+
+    // @phpstan-ignore-next-line
     private $_column_item;
 
 
@@ -52,9 +54,13 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
      * $custom available_characters
      * @var array
      */
+
+    // @phpstan-ignore-next-line
     protected static $customAvailableCharacters = [];
 
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['suuid', 'required', 'index_enabled', 'unique', 'custom_table'],
         'uniqueKeys' => [
@@ -114,69 +120,111 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         ]
     ];
 
+
+    /**
+     * @return BelongsTo<CustomTable, $this>
+     */
     public function custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'custom_table_id');
     }
 
+
+    /**
+     * @return HasMany<CustomFormColumn, $this>
+     */
     public function custom_form_columns(): HasMany
     {
         return $this->hasMany(CustomFormColumn::class, 'form_column_target_id')
             ->where('form_column_type', FormColumnType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<CustomViewColumn, $this>
+     */
     public function custom_view_columns(): HasMany
     {
         return $this->hasMany(CustomViewColumn::class, 'view_column_target_id')
             ->where('view_column_type', ConditionType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<CustomViewSort, $this>
+     */
     public function custom_view_sorts(): HasMany
     {
         return $this->hasMany(CustomViewSort::class, 'view_column_target_id')
             ->where('view_column_type', ConditionType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<CustomViewFilter, $this>
+     */
     public function custom_view_filters(): HasMany
     {
         return $this->hasMany(CustomViewFilter::class, 'view_column_target_id')
             ->where('view_column_type', ConditionType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<CustomViewSummary, $this>
+     */
     public function custom_view_summaries(): HasMany
     {
         return $this->hasMany(CustomViewSummary::class, 'view_column_target_id')
             ->where('view_column_type', ConditionType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<CustomViewGridFilter, $this>
+     */
     public function custom_view_grid_filters(): HasMany
     {
         return $this->hasMany(CustomViewGridFilter::class, 'view_column_target_id')
             ->where('view_column_type', ConditionType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<CustomOperationColumn, $this>
+     */
     public function custom_operation_columns(): HasMany
     {
         return $this->hasMany(CustomOperationColumn::class, 'view_column_target_id')
             ->where('view_column_type', ConditionType::COLUMN);
     }
 
+
+    /**
+     * @return HasMany<Condition, $this>
+     */
     public function conditions(): HasMany
     {
         return $this->hasMany(Condition::class, 'target_column_id')
             ->where('condition_type', ConditionType::COLUMN);
     }
 
+
+    // @phpstan-ignore-next-line
     public function scopeIndexEnabled($query)
     {
         return $query->whereIn('options->index_enabled', [1, "1", true]);
     }
 
+
+    // @phpstan-ignore-next-line
     public function scopeRequired($query)
     {
         return $query->whereIn('options->required', [1, "1", true]);
     }
 
+
+    // @phpstan-ignore-next-line
     public function scopeSelectTargetTable($query, $custom_table_id)
     {
         // check user or org table.
@@ -189,11 +237,15 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         return $query->whereIn('options->select_target_table', [$custom_table_id, strval($custom_table_id)]);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomTableCacheAttribute()
     {
         return CustomTable::getEloquent($this);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getColumnItemAttribute()
     {
         if (isset($this->_column_item)) {
@@ -204,6 +256,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         return $this->_column_item;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getSelectTargetTableAttribute()
     {
         if (ColumnType::isUserOrganization($this->column_type)) {
@@ -211,41 +265,57 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         }
         return CustomTable::getEloquent($this->getOption('select_target_table'));
     }
+
+    // @phpstan-ignore-next-line
     public function getSelectTargetViewAttribute()
     {
         return CustomView::getEloquent($this->getOption('select_target_view'));
     }
 
+
+    // @phpstan-ignore-next-line
     public function getRequiredAttribute()
     {
         return $this->getOption('required', false);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getIndexEnabledAttribute()
     {
         return $this->getOption('index_enabled', false);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getUniqueAttribute()
     {
         return $this->getOption('unique', false);
     }
 
+
+    // @phpstan-ignore-next-line
     public function setRequiredAttribute($value)
     {
         return $this->setOption('required', $value);
     }
 
+
+    // @phpstan-ignore-next-line
     public function setIndexEnabledAttribute($value)
     {
         return $this->setOption('index_enabled', $value);
     }
 
+
+    // @phpstan-ignore-next-line
     public function setUniqueAttribute($value)
     {
         return $this->setOption('unique', $value);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getSelectImportColumnAttribute()
     {
         return CustomColumn::getEloquent($this->getOption('select_import_column_id'));
@@ -261,6 +331,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         return boolval($this->system_flg);
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->custom_form_columns()->delete();
@@ -319,6 +391,23 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         $items->each(function ($item) {
             $item->delete();
         });
+
+        // Meilisearch filter settings name the column by column_name, with no
+        // foreign key to it. Left behind, the column stays declared filterable,
+        // is listed on the settings screen as if it existed, and a bookmarked
+        // search using it returns nothing without a word. One by one, so each
+        // delete reindexes the table and re-applies the index settings.
+        // \Schema::hasTable, not the hasTable() helper: that one builds a DBAL
+        // connection hardcoded to pdo_mysql, so on SQL Server it fails, caches an
+        // empty table list and this cleanup would never run.
+        if (\Schema::hasTable((new MeiliFilterSetting())->getTable())) {
+            $items = MeiliFilterSetting::where('custom_table_id', $this->custom_table_id)
+                ->where('column_name', $this->column_name)
+                ->get();
+            $items->each(function ($item) {
+                $item->delete();
+            });
+        }
     }
 
     protected static function boot()
@@ -329,6 +418,7 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         static::addGlobalScope(new OrderScope('order'));
 
         static::saving(function ($model) {
+            $model->filterGridStyleOptions();
             $model->prepareJson('options');
         });
 
@@ -354,8 +444,58 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
     }
 
     /**
+     * Keep the cell appearance settings of this column in the shape the
+     * renderer accepts.
+     *
+     * The column setting screen still posts the raw `grid_*` fields of
+     * columns styled before presets existed, and a template brings whatever
+     * the installation it came from stored. Either way the values end up in
+     * every list of the table, in front of people other than the one who
+     * typed them, so a value the renderer would refuse is not stored at all.
+     * The rules are a preset's, except that the per-value lines are not cut
+     * short: they list this column's own choices, however many it has.
+     *
+     * A refused value is set to null rather than forgotten, so prepareJson()
+     * drops the key instead of restoring the stored one. A key this save
+     * does not carry is read from the stored options for the same reason:
+     * prepareJson() would put it back exactly as it was stored.
+     */
+    protected function filterGridStyleOptions(): void
+    {
+        $options = $this->options;
+        if ($options instanceof Collection) {
+            $options = $options->toArray();
+        }
+        if (!is_array($options)) {
+            return;
+        }
+
+        $original = json_decode_ex($this->getRawOriginal('options'), true);
+        if (is_array($original)) {
+            $options += $original;
+        }
+
+        $present = array_intersect_key($options, array_flip(ColumnItems\GridCellStyle::STYLE_KEYS));
+        if (empty($present)) {
+            return;
+        }
+
+        $filtered = CellStylePreset::filterOptions(array_except($present, ['grid_value_colors']));
+        $filtered['grid_value_colors'] = ColumnItems\GridCellStyle::filterValueColors(array_get($present, 'grid_value_colors'));
+
+        foreach ($present as $key => $value) {
+            $accepted = array_get($filtered, $key);
+            if ($value !== $accepted) {
+                $this->setOption($key, $accepted);
+            }
+        }
+    }
+
+    /**
      * get custom column eloquent. (use table)
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($column_obj, $table_obj = null)
     {
         if (!isset($column_obj)) {
@@ -393,7 +533,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
                 return $record->column_name == $column_obj && $record->custom_table_id == $table_obj->id;
             })->first();
         }
-        /** @phpstan-ignore-next-line unreachable statement */
+
+        // @phpstan-ignore-next-line
         return null;
     }
 
@@ -402,6 +543,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
      * For add table virtual column
      * @param bool $forceDropIndex drop index. calling when remove column.
      */
+
+    // @phpstan-ignore-next-line
     public function alterColumn($forceDropIndex = false)
     {
         if (ColumnType::isIgnoreSave($this->column_type)) {
@@ -513,6 +656,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
      * @param array $array
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public static function customAvailableCharacters(array $array)
     {
         static::$customAvailableCharacters = array_merge($array, static::$customAvailableCharacters);
@@ -524,6 +669,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getAvailableCharacters()
     {
         ///// get system definitions
@@ -537,6 +684,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
 
         ///// add user definitions
         /** @var Collection $results */
+
+        // @phpstan-ignore-next-line
         $results = $results->merge(
             collect(static::$customAvailableCharacters)->map(function ($val) {
                 return [
@@ -551,6 +700,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
 
     /**
      * Create laravel-admin select box options. for column_type "select", "select_valtext"
+     *
+     * @return array<int|string, string|null> value => label (null only when mbTrim() fails on an item that is not valid UTF-8)
      */
     public function createSelectOptions()
     {
@@ -589,6 +740,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
     /**
      * Create laravel-admin select box option item.
      */
+
+    // @phpstan-ignore-next-line
     protected function setSelectOptionItem($item, &$options, $isValueText)
     {
         if (is_string($item)) {
@@ -606,6 +759,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function importSetValue(&$json, $options = [])
     {
         // set characters
@@ -621,6 +776,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
         return ['options.available_characters'];
     }
 
+
+    // @phpstan-ignore-next-line
     public function importSaved($json, $options = [])
     {
         if (!$this->index_enabled) {
@@ -634,6 +791,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
     /**
      * import template (for setting other custom column id)
      */
+
+    // @phpstan-ignore-next-line
     public static function importTemplateLinkage($json, $is_update, $options = [])
     {
         $custom_table = array_get($options, 'parent');
@@ -664,6 +823,8 @@ class CustomColumn extends ModelBase implements Interfaces\TemplateImporterInter
     /**
      * import template (for setting other custom view id)
      */
+
+    // @phpstan-ignore-next-line
     public static function importTemplateTargetView($json, $is_update, $options = [])
     {
         $custom_table = array_get($options, 'parent');

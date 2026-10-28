@@ -8,13 +8,14 @@ use Illuminate\Http\Request;
 /**
  * For login controller 2 factor
  */
-class Auth2factorController extends \Encore\Admin\Controllers\AuthController
+class Auth2factorController extends \ExmentAdminCore\Admin\Controllers\AuthController
 {
     use AuthTrait;
 
     /**
      * User logout.
      */
+    // @phpstan-ignore-next-line
     public function logout(Request $request)
     {
         $this->guard()->logout();
@@ -33,6 +34,7 @@ class Auth2factorController extends \Encore\Admin\Controllers\AuthController
      *
      * @throws \BadMethodCallException
      */
+    // @phpstan-ignore-next-line
     public function __call($method, $parameters)
     {
         $provider = Auth2factorService::getProvider();

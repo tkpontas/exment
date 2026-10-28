@@ -3,7 +3,8 @@
 namespace Exceedone\Exment\Services\FormSetting\FormColumn;
 
 use Exceedone\Exment\Services\FormSetting\FormBlock\BlockBase;
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\File as ExmentFile;
 
 /**
@@ -15,6 +16,7 @@ class Image extends OtherBase
      *
      * @return WidgetForm
      */
+    // @phpstan-ignore-next-line
     public function getSettingModalForm(BlockBase $block_item, array $parameters): WidgetForm
     {
         $form = new WidgetForm($parameters);
@@ -24,7 +26,12 @@ class Image extends OtherBase
             $form->image('image', exmtrans('custom_form.image'))
                 ->required()
                 ->help(exmtrans("common.message.cannot_preview", ['name' => exmtrans("custom_form.image")]))
-                ->attribute(['accept' => "image/*"]);
+                ->attribute([
+                    'accept' => collect(Define::IMAGE_RULE_EXTENSIONS)->map(function ($ext) {
+                        return ".$ext";
+                    })->implode(','),
+                    'data-image-extensions' => implode(',', Define::IMAGE_RULE_EXTENSIONS),
+                ]);
         } else {
             $form->description(exmtrans('custom_form.message.image_need_delete'));
 
@@ -44,12 +51,14 @@ class Image extends OtherBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getItemsForDisplay(): array
     {
         $result = parent::getItemsForDisplay();
 
         // set image url for option
         $options = json_decode_ex($result['options'], true);
+        // @phpstan-ignore-next-line
         $options['image_url'] = $this->getImageUrl();
         $result['options'] = collect($options)->toJson();
         return $result;
@@ -75,6 +84,7 @@ class Image extends OtherBase
      * @param array $options
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function prepareSavingOptions(array $options): array
     {
         return array_filter($options, function ($option, $key) {
@@ -89,6 +99,7 @@ class Image extends OtherBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getValidationRules(): array
     {
         return ['image' => 'required_image'];
@@ -104,6 +115,7 @@ class Image extends OtherBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getOptionLabels(): array
     {
         $result = parent::getOptionLabels();

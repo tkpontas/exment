@@ -2,10 +2,10 @@
 
 namespace Exceedone\Exment\ColumnItems;
 
-use Encore\Admin\Form\Field;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Filter;
-use Encore\Admin\Form;
+use ExmentAdminCore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Filter;
+use ExmentAdminCore\Admin\Form;
 use Exceedone\Exment\Form\Field as ExmentField;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\CustomTable;
@@ -29,23 +29,35 @@ abstract class CustomItem implements ItemInterface
     use SummaryItemTrait;
     use ColumnOptionQueryTrait;
 
+    // @phpstan-ignore-next-line
     protected $custom_column;
 
+    // @phpstan-ignore-next-line
     protected $custom_value;
 
     /**
      * laravel-admin set required. if false, always not-set required
      */
+    // @phpstan-ignore-next-line
     protected $required = true;
+
+    /**
+     * Cached cell styling. false until built, then GridCellStyle or null.
+     *
+     * @var GridCellStyle|null|false
+     */
+    protected $grid_cell_style = false;
 
     /**
      * Available fields.
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     public static $availableFields = [];
 
 
+    // @phpstan-ignore-next-line
     public function __construct($custom_column, $custom_value, $view_column_target = null)
     {
         $this->custom_column = $custom_column;
@@ -83,6 +95,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get column name
      */
+    // @phpstan-ignore-next-line
     public function name()
     {
         return $this->custom_column->column_name;
@@ -93,6 +106,7 @@ abstract class CustomItem implements ItemInterface
      * Join table: false
      * Wrap: false
      */
+    // @phpstan-ignore-next-line
     public function sqlname()
     {
         return $this->custom_column->getQueryKey();
@@ -101,6 +115,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get index name
      */
+    // @phpstan-ignore-next-line
     public function index()
     {
         return $this->custom_column->getIndexColumnName();
@@ -119,6 +134,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get Text(for display)
      */
+    // @phpstan-ignore-next-line
     protected function _text($v)
     {
         return $v;
@@ -127,6 +143,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get html(for display)
      */
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         // default escapes text
@@ -137,6 +154,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get grid style
      */
+    // @phpstan-ignore-next-line
     public function gridStyle()
     {
         $array = [
@@ -147,12 +165,97 @@ abstract class CustomItem implements ItemInterface
         if (isset($text_align)) {
             $array['text-align'] = $text_align;
         }
+
+        // Appended last so the cell setting wins over the defaults above -
+        // getStyleString keeps insertion order and the browser takes the last
+        // declaration of a property.
+        $cell_style = $this->getGridCellStyle();
+        if (isset($cell_style)) {
+            $array = array_merge($array, $cell_style->tdStyle());
+        }
+
         return $this->getStyleString($array);
+    }
+
+    /**
+     * get html(for display)
+     *
+     * Overrides the trait to give each value the badge configured on the
+     * column. The wrapping is applied value by value, not to the joined
+     * string, so every value of a multi-value column gets its own badge.
+     *
+     * @return mixed
+     */
+    public function html()
+    {
+        $cell_style = $this->getGridCellStyle();
+
+        $html = $this->_getMultipleValue(function ($v) use ($cell_style) {
+            $inner = $this->_html($v);
+
+            // An empty value must stay empty: _getMultipleValue drops empties
+            // after this callback, and an empty badge would survive that.
+            if (!isset($cell_style) || is_nullorempty($inner)) {
+                return $inner;
+            }
+
+            // A stand-in for something the viewer may not see is printed
+            // as it is - see isStyledValue().
+            if (!$this->isStyledValue($v)) {
+                return $inner;
+            }
+
+            return $cell_style->wrap($inner, $v, $this->_text($v));
+        });
+
+        return is_list($html) ? collect($html)->implode($this->getSeparateWord()) : $html;
+    }
+
+    /**
+     * Whether the cell style may paint this value.
+     *
+     * A value is painted by what it is: its per-value color is looked up
+     * by the stored value. A column that prints a stand-in instead of the
+     * value - because the viewer may not see what it points at - must not
+     * have the stand-in painted, or the color would give the value away.
+     *
+     * @param mixed $v
+     * @return bool
+     */
+    protected function isStyledValue($v): bool
+    {
+        return true;
+    }
+
+    /**
+     * Cell styling of this column, or null when it is not styled.
+     *
+     * Only the grid asks for it. The detail screen and the form show one
+     * record at a time, where a badge carries no comparison and would just
+     * fight the field layout.
+     *
+     * @return GridCellStyle|null
+     */
+    protected function getGridCellStyle()
+    {
+        if (!boolval(array_get($this->options, 'grid_column'))) {
+            return null;
+        }
+
+        // The grid reuses one item for every row, so this is built once per
+        // column. false is the "not built yet" marker because null is a real
+        // answer here - it means "this column is not styled".
+        if ($this->grid_cell_style === false) {
+            $this->grid_cell_style = GridCellStyle::make($this->custom_column, array_get($this->options, 'grid_preset'));
+        }
+
+        return $this->grid_cell_style;
     }
 
     /**
      * get grid header style
      */
+    // @phpstan-ignore-next-line
     public function gridHeaderStyle()
     {
         $array = [];
@@ -170,6 +273,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * sortable for grid
      */
+    // @phpstan-ignore-next-line
     public function sortable()
     {
         return $this->indexEnabled() && !$this->isMultipleEnabled();
@@ -179,11 +283,13 @@ abstract class CustomItem implements ItemInterface
      * whether column is enabled index.
      *
      */
+    // @phpstan-ignore-next-line
     public function indexEnabled()
     {
         return $this->custom_column->index_enabled;
     }
 
+    // @phpstan-ignore-next-line
     public function setCustomValue($custom_value)
     {
         $this->custom_value = $this->getTargetCustomValue($custom_value);
@@ -197,6 +303,7 @@ abstract class CustomItem implements ItemInterface
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function getCustomColumn()
     {
         return $this->custom_column;
@@ -213,6 +320,7 @@ abstract class CustomItem implements ItemInterface
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getTargetValue($custom_value)
     {
         // if options has "summary" (for summary view)
@@ -309,6 +417,7 @@ abstract class CustomItem implements ItemInterface
      *
      * @return array offset 0: type, 1: value
      */
+    // @phpstan-ignore-next-line
     protected function getDefaultSetting()
     {
         $default_type = array_get($this->form_column_options, 'default_type');
@@ -371,6 +480,7 @@ abstract class CustomItem implements ItemInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public function getFilterField($value_type = null)
     {
         if (get_class($this) == AutoNumber::class) {
@@ -397,7 +507,20 @@ abstract class CustomItem implements ItemInterface
         $this->custom_column->setOption('number_format', false);
         $this->options['disable_number_format'] = true;
 
-        return $this->getCustomField($classname);
+        $field = $this->getCustomField($classname);
+
+        // For day-count filter (X日前/X日後の日付): default value 0, integer in [0, 99999].
+        // - min 0: disallow negative input.
+        // - max 99999 / maxlength 5: a larger value overflows the Carbon date math on the server
+        //   (Carbon::today()->addDays(-x)) so the filter returns no rows; the spinner honours max
+        //   and maxlength caps typed/pasted input. The client also strips non-digit characters.
+        // - type text: the box stays a text input as in v6 (laravel-admin); the Number field of
+        //   exment-admin-core renders type="number" unless the type is given.
+        if ($value_type == FilterType::NUMBER) {
+            $field->default(0)->attribute(['type' => 'text', 'min' => 0, 'max' => 99999, 'maxlength' => 5, 'data-day-count' => 1]);
+        }
+
+        return $field;
     }
 
 
@@ -411,19 +534,21 @@ abstract class CustomItem implements ItemInterface
         return true;
     }
 
+    // @phpstan-ignore-next-line
     protected function getFilterFieldClass()
     {
         return $this->getAdminFieldClass();
     }
 
+    // @phpstan-ignore-next-line
     public function getAdminField($form_column = null, $column_name_prefix = null)
     {
         $form_column_options = $form_column->options ?? [];
         $this->form_column_options = array_merge($this->form_column_options, $form_column_options);
 
-        // if hidden setting, add hidden field
+        // if hidden setting, add hidden field (array-safe for multi-value columns)
         if ($this->hidden()) {
-            $classname = Field\Hidden::class;
+            $classname = ExmentField\Hidden::class;
         } elseif ($this->initonly()) {
             $classname = ExmentField\InitOnly::class;
         } elseif ($this->viewonly()) {
@@ -441,6 +566,35 @@ abstract class CustomItem implements ItemInterface
         return null;
     }
 
+    /**
+     * Get the display html of this column for the given stored value,
+     * without changing the value this item currently holds.
+     *
+     * @param mixed $value stored value of this column
+     * @return mixed escaped html, or null when there is nothing to show
+     */
+    public function htmlFromValue($value)
+    {
+        if (is_nullorempty($value)) {
+            return null;
+        }
+
+        $original = $this->value;
+        $this->value = $value;
+        try {
+            // same as setCustomValue(), so the value is formatted like on the main form (e.g. decimal digits)
+            $this->prepare();
+            return $this->html();
+        } catch (\Throwable $ex) {
+            // never break the form for one cell: report it, the caller falls back to the escaped raw value
+            report($ex);
+            return null;
+        } finally {
+            $this->value = $original;
+        }
+    }
+
+    // @phpstan-ignore-next-line
     protected function getCustomField($classname, $column_name_prefix = null)
     {
         $options = $this->custom_column->options;
@@ -456,10 +610,24 @@ abstract class CustomItem implements ItemInterface
             if ($this->initonly()) {
                 $field->displayText($this->html())->escape(false)->default($this->value)->prepareDefault();
             } elseif ($this->viewonly() && !isset($this->value)) {
-                // if view only and create, set default value
-                $this->value = $this->getDefaultValue();
-                $field->displayText($this->html())->escape(false);
+                // The item has no value while the form is built: a create form (no id), a record whose
+                // column is empty, or a row of a has-many table - there the row's value only reaches
+                // the field when it is rendered.
+                if (is_null($this->id)) {
+                    // if view only and create (no id), set default value
+                    $this->value = $this->getDefaultValue();
+                }
+                $emptyHtml = $this->html();
                 $this->value = null;
+
+                // So resolve the display html from the field's value at render time. Without a value,
+                // show what the item shows for none (the default on a create form).
+                // Display::render() runs the closure with Closure::call($field, $value), which rebinds
+                // $this to the field: keep the item in a variable, and the closure must not be static.
+                $item = $this;
+                $field->displayText(function ($value) use ($item, $emptyHtml) {
+                    return is_nullorempty($value) ? $emptyHtml : $item->htmlFromValue($value);
+                })->escape(false);
             } elseif ($this->viewonly()) {
                 $field->displayText($this->html())->escape(false);
             }
@@ -511,6 +679,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get view filter type
      */
+    // @phpstan-ignore-next-line
     public function getViewFilterType()
     {
         // get column_type
@@ -544,6 +713,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get sort name
      */
+    // @phpstan-ignore-next-line
     public function getSortName()
     {
         return $this->sqlUniqueTableName() .'.'. $this->custom_column->getQueryKey();
@@ -552,6 +722,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get cast name for sort
      */
+    // @phpstan-ignore-next-line
     public function getCastName($is_summary = false)
     {
         list($type, $addOption, $options) = $this->getCastOptions();
@@ -574,6 +745,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get cast name for virtual column database
      */
+    // @phpstan-ignore-next-line
     public function getVirtualColumnTypeName()
     {
         list($type, $addOption, $options) = $this->getCastOptions();
@@ -613,6 +785,7 @@ abstract class CustomItem implements ItemInterface
         return array_get($this->custom_value->getOriginal(), 'value.' . $this->custom_column->column_name);
     }
 
+    // @phpstan-ignore-next-line
     protected function getCastOptions()
     {
         return [DatabaseDataType::TYPE_STRING, false, []];
@@ -621,6 +794,7 @@ abstract class CustomItem implements ItemInterface
     /**
      * get value before saving
      */
+    // @phpstan-ignore-next-line
     public function saving()
     {
     }
@@ -628,10 +802,12 @@ abstract class CustomItem implements ItemInterface
     /**
      * get value after saving
      */
+    // @phpstan-ignore-next-line
     public function saved()
     {
     }
 
+    // @phpstan-ignore-next-line
     protected function disableEdit()
     {
         if ($this->initonly()) {
@@ -656,6 +832,7 @@ abstract class CustomItem implements ItemInterface
      *     skip :Iif true, skip import this column.
      *     value : Replaced value.
      */
+    // @phpstan-ignore-next-line
     public function getImportValue($value, $options = [])
     {
         return [
@@ -664,16 +841,20 @@ abstract class CustomItem implements ItemInterface
         ];
     }
 
+    // @phpstan-ignore-next-line
     abstract protected function getAdminFieldClass();
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminFilterOptions(&$filter)
     {
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
     }
@@ -683,6 +864,7 @@ abstract class CustomItem implements ItemInterface
         return null;
     }
 
+    // @phpstan-ignore-next-line
     protected function appendHelp(Field $field)
     {
         $text = $this->getAppendHelpText();
@@ -693,6 +875,7 @@ abstract class CustomItem implements ItemInterface
         $field->appendHelp($text);
     }
 
+    // @phpstan-ignore-next-line
     public static function getItem(...$args)
     {
         list($custom_column, $custom_value, $view_column_target) = $args + [null, null, null];
@@ -702,7 +885,7 @@ abstract class CustomItem implements ItemInterface
             return new $className($custom_column, $custom_value, $view_column_target);
         }
 
-        admin_error('Error', "Field type [$column_type] does not exist.");
+        admin_error('Error', 'Field type [' . e($column_type) . '] does not exist.');
 
         return null;
     }
@@ -740,6 +923,7 @@ abstract class CustomItem implements ItemInterface
      * @param Field $field
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getColumnValidates(Field $field)
     {
         $options = array_get($this->custom_column, 'options');
@@ -775,6 +959,7 @@ abstract class CustomItem implements ItemInterface
      * Get remove validate array.
      * @return array if want to remove, append removing array.
      */
+    // @phpstan-ignore-next-line
     protected function getRemoveValidates()
     {
         return [];
@@ -784,12 +969,14 @@ abstract class CustomItem implements ItemInterface
     /**
      * Compare two values.
      */
+    // @phpstan-ignore-next-line
     public function compareTwoValues(CustomColumnMulti $compare_column, $this_value, $target_value)
     {
         return true;
     }
 
 
+    // @phpstan-ignore-next-line
     public function initonly()
     {
         $initOnly = boolval(array_get($this->custom_column->options, 'init_only'));
@@ -797,21 +984,25 @@ abstract class CustomItem implements ItemInterface
         return $initOnly && isset($this->value);
     }
 
+    // @phpstan-ignore-next-line
     public function readonly()
     {
         return array_boolval($this->form_column_options, 'read_only') || array_get($this->form_column_options, 'field_showing_type') == 'read_only';
     }
 
+    // @phpstan-ignore-next-line
     public function viewonly()
     {
         return array_boolval($this->form_column_options, 'view_only') || array_get($this->form_column_options, 'field_showing_type') == 'view_only';
     }
 
+    // @phpstan-ignore-next-line
     public function hidden()
     {
         return array_boolval($this->form_column_options, 'hidden') || array_get($this->form_column_options, 'field_showing_type') == 'hidden';
     }
 
+    // @phpstan-ignore-next-line
     public function internal()
     {
         return array_boolval($this->form_column_options, 'internal') || array_get($this->form_column_options, 'field_showing_type') == 'internal';
@@ -840,6 +1031,7 @@ abstract class CustomItem implements ItemInterface
         return false;
     }
 
+    // @phpstan-ignore-next-line
     public function required()
     {
         if ($this->initonly() || $this->viewonly() || $this->internal()) {

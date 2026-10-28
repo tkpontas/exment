@@ -3,6 +3,7 @@
 namespace Exceedone\Exment\Services\BackupRestore;
 
 use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Enums\BackupTarget;
 use Exceedone\Exment\Services\Installer\EnvTrait;
 
@@ -36,6 +37,7 @@ class Backup
      * @return int
      * @throws \Exceedone\Exment\Exceptions\BackupRestoreCheckException
      */
+    // @phpstan-ignore-next-line
     public function execute($target = null, bool $schedule = false)
     {
         try {
@@ -46,7 +48,7 @@ class Backup
 
             if (is_string($target)) {
                 $target = collect(explode(",", $target))->map(function ($t) {
-                    /** @phpstan-ignore-next-line Expression on left side of ?? is not nullable. */
+                    // @phpstan-ignore-next-line
                     return new BackupTarget($t) ?? null;
                 })->filter()->toArray();
             }
@@ -62,6 +64,9 @@ class Backup
             if (!$this->copyFiles($target)) {
                 return -1;
             }
+
+            // record the versions this backup is taken on
+            $this->writeVersionFile();
 
             // archive whole folder to zip
             $this->createZip();
@@ -84,6 +89,7 @@ class Backup
      *
      * @return bool true:success/false:fail
      */
+    // @phpstan-ignore-next-line
     protected function copyFiles($target)
     {
         // get directory paths
@@ -152,9 +158,29 @@ class Backup
     }
 
     /**
+     * Write the Exment and Laravel versions to the backup.
+     *
+     * Restore reads it to tell whether the backup's config files fit this installation:
+     * config files of another Laravel version must not overwrite the current ones.
+     *
+     * @return void
+     */
+    protected function writeVersionFile()
+    {
+        $dirName = $this->diskService->tmpDiskItem()->dirName();
+        \Exment::makeDirectoryDisk($this->tmpDisk(), $dirName);
+
+        \File::put($this->tmpDisk()->path(path_join($dirName, Define::BACKUP_VERSION_FILE)), json_encode([
+            'exment' => \Exment::getExmentCurrentVersion(),
+            'laravel' => app()->version(),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * archive whole folder(sql and tsv only) to zip.
      *
      */
+    // @phpstan-ignore-next-line
     protected function createZip()
     {
         // open new zip file
@@ -225,6 +251,7 @@ class Backup
      * get matched env data
      *
      */
+    // @phpstan-ignore-next-line
     protected function getMatchedEnv()
     {
         // get env file

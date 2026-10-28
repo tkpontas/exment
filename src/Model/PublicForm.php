@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Model;
 
-use Encore\Admin\Form;
+use ExmentAdminCore\Admin\Form;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -43,6 +43,8 @@ class PublicForm extends ModelBase
 
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => [
             'custom_form_id', 'proxy_user_id', 'uuid', 'active_flg', 'public_form_view_name', 'options.analytics_tag', 'options.use_recaptcha', 'options.header_logo','options.plugin_css','options.plugin_js',
@@ -50,23 +52,39 @@ class PublicForm extends ModelBase
     ];
 
 
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<CustomForm, $this>
+     */
     public function custom_form()
     {
         return $this->belongsTo(CustomForm::class, 'custom_form_id');
     }
 
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Notify, $this>
+     */
     public function notify_complete_admin()
     {
         return $this->hasOne(Notify::class, 'target_id')
             ->where('notify_trigger', NotifyTrigger::PUBLIC_FORM_COMPLETE_ADMIN)
             ->where('active_flg', 1);
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Notify, $this>
+     */
     public function notify_complete_user()
     {
         return $this->hasOne(Notify::class, 'target_id')
             ->where('notify_trigger', NotifyTrigger::PUBLIC_FORM_COMPLETE_USER)
             ->where('active_flg', 1);
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Notify, $this>
+     */
     public function notify_error()
     {
         return $this->hasOne(Notify::class, 'target_id')
@@ -74,22 +92,32 @@ class PublicForm extends ModelBase
             ->where('active_flg', 1);
     }
 
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Notify, $this>
+     */
     public function notify_all()
     {
         return $this->hasMany(Notify::class, 'target_id')
             ->whereIn('notify_trigger', NotifyTrigger::PUBLIC_FORMS());
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->notify_all()->delete();
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomFormCacheAttribute()
     {
         return CustomForm::getEloquent($this->custom_form_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomTableCacheAttribute()
     {
         $custom_form = $this->custom_form_cache;
@@ -125,6 +153,8 @@ class PublicForm extends ModelBase
      *
      * @return string
      */
+
+    // @phpstan-ignore-next-line
     public function getBasePath(...$pass_array): string
     {
         return url_join(public_form_base_path(), $this->uuid, ...$pass_array);
@@ -135,6 +165,8 @@ class PublicForm extends ModelBase
      *
      * @return string
      */
+
+    // @phpstan-ignore-next-line
     public function getUrl(...$pass_array): string
     {
         return asset_urls($this->getBasePath(...$pass_array));
@@ -177,6 +209,8 @@ class PublicForm extends ModelBase
      *
      * @return PublicForm|null
      */
+
+    // @phpstan-ignore-next-line
     public static function getPublicFormByUuid($uuid, bool $skipCheckActiveEtc = false): ?PublicForm
     {
         if (!$uuid) {
@@ -240,6 +274,8 @@ class PublicForm extends ModelBase
      *
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getListOfTablesUsed(): Collection
     {
         $result = collect();
@@ -286,6 +322,8 @@ class PublicForm extends ModelBase
      * @param array $options
      * @return Form|null
      */
+
+    // @phpstan-ignore-next-line
     public function getForm(Request $request, ?CustomValue $custom_value = null, array $options = [])
     {
         $options = array_merge([
@@ -296,7 +334,7 @@ class PublicForm extends ModelBase
 
 
         // set footer as PublicFormFooter
-        \Encore\Admin\Form\Builder::$footerClassName = \Exceedone\Exment\Form\PublicFormFooter::class;
+        \ExmentAdminCore\Admin\Form\Builder::$footerClassName = \Exceedone\Exment\Form\PublicFormFooter::class;
 
         $custom_form = $this->custom_form;
         if (!$custom_form) {
@@ -359,6 +397,8 @@ class PublicForm extends ModelBase
      * @return mixed|null
      * @throws \Throwable
      */
+
+    // @phpstan-ignore-next-line
     public function getShow(Request $request, CustomValue|Model $custom_value, array $inputs = [])
     {
         $custom_form = $this->custom_form;
@@ -456,6 +496,8 @@ class PublicForm extends ModelBase
      * @return PublicContent|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
      * @throws \Throwable
      */
+
+    // @phpstan-ignore-next-line
     public function showError($ex, $asInner = false, ?array $data = null)
     {
         try {
@@ -494,6 +536,8 @@ class PublicForm extends ModelBase
     }
 
 
+
+    // @phpstan-ignore-next-line
     public function getNotifyParams(?CustomValue $custom_value = null, array $relationInputs = null, ?array $data = null)
     {
         return [
@@ -510,6 +554,8 @@ class PublicForm extends ModelBase
      * @param array|null $data
      * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Translation\Translator|string|null
      */
+
+    // @phpstan-ignore-next-line
     protected function getInputValueText(?CustomValue $custom_value = null, array $relationInputs = null, ?array $data = null)
     {
         try {
@@ -526,6 +572,8 @@ class PublicForm extends ModelBase
                     'asConfirm' => true,
                 ]);
                 /** @var array|null $relationInputs */
+
+                // @phpstan-ignore-next-line
                 $relationInputs = $form->getRelationModelByInputs();
             }
 
@@ -570,6 +618,8 @@ class PublicForm extends ModelBase
 
                                 // if relation, set relation label
                                 if (!is_null($relationInfo[0]) && !is_null($relationInfo[2])) {
+
+                                    // @phpstan-ignore-next-line
                                     $label = $relationInfo[2] . " - " . ($index + 1) . " - " . $label;
                                 }
 
@@ -606,6 +656,8 @@ class PublicForm extends ModelBase
      * @param PublicContent $content
      * @return $this
      */
+
+    // @phpstan-ignore-next-line
     public function setContentOption(PublicContent $content, array $options = [])
     {
         \Admin::css(asset('vendor/exment/css/publicform.css'));
@@ -681,7 +733,7 @@ class PublicForm extends ModelBase
     public static function isEnableRecaptcha()
     {
         $message = null;
-        // checking NoCaptcha
+        // checking the optional google/recaptcha library is installed
         if (!\Exment::isAvailableGoogleRecaptcha()) {
             $message = exmtrans('login.message.not_install_library', [
                 'name' => 'Google reCaptcha',
@@ -710,6 +762,8 @@ class PublicForm extends ModelBase
      *
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getCssJsPlugins()
     {
         $result = collect();

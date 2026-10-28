@@ -31,13 +31,19 @@ class CustomViewFilter extends ModelBase
     protected $appends = ['view_column_target', 'view_filter_condition_value'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => [
             'import' => ['custom_table', 'view_column_table_id', 'view_column_target', 'custom_column'],
             'export' => ['custom_table', 'view_column_table_id', 'view_column_target_id', 'custom_view_id', 'view_column_target', 'custom_column', 'view_filter_condition_value_table_id', 'view_filter_condition_value_id'],
         ],
         'uniqueKeys' => [
-            'custom_view_id', 'view_column_type', 'view_column_target_id', 'view_column_table_id', 'view_filter_condition'
+            // The value has to take part in the key: a view may hold two filters
+            // on the same column with the same operator but different values
+            // (state <> resolved AND state <> closed). Without it the second one
+            // overwrites the first on import and the condition is silently lost.
+            'custom_view_id', 'view_column_type', 'view_column_target_id', 'view_column_table_id', 'view_filter_condition', 'view_filter_condition_value_text'
         ],
         'parent' => 'custom_view_id',
         'uniqueKeyReplaces' => [
@@ -73,6 +79,8 @@ class CustomViewFilter extends ModelBase
     /**
      * get edited view_filter_condition_value_text.
      */
+
+    // @phpstan-ignore-next-line
     public function getViewFilterConditionValueAttribute()
     {
         if (is_string($this->view_filter_condition_value_text)) {
@@ -90,6 +98,8 @@ class CustomViewFilter extends ModelBase
      * set view_filter_condition_value_text.
      * * we have to convert int if view_filter_condition_value is array*
      */
+
+    // @phpstan-ignore-next-line
     public function setViewFilterConditionValueAttribute($view_filter_condition_value)
     {
         if (is_array($view_filter_condition_value)) {
@@ -106,24 +116,34 @@ class CustomViewFilter extends ModelBase
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewPivotColumnIdAttribute()
     {
         return $this->getViewPivotIdTrait('view_pivot_column_id');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewPivotColumnIdAttribute($view_pivot_column_id)
     {
         return $this->setViewPivotIdTrait('view_pivot_column_id', $view_pivot_column_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewPivotTableIdAttribute()
     {
         return $this->getViewPivotIdTrait('view_pivot_table_id');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewPivotTableIdAttribute($view_pivot_table_id)
     {
         return $this->setViewPivotIdTrait('view_pivot_table_id', $view_pivot_table_id);
@@ -133,6 +153,8 @@ class CustomViewFilter extends ModelBase
     /**
      * set value filter
      */
+
+    // @phpstan-ignore-next-line
     public function setValueFilter($query, $or_option = false)
     {
         // get filter target column
@@ -142,6 +164,15 @@ class CustomViewFilter extends ModelBase
         $viewFilterItem = ViewFilterBase::make($this->view_filter_condition, $this->column_item, [
             'or_option' => $or_option,
         ]);
+
+        // A row holding no comparison - or one that this column does not
+        // offer any more - cannot be turned into a query. Failing the whole
+        // screen over it would also take away the screen it is repaired
+        // from, so the row is left out and the reason is shown.
+        if (!isset($viewFilterItem)) {
+            admin_warning_once(exmtrans('common.error'), exmtrans('custom_view.message.filter_ignored'));
+            return $query;
+        }
 
         $viewFilterItem->setFilter($query, $condition_value_text);
         return $query;

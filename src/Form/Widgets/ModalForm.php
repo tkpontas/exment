@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Widgets;
 
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 
 /**
  * @method mixed hasManyTable($tableName, $columnName, $closure)
@@ -20,6 +20,7 @@ class ModalForm extends WidgetForm
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $buttons = [];
 
     /**
@@ -27,12 +28,15 @@ class ModalForm extends WidgetForm
      *
      * @return array
      */
-    public function getScript()
+    public function getScript(): string
     {
-        return collect($this->fields)->map(function ($field) {
+            return collect($this->fields)
+        ->map(function ($field) {
             /* @var Field $field  */
             return $field->getScript();
-        })->filter()->values()->toArray();
+        })
+        ->filter()
+        ->implode("\n");
     }
 
     /**

@@ -2,12 +2,12 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-class MultipleImage extends \Encore\Admin\Form\Field\MultipleImage
+class MultipleImage extends \ExmentAdminCore\Admin\Form\Field\MultipleImage
 {
     /**
      *  Validation rules.
-     * @phpstan-ignore-next-line Need to fix laravel-admin
      */
+    // @phpstan-ignore-next-line
     protected $rules = [];
 
     /**
@@ -24,7 +24,7 @@ class MultipleImage extends \Encore\Admin\Form\Field\MultipleImage
     protected function getRules()
     {
         $rules = parent::getRules();
-        /** @phpstan-ignore-next-line Cannot assign new offset to string. */
+        // @phpstan-ignore-next-line
         $rules[] = new \Exceedone\Exment\Validator\ImageRule();
         return $rules;
     }

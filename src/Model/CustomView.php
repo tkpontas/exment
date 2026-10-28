@@ -4,14 +4,15 @@ namespace Exceedone\Exment\Model;
 
 use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Illuminate\Database\Eloquent\Builder;
-use Encore\Admin\Facades\Admin;
-use Encore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Services\Search\SearchService;
 use Exceedone\Exment\Enums\ValueType;
 use Exceedone\Exment\Enums\ViewType;
 use Exceedone\Exment\Enums\ConditionType;
 use Exceedone\Exment\Enums\ViewKindType;
 use Exceedone\Exment\Enums\UserSetting;
+use Exceedone\Exment\Enums\TemplateImportResult;
 use Exceedone\Exment\Enums\SummaryCondition;
 use Exceedone\Exment\Enums\SystemColumn;
 use Exceedone\Exment\Enums\SystemTableName;
@@ -38,6 +39,7 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     use Traits\AutoSUuidTrait;
     use Traits\DefaultFlgTrait;
     use Traits\TemplateTrait;
+    use Traits\TemplateColumnRefTrait;
     use Traits\DatabaseJsonOptionTrait;
 
     //protected $appends = ['view_calendar_target', 'pager_count'];
@@ -46,6 +48,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     protected $casts = ['options' => 'json', 'custom_options' => 'json'];
     //protected $with = ['custom_table', 'custom_view_columns'];
 
+
+    // @phpstan-ignore-next-line
     private $_grid_item;
 
     /**
@@ -55,6 +59,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      */
     private $_search_service;
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['custom_table', 'target_view_name', 'view_calendar_target', 'pager_count'],
         'uniqueKeys' => ['suuid'],
@@ -93,38 +99,97 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     ];
 
 
+    /**
+     * Kanban and gantt settings point at columns by numeric id, which is only
+     * meaningful on the system that produced them. Swap those ids for
+     * "table_name.column_name" so the view survives an import elsewhere.
+     *
+     * @param array<string, mixed> $array
+     * @return void
+     */
+    protected static function exportReplaceJson(&$array)
+    {
+        $options = array_get($array, 'options');
+        if (is_array($options)) {
+            $array['options'] = static::templateExportColumnRefs($options);
+        }
+    }
+
+
+    /**
+     * @param array<string, mixed> $json
+     * @param array<string, mixed> $options
+     * @return string
+     */
+    protected static function importReplaceJson(&$json, $options = [])
+    {
+        $viewOptions = array_get($json, 'options');
+        if (is_array($viewOptions)) {
+            $json['options'] = static::templateImportColumnRefs($viewOptions);
+        }
+
+        return TemplateImportResult::SUCCESS;
+    }
+
+
     //public function custom_table()
+
+    // @phpstan-ignore-next-line
     public function getCustomTableAttribute()
     {
         return CustomTable::getEloquent($this->custom_table_id);
         //return $this->belongsTo(CustomTable::class, 'custom_table_id');
     }
 
+
+    /**
+     * @return HasMany<CustomViewColumn, $this>
+     */
     public function custom_view_columns(): HasMany
     {
         return $this->hasMany(CustomViewColumn::class, 'custom_view_id');
     }
 
+
+    /**
+     * @return HasMany<CustomViewFilter, $this>
+     */
     public function custom_view_filters(): HasMany
     {
         return $this->hasMany(CustomViewFilter::class, 'custom_view_id');
     }
 
+
+    /**
+     * @return HasMany<CustomViewSort, $this>
+     */
     public function custom_view_sorts(): HasMany
     {
         return $this->hasMany(CustomViewSort::class, 'custom_view_id');
     }
 
+
+    /**
+     * @return HasMany<CustomViewSummary, $this>
+     */
     public function custom_view_summaries(): HasMany
     {
         return $this->hasMany(CustomViewSummary::class, 'custom_view_id');
     }
 
+
+    /**
+     * @return HasMany<CustomViewGridFilter, $this>
+     */
     public function custom_view_grid_filters(): HasMany
     {
         return $this->hasMany(CustomViewGridFilter::class, 'custom_view_id');
     }
 
+
+    /**
+     * @return HasMany<DataShareAuthoritable, $this>
+     */
     public function data_share_authoritables(): HasMany
     {
         return $this->hasMany(DataShareAuthoritable::class, 'parent_id')
@@ -132,47 +197,93 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     }
 
     /**
+     * Children set on this instance by hand, or null to read them the usual way.
+     *
+     * The cached readers below look children up by custom_view_id, so a view
+     * built in memory - the preview of settings that were never saved - would
+     * find none of them, or worse, find the ones still saved under the same id.
+     * Whatever was put on the relation is what this view is made of.
+     *
+     * @param string $relation
+     * @return \Illuminate\Support\Collection<int, mixed>|null
+     */
+    protected function getSetRelationCache(string $relation)
+    {
+        if (!$this->relationLoaded($relation)) {
+            return null;
+        }
+
+        return collect($this->getRelation($relation));
+    }
+
+    /**
      * get Custom columns using cache
+     *
+     * @return \Illuminate\Support\Collection<int, CustomViewColumn>
      */
     public function getCustomViewColumnsCacheAttribute()
     {
+        if (!is_null($set = $this->getSetRelationCache('custom_view_columns'))) {
+            return $set;
+        }
+
         return $this->hasManyCache(CustomViewColumn::class, 'custom_view_id');
     }
 
     /**
      * get Custom filters using cache
+     *
+     * @return \Illuminate\Support\Collection<int, CustomViewFilter>
      */
     public function getCustomViewFiltersCacheAttribute()
     {
+        if (!is_null($set = $this->getSetRelationCache('custom_view_filters'))) {
+            return $set;
+        }
+
         return $this->hasManyCache(CustomViewFilter::class, 'custom_view_id');
     }
 
     /**
      * get Custom Sorts using cache
+     *
+     * @return \Illuminate\Support\Collection<int, CustomViewSort>
      */
     public function getCustomViewSortsCacheAttribute()
     {
+        if (!is_null($set = $this->getSetRelationCache('custom_view_sorts'))) {
+            return $set;
+        }
+
         return $this->hasManyCache(CustomViewSort::class, 'custom_view_id');
     }
 
     /**
      * get Custom summaries using cache
+     *
+     * @return \Illuminate\Support\Collection<int, CustomViewSummary>
      */
     public function getCustomViewSummariesCacheAttribute()
     {
         return $this->hasManyCache(CustomViewSummary::class, 'custom_view_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getTableNameAttribute()
     {
         return $this->custom_table->table_name;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getFilterIsOrAttribute()
     {
         return $this->condition_join == 'or';
     }
 
+
+    // @phpstan-ignore-next-line
     public function getGridItemAttribute()
     {
         if (isset($this->_grid_item)) {
@@ -185,15 +296,21 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this->_grid_item;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomOption($key, $default = null)
     {
         return $this->getJson('custom_options', $key, $default);
     }
+
+    // @phpstan-ignore-next-line
     public function setCustomOption($key, $val = null)
     {
         return $this->setJson('custom_options', $key, $val);
     }
 
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $this->custom_view_columns()->delete();
@@ -239,6 +356,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         });
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgFilter($query)
     {
         $query->where('view_type', $this->view_type);
@@ -248,6 +367,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgSet()
     {
         // set if only this flg is system
@@ -272,6 +393,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * reset search service.
      */
+
+    // @phpstan-ignore-next-line
     public function resetSearchService()
     {
         $this->_search_service = null;
@@ -280,6 +403,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set search service.
      */
+
+    // @phpstan-ignore-next-line
     public function setSearchService(SearchService $service)
     {
         $this->_search_service = $service;
@@ -290,6 +415,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         if (strlen_ex($id) == 20) {
@@ -307,6 +434,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * @param array $options
      * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
      */
+
+    // @phpstan-ignore-next-line
     public function getQuery($query, array $options = [])
     {
         return $this->grid_item->getQuery($query, $options);
@@ -316,6 +445,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set laravel-admin grid using custom_view
      */
+
+    // @phpstan-ignore-next-line
     public function setGrid($grid)
     {
         return $this->grid_item->setGrid($grid);
@@ -325,6 +456,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * Get data paginate. default or summary
      */
+
+    // @phpstan-ignore-next-line
     public function getDataPaginate($options = [])
     {
         $options = array_merge([
@@ -351,6 +484,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * set DataTable using custom_view
      * @return array $headers : header items, $bodies : body items.
      */
+
+    // @phpstan-ignore-next-line
     public function convertDataTable($datalist, $options = [])
     {
         $options = array_merge(
@@ -410,6 +545,7 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
                         'view_pivot_column' => $column->view_pivot_column_id ?? null,
                         'view_pivot_table' => $column->view_pivot_table_id ?? null,
                         'grid_column' => true,
+                        'grid_preset' => $column->getOption('grid_preset'),
                     ]);
 
                     $valueType = ValueType::getEnum($options['valueType']);
@@ -573,6 +709,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $view;
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function showableViews($query)
     {
         $query->where('view_type', ViewType::SYSTEM);
@@ -604,6 +742,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         });
     }
 
+
+    // @phpstan-ignore-next-line
     public static function createDefaultView($tableObj)
     {
         $tableObj = CustomTable::getEloquent($tableObj);
@@ -621,6 +761,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * filter target model
      */
+
+    // @phpstan-ignore-next-line
     public function filterModel($model, $options = [])
     {
         $options = array_merge([
@@ -657,6 +799,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * filter and sort target model
      */
+
+    // @phpstan-ignore-next-line
     public function filterSortModel($query, $options = [])
     {
         $options = array_merge([
@@ -671,6 +815,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @param boolean $appendIndexColumn if true, append custom column has index
      */
+
+    // @phpstan-ignore-next-line
     public function createDefaultViewColumns($appendIndexColumn = false)
     {
         $view_columns = [];
@@ -718,6 +864,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @param CustomView|null $fromView copied target view
      */
+
+    // @phpstan-ignore-next-line
     public function copyFromDefaultViewColumns(?CustomView $fromView)
     {
         $view_columns = [];
@@ -743,6 +891,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set value filters
      */
+
+    // @phpstan-ignore-next-line
     public function setValueFilters($query)
     {
         // If summary, call setSummaryValueFilters.
@@ -774,6 +924,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set summary value filters
      */
+
+    // @phpstan-ignore-next-line
     protected function setSummaryValueFilters($query)
     {
         // Cannot use $custom_view_filters_cache because summary to grid, use custom_view_filters directly.
@@ -818,6 +970,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @deprecated Please use sortModel func.
      */
+
+    // @phpstan-ignore-next-line
     public function setValueSort($model)
     {
         return $this->sortModel($model);
@@ -826,6 +980,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * set value sort
      */
+
+    // @phpstan-ignore-next-line
     public function sortModel($query)
     {
         // if request has "_sort", not executing
@@ -849,6 +1005,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getSummaryIndexAndViewColumns()
     {
         $results = [];
@@ -875,6 +1033,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * get view columns select options. It contains system column(ex. id, suuid, created_at, updated_at), and table columns.
      * @param bool $is_y
      */
+
+    // @phpstan-ignore-next-line
     public function getViewColumnsSelectOptions(bool $is_y): array
     {
         $options = [];
@@ -909,6 +1069,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $options;
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setViewColumnsOptions(&$options, $view_kind_type, $custom_view_column, ?bool $is_number)
     {
         $option = $this->getSelectColumn($view_kind_type, $custom_view_column);
@@ -917,6 +1079,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getSelectColumn($column_type, $custom_view_column)
     {
         $condition_item = $custom_view_column->condition_item;
@@ -931,6 +1095,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return ['id' => $view_column_id, 'text' => $column_view_name, 'is_number' => $is_number];
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewCalendarTargetAttribute()
     {
         $custom_view_columns = $this->custom_view_columns_cache;
@@ -940,6 +1106,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setViewCalendarTargetAttribute($view_calendar_target)
     {
         $custom_view_columns = $this->custom_view_columns_cache;
@@ -949,11 +1117,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         $custom_view_columns[0]->view_column_target = $view_calendar_target;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getPagerCountAttribute()
     {
         return $this->getOption('pager_count');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setPagerCountAttribute($val)
     {
         $this->setOption('pager_count', $val);
@@ -961,11 +1133,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getConditionJoinAttribute()
     {
         return $this->getOption('condition_join');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setConditionJoinAttribute($val)
     {
         $this->setOption('condition_join', $val);
@@ -973,11 +1149,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getConditionReverseAttribute()
     {
         return $this->getOption('condition_reverse');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setConditionReverseAttribute($val)
     {
         $this->setOption('condition_reverse', $val);
@@ -985,11 +1165,796 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    ///// kanban view options -----------------------------------------------
+    // Stored in the "options" json column, so no migration is needed.
+
+    // @phpstan-ignore-next-line
+    public function getKanbanGroupColumnIdAttribute()
+    {
+        return $this->getOption('kanban_group_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanGroupColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_group_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanSwimlaneColumnIdAttribute()
+    {
+        return $this->getOption('kanban_swimlane_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanSwimlaneColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_swimlane_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanEditableAttribute()
+    {
+        return $this->getOption('kanban_editable');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanEditableAttribute($val)
+    {
+        $this->setOption('kanban_editable', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanMaxCountAttribute()
+    {
+        return $this->getOption('kanban_max_count');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanMaxCountAttribute($val)
+    {
+        $this->setOption('kanban_max_count', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanTitleColumnIdAttribute()
+    {
+        return $this->getOption('kanban_title_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanTitleColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_title_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanAssigneeColumnIdAttribute()
+    {
+        return $this->getOption('kanban_assignee_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanAssigneeColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_assignee_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanMineColumnIdAttribute()
+    {
+        return $this->getOption('kanban_mine_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanMineColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_mine_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanFilterColumnIdsAttribute()
+    {
+        return $this->getOption('kanban_filter_column_ids');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanFilterColumnIdsAttribute($val)
+    {
+        $this->setOption('kanban_filter_column_ids', $val);
+
+        return $this;
+    }
+
+
+    /**
+     * Board state a kanban view opens with: the filter panel, the keyword, the
+     * grouping and the checkboxes, exactly as they stood when the view was
+     * saved from the board. Written by the board, not by the settings screen.
+     */
+    // @phpstan-ignore-next-line
+    public function getKanbanPresetAttribute()
+    {
+        return $this->getOption('kanban_preset');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanPresetAttribute($val)
+    {
+        $this->setOption('kanban_preset', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanLimitColumnIdAttribute()
+    {
+        return $this->getOption('kanban_limit_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanLimitColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_limit_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanAgeColumnIdAttribute()
+    {
+        return $this->getOption('kanban_age_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanAgeColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_age_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanAiColumnIdAttribute()
+    {
+        return $this->getOption('kanban_ai_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanAiColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_ai_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttStartColumnIdAttribute()
+    {
+        return $this->getOption('gantt_start_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttStartColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_start_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttEndColumnIdAttribute()
+    {
+        return $this->getOption('gantt_end_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttEndColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_end_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttColorColumnIdAttribute()
+    {
+        return $this->getOption('gantt_color_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttColorColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_color_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttProgressColumnIdAttribute()
+    {
+        return $this->getOption('gantt_progress_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttProgressColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_progress_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttGroupColumnIdAttribute()
+    {
+        return $this->getOption('gantt_group_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttGroupColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_group_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttParentColumnIdAttribute()
+    {
+        return $this->getOption('gantt_parent_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttParentColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_parent_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttAssigneeColumnIdAttribute()
+    {
+        return $this->getOption('gantt_assignee_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttAssigneeColumnIdAttribute($val)
+    {
+        $this->setOption('gantt_assignee_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttMaxCountAttribute()
+    {
+        return $this->getOption('gantt_max_count');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttMaxCountAttribute($val)
+    {
+        $this->setOption('gantt_max_count', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getGanttEditableAttribute()
+    {
+        return $this->getOption('gantt_editable');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setGanttEditableAttribute($val)
+    {
+        $this->setOption('gantt_editable', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanSourceAttribute()
+    {
+        return $this->getOption('kanban_source');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanSourceAttribute($val)
+    {
+        $this->setOption('kanban_source', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanWipColumnIdAttribute()
+    {
+        return $this->getOption('kanban_wip_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanWipColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_wip_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanLimitWarnAttribute()
+    {
+        return $this->getOption('kanban_limit_warn');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanLimitWarnAttribute($val)
+    {
+        $this->setOption('kanban_limit_warn', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanAgeStepsAttribute()
+    {
+        return $this->getOption('kanban_age_steps');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanAgeStepsAttribute($val)
+    {
+        $this->setOption('kanban_age_steps', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanWipsAttribute()
+    {
+        return $this->getOption('kanban_wips');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanWipsAttribute($val)
+    {
+        $this->setOption('kanban_wips', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanDoneKeysAttribute()
+    {
+        return $this->getOption('kanban_done_keys');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanDoneKeysAttribute($val)
+    {
+        $this->setOption('kanban_done_keys', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanHideKeysAttribute()
+    {
+        return $this->getOption('kanban_hide_keys');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanHideKeysAttribute($val)
+    {
+        $this->setOption('kanban_hide_keys', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanColCountAttribute()
+    {
+        return $this->getOption('kanban_col_count');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanColCountAttribute($val)
+    {
+        $this->setOption('kanban_col_count', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanKpiAttribute()
+    {
+        return $this->getOption('kanban_kpi');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanKpiAttribute($val)
+    {
+        $this->setOption('kanban_kpi', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanQuickaddAttribute()
+    {
+        return $this->getOption('kanban_quickadd');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanQuickaddAttribute($val)
+    {
+        $this->setOption('kanban_quickadd', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanBulkAttribute()
+    {
+        return $this->getOption('kanban_bulk');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanBulkAttribute($val)
+    {
+        $this->setOption('kanban_bulk', $val);
+
+        return $this;
+    }
+
+
+    /**
+     * @return mixed
+     */
+    public function getKanbanEditformAttribute()
+    {
+        return $this->getOption('kanban_editform');
+    }
+
+
+    /**
+     * @param mixed $val
+     * @return $this
+     */
+    public function setKanbanEditformAttribute($val)
+    {
+        $this->setOption('kanban_editform', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanDrawerAttribute()
+    {
+        return $this->getOption('kanban_drawer');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanDrawerAttribute($val)
+    {
+        $this->setOption('kanban_drawer', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanCoverColumnIdAttribute()
+    {
+        return $this->getOption('kanban_cover_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanCoverColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_cover_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanCoverFitAttribute()
+    {
+        return $this->getOption('kanban_cover_fit');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanCoverFitAttribute($val)
+    {
+        $this->setOption('kanban_cover_fit', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanLabelsColumnIdAttribute()
+    {
+        return $this->getOption('kanban_labels_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanLabelsColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_labels_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanLabelsStyleAttribute()
+    {
+        return $this->getOption('kanban_labels_style');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanLabelsStyleAttribute($val)
+    {
+        $this->setOption('kanban_labels_style', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanBadgeColumnIdAttribute()
+    {
+        return $this->getOption('kanban_badge_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanBadgeColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_badge_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanSumColumnIdAttribute()
+    {
+        return $this->getOption('kanban_sum_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanSumColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_sum_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanColAgeAttribute()
+    {
+        return $this->getOption('kanban_col_age');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanColAgeAttribute($val)
+    {
+        $this->setOption('kanban_col_age', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanHistoryAttribute()
+    {
+        return $this->getOption('kanban_history');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanHistoryAttribute($val)
+    {
+        $this->setOption('kanban_history', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanProgressColumnIdAttribute()
+    {
+        return $this->getOption('kanban_progress_column_id');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanProgressColumnIdAttribute($val)
+    {
+        $this->setOption('kanban_progress_column_id', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanProgressMaxAttribute()
+    {
+        return $this->getOption('kanban_progress_max');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanProgressMaxAttribute($val)
+    {
+        $this->setOption('kanban_progress_max', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanBlockedKeysAttribute()
+    {
+        return $this->getOption('kanban_blocked_keys');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanBlockedKeysAttribute($val)
+    {
+        $this->setOption('kanban_blocked_keys', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanExpediteKeysAttribute()
+    {
+        return $this->getOption('kanban_expedite_keys');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanExpediteKeysAttribute($val)
+    {
+        $this->setOption('kanban_expedite_keys', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanWipEnforceAttribute()
+    {
+        return $this->getOption('kanban_wip_enforce');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanWipEnforceAttribute($val)
+    {
+        $this->setOption('kanban_wip_enforce', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanPoliciesAttribute()
+    {
+        return $this->getOption('kanban_policies');
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setKanbanPoliciesAttribute($val)
+    {
+        $this->setOption('kanban_policies', $val);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
     public function getUseViewInfoboxAttribute()
     {
         return $this->getOption('use_view_infobox');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setUseViewInfoboxAttribute($val)
     {
         $this->setOption('use_view_infobox', $val);
@@ -997,10 +1962,14 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewInfoboxTitleAttribute()
     {
         return $this->getOption('view_infobox_title');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewInfoboxTitleAttribute($val)
     {
         $this->setOption('view_infobox_title', $val);
@@ -1008,10 +1977,14 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewInfoboxAttribute()
     {
         return $this->getOption('view_infobox');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewInfoboxAttribute($val)
     {
         $this->setOption('view_infobox', $val);
@@ -1019,11 +1992,15 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getHeaderAlignAttribute()
     {
         return $this->getOption('header_align');
     }
 
+
+    // @phpstan-ignore-next-line
     public function setHeaderAlignAttribute($val)
     {
         $this->setOption('header_align', $val);
@@ -1031,6 +2008,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getHeaderOptions()
     {
         $attributes = [];
@@ -1056,6 +2035,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     /**
      * Whether login user has edit permission about this view.
      */
+
+    // @phpstan-ignore-next-line
     public function hasEditPermission()
     {
         $login_user = \Exment::user();
@@ -1080,6 +2061,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getQueryData()
     {
         $query = $this->custom_table->getValueQuery();
@@ -1092,6 +2075,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
      * @param int|string $id
      * @return array [boolean, string] status, error message.
      */
+
+    // @phpstan-ignore-next-line
     public static function validateDestroy($id)
     {
         // check notify target view

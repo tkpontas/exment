@@ -3,7 +3,7 @@
 namespace Exceedone\Exment\Providers;
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Exceedone\Exment\Providers\ExmentRouteServiceProvider as ServiceProvider;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Auth\ApiKeyGrant;
@@ -85,7 +85,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
      */
     protected function forTransientTokens()
     {
-        Route::group($this->getOauthAnonymousOptions(), function ($router) {
+        // refresh() reads the logged-in user and the session's CSRF token (Passport's own route
+        // uses the web and auth middleware), so it needs the session and login of the web options.
+        Route::group($this->getOauthWebOptions(), function ($router) {
             $router->get('/token/refresh', [
                 'uses' => 'TransientTokenController@refresh',
             ]);
@@ -144,6 +146,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function getOauthDefaultOptions()
     {
         return [
@@ -152,6 +157,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
             'middleware' => 'adminapi'
         ];
     }
+    /**
+     * @return array<string, mixed>
+     */
     protected function getOauthAnonymousOptions()
     {
         return [
@@ -160,6 +168,9 @@ class RouteOAuthServiceProvider extends ServiceProvider
             'middleware' => ['adminapi_anonymous'],
         ];
     }
+    /**
+     * @return array<string, mixed>
+     */
     protected function getOauthWebOptions()
     {
         return [
@@ -176,27 +187,36 @@ class RouteOAuthServiceProvider extends ServiceProvider
         if (canConnection() && hasTable(SystemTableName::SYSTEM) && System::api_available()) {
             app(AuthorizationServer::class)->enableGrantType(
                 $this->makeApiKeyGrant(),
+                // @phpstan-ignore-next-line
                 Passport::tokensExpireIn()
             );
 
             app(AuthorizationServer::class)->enableGrantType(
                 $this->makePasswordGrant(),
+                // @phpstan-ignore-next-line
                 Passport::tokensExpireIn()
             );
         }
     }
 
+    /**
+     * @return ApiKeyGrant
+     */
     protected function makeApiKeyGrant()
     {
         $grant = new ApiKeyGrant(
             $this->app->make(RefreshTokenRepository::class)
         );
 
+        // @phpstan-ignore-next-line
         $grant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
         return $grant;
     }
 
+    /**
+     * @return PasswordGrant
+     */
     protected function makePasswordGrant()
     {
         $grant = new PasswordGrant(
@@ -204,6 +224,7 @@ class RouteOAuthServiceProvider extends ServiceProvider
             $this->app->make(Bridge\RefreshTokenRepository::class)
         );
 
+        // @phpstan-ignore-next-line
         $grant->setRefreshTokenTTL(Passport::refreshTokensExpireIn());
 
         return $grant;

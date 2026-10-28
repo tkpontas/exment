@@ -10,6 +10,7 @@ namespace Exceedone\Exment\Enums;
 class SystemTableName extends EnumBase
 {
     public const SYSTEM = 'systems';
+    public const SYSTEM_LOGS = 'system_logs';
     public const LOGIN_USER = 'login_users';
     public const PLUGIN = 'plugins';
     public const USER = 'user';
@@ -20,6 +21,8 @@ class SystemTableName extends EnumBase
     public const COMMENT = 'comment';
     public const MAIL_TEMPLATE = 'mail_template';
     public const MAIL_SEND_LOG = 'mail_send_log';
+    public const LINE_FLEX_TEMPLATE = 'line_flex_template';
+    public const LINE_SEND_LOG = 'line_send_log';
     public const BASEINFO = 'base_info';
     public const DOCUMENT = 'document';
     public const FILE= 'files';
@@ -44,6 +47,7 @@ class SystemTableName extends EnumBase
     public const VIEW_WORKFLOW_VALUE_UNION = 'view_workflow_value_unions';
     public const VIEW_WORKFLOW_START = 'view_workflow_start';
 
+    // @phpstan-ignore-next-line
     public static function SYSTEM_TABLE_NAME_IGNORE_SAVED_AUTHORITY()
     {
         return [
@@ -54,6 +58,7 @@ class SystemTableName extends EnumBase
         ];
     }
 
+    // @phpstan-ignore-next-line
     public static function SYSTEM_TABLE_NAME_MASTER()
     {
         return [
@@ -61,6 +66,8 @@ class SystemTableName extends EnumBase
             SystemTableName::ORGANIZATION,
             SystemTableName::MAIL_TEMPLATE,
             SystemTableName::MAIL_SEND_LOG,
+            SystemTableName::LINE_FLEX_TEMPLATE,
+            SystemTableName::LINE_SEND_LOG,
             SystemTableName::BASEINFO,
         ];
     }

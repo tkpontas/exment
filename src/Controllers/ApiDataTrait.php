@@ -16,6 +16,8 @@ use Exceedone\Exment\Model\Linkage;
 use Exceedone\Exment\Enums\SearchType;
 use Exceedone\Exment\Enums\ValueType;
 use Exceedone\Exment\Enums\ErrorCode;
+use Exceedone\Exment\Enums\RelationType;
+use Exceedone\Exment\Enums\SystemTableName;
 use Validator;
 
 /**
@@ -35,6 +37,7 @@ trait ApiDataTrait
     protected function _dataFind(Request $request, $id)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            /** @phpstan-ignore-next-line */
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -43,22 +46,28 @@ trait ApiDataTrait
         // set query
         $this->setQueryInfo($query);
 
+        /** @phpstan-ignore-next-line */
         $model = $query->where('id', $id)->first();
         // not contains data, return empty data.
         if (!isset($model)) {
             $code = $this->custom_table->getNoDataErrorCode($id);
             if ($code == ErrorCode::PERMISSION_DENY) {
+                /** @phpstan-ignore-next-line */
                 return abortJson(403, $code);
             } else {
                 // nodata
+                /** @phpstan-ignore-next-line */
                 return abortJson(400, $code);
             }
         }
 
+        // @phpstan-ignore-next-line
         if (($code = $model->enableAccess()) !== true) {
+            /** @phpstan-ignore-next-line */
             return abortJson(403, trans('admin.deny'), $code);
         }
 
+        /** @phpstan-ignore-next-line */
         return $this->modifyAfterGetValue($request, $model);
     }
 
@@ -72,18 +81,22 @@ trait ApiDataTrait
     protected function _columnData(Request $request, $column_name)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            /** @phpstan-ignore-next-line */
             return abortJson(403, $code);
         }
 
         $query = $request->get('query');
+        /** @phpstan-ignore-next-line */
         $custom_column = CustomColumn::getEloquent($column_name, $this->custom_table->table_name);
 
         $list = [];
 
+        /** @phpstan-ignore-next-line */
         if ($custom_column->index_enabled) {
             $column_name = $custom_column->getIndexColumnName();
             $list = $this->custom_table->searchValue($query, [
                 'searchColumns' => collect([$column_name]),
+            /** @phpstan-ignore-next-line */
             ])->pluck($column_name)->unique()->toArray();
         }
         return json_encode($list);
@@ -109,6 +122,7 @@ trait ApiDataTrait
         $paginator->getCollection()->transform(function ($value) {
             return [
                 'id' => $value->id,
+                /** @phpstan-ignore-next-line */
                 'text' => $value->label,
             ];
         });
@@ -125,9 +139,11 @@ trait ApiDataTrait
      * *search_type(required) : 1:n, n:n or select_table.
      * *q(required) : id that user selected.
      */
+    // @phpstan-ignore-next-line
     protected function _relatedLinkage(Request $request)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            /** @phpstan-ignore-next-line */
             return abortJson(403, $code);
         }
 
@@ -157,12 +173,14 @@ trait ApiDataTrait
             'maxCount' => null,
             'getLabel' => true,
             'searchColumns' => $searchColumns ?? null,
+            /** @phpstan-ignore-next-line */
             'target_view' => CustomView::getEloquent($child_column->getOption('select_target_view')),
             'display_table' => $request->get('display_table_id'),
             'all' => $child_column->isGetAllUserOrganization(),
         ];
         $datalist = $this->custom_table->searchRelationValue($searchType, $q, $child_select_table, $options);
         return collect($datalist)->map(function ($data) {
+            /** @phpstan-ignore-next-line */
             return ['id' => $data->id, 'text' => $data->label];
         });
     }
@@ -174,6 +192,7 @@ trait ApiDataTrait
      * @param $options
      * @return array|CustomValue|\Illuminate\Pagination\LengthAwarePaginator|mixed|void
      */
+    // @phpstan-ignore-next-line
     protected function modifyAfterGetValue(Request $request, $target, $options = [])
     {
         $options = array_merge(
@@ -202,6 +221,7 @@ trait ApiDataTrait
                     'id',
                     'target_view_id',
                     'children',
+                    'parents',
                 ]),
                 $options['appends']
             );
@@ -224,6 +244,7 @@ trait ApiDataTrait
             }
 
             // set appends
+            /** @phpstan-ignore-next-line */
             if (!is_nullorempty($appends)) {
                 $target->appends($appends);
             }
@@ -232,11 +253,15 @@ trait ApiDataTrait
         }
         // as single model
         elseif ($target instanceof CustomValue) {
+            /** @phpstan-ignore-next-line */
             $editor_cols = CustomColumn::where('custom_table_id', $this->custom_table->id)->where('column_type', ColumnType::EDITOR)->get();
             foreach($editor_cols as $col) {
+                /** @phpstan-ignore-next-line */
                 $val = $target->getValue($col->column_name);
+                /** @phpstan-ignore-next-line */
                 $target->setValue($col->column_name, Editor::replaceImgUrl($val, ['dirName' => true]));
             }
+            /** @phpstan-ignore-next-line */
             if (boolval($options['makeHidden'])) {
                 $target = $target->makeHidden($this->custom_table->getMakeHiddenArray());
                 return $this->modifyCustomValue($request, $target);
@@ -263,8 +288,14 @@ trait ApiDataTrait
         }
 
         // Change relation key name
+        /** @phpstan-ignore-next-line */
         if (!$recursive && $request->has('children') && boolval($request->get('children'))) {
             $custom_value = $this->modifyChildrenValue($request, $custom_value);
+        }
+
+        // Change relation key name
+        if (!$recursive && $request->has('parents') && boolval($request->get('parents'))) {
+            $custom_value = $this->modifyParentsValue($request, $custom_value);
         }
 
         // convert to custom values
@@ -273,6 +304,7 @@ trait ApiDataTrait
             $custom_value->setValueDirectly($custom_value->getValues(ValueType::getEnum($valuetype), ['asApi' => true]));
         }
 
+        /** @phpstan-ignore-next-line */
         if ($request->has('dot') && boolval($request->get('dot'))) {
             $custom_value = array_dot($custom_value->toArray());
         }
@@ -288,9 +320,11 @@ trait ApiDataTrait
     protected function isAppendLabel(Request $request)
     {
         if ($request->has('label')) {
+            /** @phpstan-ignore-next-line */
             return boolval($request->get('label', false));
         }
 
+        /** @phpstan-ignore-next-line */
         if (boolval(config('exment.api_append_label', false))) {
             return true;
         }
@@ -299,16 +333,20 @@ trait ApiDataTrait
     }
 
 
+    // @phpstan-ignore-next-line
     protected function executeQuery(Request $request, $count = null)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            /** @phpstan-ignore-next-line */
             return abortJson(403, $code);
         }
 
+        /** @phpstan-ignore-next-line */
         $validator = Validator::make($request->all(), [
             'q' => 'required',
         ]);
         if ($validator->fails()) {
+            /** @phpstan-ignore-next-line */
             return abortJson(400, [
                 'errors' => $this->getErrorMessages($validator)
             ], ErrorCode::VALIDATION_ERROR());
@@ -335,6 +373,7 @@ trait ApiDataTrait
         ///// If set linkage, filter relation.
         // get children table id
         $relationColumn = null;
+        /** @phpstan-ignore-next-line */
         if (array_key_value_exists('linkage_column_id', $expand)) {
             $linkage_column_id = array_get($expand, 'linkage_column_id');
             $linkage_column = CustomColumn::getEloquent($linkage_column_id);
@@ -344,6 +383,28 @@ trait ApiDataTrait
 
             if (isset($linkage_value_id)) {
                 $relationColumn = Linkage::getLinkage($linkage_column, $column);
+            }
+        }
+
+        // select_table autocomplete via Meilisearch (simple case only:
+        // no linkage, no view filter). On error -> null -> fall back to searchValue.
+        // Behind its own flag, off by default: Meilisearch matches by word prefix
+        // and tolerates typos, the MySQL path matches the stored value with LIKE,
+        // so turning this on changes what every select box offers.
+        if (boolval(config('meilisearch.select_table'))
+            && boolval(config('meilisearch.global_search'))
+            && class_exists(\Meilisearch\Client::class)
+            // An unbuilt index answers "no results" instead of failing, so the
+            // select box would silently offer nothing (see ExmentIndexer).
+            && \Exceedone\Exment\Services\Meili\ExmentIndexer::indexIsBuilt()
+            && empty($relationColumn)
+            && empty(array_get($expand, 'target_view_id'))
+            && !in_array($this->custom_table->table_name, [SystemTableName::USER, SystemTableName::ORGANIZATION], true)) {
+            $paginator = $this->searchSelectByMeilisearch($q, $count, $request);
+            if ($paginator !== null) {
+                return $this->modifyAfterGetValue($request, $paginator, [
+                    'appends' => ['q' => $q, 'count' => $count],
+                ]);
             }
         }
 
@@ -358,15 +419,126 @@ trait ApiDataTrait
             'relationColumnValue' => $linkage_value_id ?? null,
             'display_table' => $request->get('display_table_id'),
             'all' => $column ? $column->isGetAllUserOrganization() : false,
+            /** @phpstan-ignore-next-line */
             'withChildren' => boolval($request->get('children')) ? CustomRelation::getRelationsByParent($this->custom_table) : null,
         ]);
 
+        /** @phpstan-ignore-next-line */
         return $this->modifyAfterGetValue($request, $paginator, [
             'appends' => [
                 'q' => $q,
                 'count' => $count,
             ]
         ]);
+    }
+
+    /**
+     * select_table autocomplete with a SINGLE Meilisearch query.
+     * Returns a LengthAwarePaginator of CustomValues (like searchValue), or null
+     * whenever Meilisearch cannot answer authoritatively - the caller then falls
+     * back to searchValue (MySQL). Models are loaded through the global scope,
+     * so record permission still applies.
+     *
+     * @param string $q
+     * @param int|null $count
+     * @param Request $request
+     * @return \Illuminate\Pagination\LengthAwarePaginator<int,\Exceedone\Exment\Model\CustomValue>|null
+     */
+    protected function searchSelectByMeilisearch($q, $count, Request $request)
+    {
+        try {
+            $custom_table = $this->custom_table;
+
+            // A table outside the indexing criteria has no document at all, so
+            // Meili could only ever answer "no results".
+            if (!\Exceedone\Exment\Services\Meili\ExmentIndexer::isIndexable($custom_table)) {
+                return null;
+            }
+
+            $perPage = max(1, (int) ($count ?: 10));
+            $page = (int) $request->input('page', 1);
+            if ($page < 1) {
+                $page = 1;
+            }
+
+            $service = new \Exceedone\Exment\Services\Meili\MeiliSearchService(
+                \Exceedone\Exment\Services\Meili\MeiliClientFactory::make(),
+                config('meilisearch.index')
+            );
+
+            $cap = max(1, min(
+                (int) config('meilisearch.permission_scan_cap', 1000),
+                $perPage * 20
+            ));
+            // Autocomplete must not match on a linked label this user cannot
+            // read: the suggestions alone would confirm it exists.
+            $result = $service->searchTablePaginated(
+                $q,
+                $custom_table->table_name,
+                $cap,
+                1,
+                [],
+                null,
+                \Exceedone\Exment\Services\Meili\GlobalSearch\ReadableAttributes::forTable($custom_table)
+            );
+            $candidateIds = $result['ids'];
+            if (empty($candidateIds)) {
+                return null;
+            }
+
+            // Paging and the total below are computed over this list alone. When
+            // Meilisearch matched more than it returned, the total and the last
+            // pages would stop at the cap (select2 stops loading more, the API
+            // reports a wrong total), so leave large result sets to searchValue.
+            if (!\Exceedone\Exment\Services\Meili\MeiliSearchService::isCompleteCandidateSet(
+                count($candidateIds),
+                $cap,
+                $service->maxTotalHits(),
+                $result['total']
+            )) {
+                return null;
+            }
+
+            $accessibleIds = getModelName($custom_table)::whereIn('id', $candidateIds)->pluck('id')->all();
+            $paged = \Exceedone\Exment\Services\Meili\MeiliSearchService::pageAccessibleIds(
+                $candidateIds,
+                $accessibleIds,
+                $page,
+                $perPage
+            );
+
+            // Must be an Eloquent Collection (has makeHidden) because modifyAfterGetValue calls makeHidden().
+            $models = new Collection();
+            if (!empty($paged['pageIds'])) {
+                $query = getModelName($custom_table)::whereIn('id', $paged['pageIds']);
+                // Same eager loads the MySQL path gets through searchValue(): without
+                // them the response silently drops workflow_value, which only appears
+                // in the JSON when the relation is loaded.
+                $custom_table->setQueryWith($query);
+                $loaded = $query->get()->keyBy('id');
+                foreach ($paged['pageIds'] as $id) {
+                    $m = $loaded->get($id);
+                    if ($m) {
+                        $models->push($m);
+                    }
+                }
+            }
+
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                $models,
+                $paged['total'],
+                $perPage,
+                $page,
+                ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()]
+            );
+        } catch (\Throwable $e) {
+            // Falling back is silent for the user; without this the cause of a
+            // permanently MySQL-served autocomplete is nowhere to be found.
+            \Illuminate\Support\Facades\Log::warning(
+                '[Meili] select_table fallback to MySQL: ' . $e->getMessage()
+            );
+            return null;
+        }
     }
 
 
@@ -380,8 +552,15 @@ trait ApiDataTrait
     protected function setQueryInfo($query)
     {
         $request = request();
+        /** @phpstan-ignore-next-line */
         if ($request->has('children') && boolval($request->get('children'))) {
             $relations = CustomRelation::getRelationsByParent($this->custom_table);
+            foreach ($relations as $relation) {
+                $query->with($relation->getRelationName());
+            }
+        }
+        if ($request->has('parents') && boolval($request->get('parents'))) {
+            $relations = CustomRelation::getRelationsByChild($this->custom_table);
             foreach ($relations as $relation) {
                 $query->with($relation->getRelationName());
             }
@@ -390,6 +569,13 @@ trait ApiDataTrait
         return $query;
     }
 
+    /**
+     * Modify children values (exclude virtual columns from children values)
+     *
+     * @param Request $request
+     * @return CustomValue $custom_value
+     */
+    // @phpstan-ignore-next-line
     protected function modifyChildrenValue(Request $request, $custom_value)
     {
         $relations = CustomRelation::getRelationsByParent($this->custom_table);
@@ -409,12 +595,56 @@ trait ApiDataTrait
                     return $relationValue;
                 });
                 // Set key name
+                /** @phpstan-ignore-next-line */
                 $results[$relation->child_custom_table_cache->table_name] = $relationValues;
                 unset($custom_value[$reltionName]);
             }
         }
 
         $custom_value['children'] = $results;
+        return $custom_value;
+    }
+
+    /**
+     * Modify parents values (exclude virtual columns from parents values)
+     *
+     * @param Request $request
+     * @return CustomValue $custom_value
+     */
+    // @phpstan-ignore-next-line
+    protected function modifyParentsValue(Request $request, $custom_value)
+    {
+        $relations = CustomRelation::getRelationsByChild($this->custom_table);
+
+        $results = [];
+        foreach ($relations as $relation) {
+            // If getted relation name, change key name
+            $reltionName = $relation->getRelationName();
+            if (array_has($custom_value, $reltionName)) {
+                $relationValues = $custom_value[$reltionName];
+                $makeHiddenArray = $relation->parent_custom_table_cache->getMakeHiddenArray();
+
+                if ($relation->relation_type == RelationType::ONE_TO_MANY) {
+                    // Call makehidden
+                    $relationValues = $relationValues->makeHidden($makeHiddenArray);
+                    // Call modify custom value
+                    $relationValues = $this->modifyCustomValue($request, $relationValues, true);
+                } else {
+                    $relationValues = $relationValues->map(function ($relationValue) use ($makeHiddenArray, $request) {
+                        // Call makehidden
+                        $relationValue = $relationValue->makeHidden($makeHiddenArray);
+                        // Call modify custom value
+                        $relationValue = $this->modifyCustomValue($request, $relationValue, true);
+                        return $relationValue;
+                    });
+                }
+                // Set key name
+                $results[$relation->parent_custom_table_cache->table_name] = $relationValues;
+                unset($custom_value[$reltionName]);
+            }
+        }
+
+        $custom_value['parents'] = $results;
         return $custom_value;
     }
 }

@@ -2,17 +2,18 @@
 
 namespace Exceedone\Exment\DataItems\Show;
 
-use Encore\Admin\Form;
+use ExmentAdminCore\Admin\Form;
 use Exceedone\Exment\Model\PublicForm;
 use Exceedone\Exment\Model\CustomFormColumn;
 use Exceedone\Exment\Enums\RelationType;
 use Exceedone\Exment\Form\Show as PublicShow;
-use Encore\Admin\Show\Field as ShowField;
+use ExmentAdminCore\Admin\Show\Field as ShowField;
 use Exceedone\Exment\ColumnItems\ItemInterface;
 use Illuminate\Database\Eloquent\Relations;
 
 class PublicFormShow extends DefaultShow
 {
+    // @phpstan-ignore-next-line
     protected static $showClassName = PublicShow\PublicShow::class;
 
     /**
@@ -42,6 +43,7 @@ class PublicFormShow extends DefaultShow
      * @param mixed $show default show's model. Use for n:n relation.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getChildRelationShows(array $relationInputs, $show)
     {
         // get relations
@@ -99,6 +101,7 @@ class PublicFormShow extends DefaultShow
      * @param array $relationInputs
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getRelationModels(array $relationInputs)
     {
         $relations = [];
@@ -107,6 +110,7 @@ class PublicFormShow extends DefaultShow
                 continue;
             }
 
+            // @phpstan-ignore-next-line
             $relation = call_user_func([$this->custom_value, $column]);
 
             if ($relation instanceof Relations\Relation) {

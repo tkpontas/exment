@@ -1,9 +1,9 @@
 
-<div id="has-many-table-{{$column}}" class="has-many-table-{{$column}} form-group has-many-table-div">
+<div id="has-many-table-{{$column}}" class="has-many-table-{{$column}} form-group has-many-table-div pb-5">
     @if($enableHeader)
     <div class="row">
         <div class="col-sm-12">
-            <h4 class="field-header">{{ $label }}</h4>
+            <h4 class="field-header px-5">{{ $label }}</h4>
         </div>
     </div>
 
@@ -11,7 +11,7 @@
     @endif
     
     @if(isset($description))
-        <div class="col-sm-{{$tablewidth['width']}} col-sm-offset-{{$tablewidth['offset']}}" style="margin-bottom:20px;">
+        <div class="col-sm-{{$tablewidth['width']}} offset-sm-{{$tablewidth['offset']}}" style="margin-bottom:20px;">
             @if($escapeDescription)
             {{ $description }}
             @else
@@ -19,12 +19,12 @@
             @endif
         </div>
     @endif
-    <div class="{{ str_starts_with($column, 'pivot') ? 'table-container ' : '' }}col-sm-{{$tablewidth['width']}} hasmanyblock-{{$column}} col-sm-offset-{{$tablewidth['offset']}}">
+    <div class="{{ str_starts_with($column, 'pivot') ? 'table-container ' : '' }}col-sm-{{$tablewidth['width']}} hasmanyblock-{{$column}} offset-sm-{{$tablewidth['offset']}}">
         <table id="has-many-table-{{$column}}-table" class="{{ str_starts_with($column, 'pivot') ? 'scrollable-table ' : '' }}table table-bordered has-many-table has-many-table-{{$column}}-table" {!! $attributes !!} >
             <thead>
             <tr class="active">
                 @foreach($tableitems as $tableitem)
-                    <th class="text-center {{$loop->index < count($tablecolumnwidths) ? 'col-sm-'.$tablecolumnwidths[$loop->index] : ''}} {{$loop->index < count($requires) && boolval($requires[$loop->index]) ? 'asterisk' : ''}}">
+                    <th class="text-center {{$loop->index < count($tablecolumnwidths) ? 'col-sm-' . $tablecolumnwidths[$loop->index] : ''}} {{$loop->index < count($requires) && boolval($requires[$loop->index]) ? 'asterisk' : ''}}">
                         {{ $tableitem->label() }}
 
                         @if($loop->index < count($helps) && isset($helps[$loop->index]))
@@ -34,7 +34,7 @@
                 @endforeach
 
                 @if($options['allowOptions'])
-                <th class="text-center {{count($tableitems) < count($tablecolumnwidths) ? 'col-sm-'.$tablecolumnwidths[count($tableitems)] : ''}}">{{trans('admin.action')}}</th>
+                <th class="text-center {{count($tableitems) < count($tablecolumnwidths) ? 'col-sm-' . $tablecolumnwidths[count($tableitems)] : ''}}">{{trans('admin.action')}}</th>
                 @else
                 <th style="display:none;"></th>
                 @endif
@@ -54,16 +54,16 @@
                     @endforeach
                     
                     @if($hasRowUpDown)
-                    <a href="javascript:void(0);" class="btn btn-xs btn-primary row-move row-move-down" data-toggle="tooltip" title="{{exmtrans('common.row_down')}}" style="margin-right:2px;">
+                    <a href="javascript:void(0);" class="btn btn-xs btn-primary  row-move row-move-down enable-tooltip" data-bs-toggle="tooltip" title="{{exmtrans('common.row_down')}}" style="margin-right:2px;">
                         <i class="fa fa-arrow-down" style=""></i>
                     </a>
-                    <a href="javascript:void(0);" class="btn btn-xs btn-success row-move row-move-up" data-toggle="tooltip" title="{{exmtrans('common.row_up')}}" style="margin-right:2px;">
+                    <a href="javascript:void(0);" class="btn btn-xs btn-success row-move row-move-up enable-tooltip" data-bs-toggle="tooltip" title="{{exmtrans('common.row_up')}}" style="margin-right:2px;">
                         <i class="fa fa-arrow-up" style=""></i>
                     </a>
                     @endif
 
                     @if($options['allowDelete'] && ($hideDeleteButtonRow === null || $hideDeleteButtonRow <= $loop->index))
-                    <a href="javascript:void(0);" class="btn {{$hasRowUpDown ? 'btn-xs' : ''}} btn-warning remove" data-toggle="tooltip" title="{{trans('admin.delete')}}">
+                    <a href="javascript:void(0);" class="btn {{$hasRowUpDown ? 'btn-xs' : ''}} btn-warning remove enable-tooltip" data-bs-toggle="tooltip" title="{{trans('admin.delete')}}">
                         <i class="fa fa-trash" style=""></i>
                     </a>
                     @endif
@@ -100,15 +100,15 @@
                 {!! $hidden->render() !!}
                 @endforeach
                 @if($hasRowUpDown)
-                <a href="javascript:void(0);" class="btn btn-xs btn-primary row-move row-move-down" data-toggle="tooltip" title="{{exmtrans('common.row_down')}}" style="margin-right:2px;">
+                <a href="javascript:void(0);" class="btn btn-xs btn-primary row-move row-move-down enable-tooltip" data-bs-toggle="tooltip" title="{{exmtrans('common.row_down')}}" style="margin-right:2px;">
                     <i class="fa fa-arrow-down" style=""></i>
                 </a>
-                <a href="javascript:void(0);" class="btn btn-xs btn-success row-move row-move-up" data-toggle="tooltip" title="{{exmtrans('common.row_up')}}" style="margin-right:2px;">
+                <a href="javascript:void(0);" class="btn btn-xs btn-success row-move row-move-up enable-tooltip" data-bs-toggle="tooltip" title="{{exmtrans('common.row_up')}}" style="margin-right:2px;">
                     <i class="fa fa-arrow-up" style=""></i>
                 </a>
                 @endif
 
-                <a href="javascript:void(0);" class="btn {{$hasRowUpDown ? 'btn-xs' : ''}} btn-warning remove" data-toggle="tooltip" title="{{trans('admin.delete')}}">
+                <a href="javascript:void(0);" class="btn {{$hasRowUpDown ? 'btn-xs' : ''}} btn-warning remove enable-tooltip" data-bs-toggle="tooltip" title="{{trans('admin.delete')}}">
                     <i class="fa fa-trash" style=""></i>
                 </a>
             </td>
@@ -116,8 +116,16 @@
     </template>
 
     <style type="text/css">
+    
     .has-many-table .form-group{
         margin-bottom: 0;
+    }
+    /* Vertical layout uses .form-group-vertical (margin-bottom:10px by default). */
+    .has-many-table .form-group-vertical{
+        margin-bottom: 0 !important;
+    }
+    .has-many-table td .form-group-vertical label.control-label {
+        display: none !important;
     }
     .table-container {
         width: 100%;
@@ -129,7 +137,7 @@
         white-space: nowrap;
     }
     input {
-        min-width: 90px;
+        min-width: 90px !important;
     }
     .select2 {
         min-width: 100px;

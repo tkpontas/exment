@@ -25,19 +25,24 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
 
     public function retrieveById($identifier)
     {
-        //return \Encore\Admin\Auth\Database\Administrator::find($identifier);
-        return LoginUser::find($identifier);
+        try {
+            //return \ExmentAdminCore\Admin\Auth\Database\Administrator::find($identifier);
+            return LoginUser::find($identifier);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**
      * retrieveByCredentials.
      * execute login using each service.
      *
-     * @param array $credentials
+     * @param array<string, mixed> $credentials
      * @return ?Authenticatable
      */
     public function retrieveByCredentials(array $credentials)
     {
+        // @phpstan-ignore-next-line
         return static::RetrieveByCredential($credentials);
     }
 
@@ -45,8 +50,8 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
      * retrieveByCredentials.
      * execute login using each service.
      *
-     * @param array $credentials
-     * @return Authenticatable|null|array
+     * @param array<string, mixed> $credentials
+     * @return Authenticatable|null|array<mixed>
      */
     public static function RetrieveByCredential(array $credentials)
     {
@@ -66,15 +71,44 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
         return $classname::retrieveByCredential($credentials);
     }
 
+    /**
+     * @param array<string, mixed> $credentials
+     */
     public function validateCredentials(Authenticatable $login_user, array $credentials)
     {
         return static::ValidateCredential($login_user, $credentials);
     }
 
     /**
+     * Rehash the password after login when the hash cost changed (Laravel 11+ "rehash_on_login").
+     *
+     * Only the Exment password login is rehashed: SSO/LDAP credentials have no Exment password.
+     * The new hash is saved quietly, because LoginUser hashes the password again while saving
+     * and would store a hash of the hash.
+     *
+     * @param array<string, mixed> $credentials
+     */
+    public function rehashPasswordIfRequired(Authenticatable $user, #[\SensitiveParameter] array $credentials, bool $force = false)
+    {
+        $credentials = static::getCredentialDefault($credentials);
+        if ($credentials['login_type'] != LoginType::PURE || !isset($credentials['password'])) {
+            return;
+        }
+
+        if (!$this->hasher->needsRehash($user->getAuthPassword()) && !$force) {
+            return;
+        }
+
+        /** @var LoginUser $user */
+        $user->forceFill([
+            $user->getAuthPasswordName() => $this->hasher->make($credentials['password']),
+        ])->saveQuietly();
+    }
+
+    /**
      * findByCredentials. Only search from database.
      *
-     * @param array $credentials
+     * @param array<string, mixed> $credentials
      * @return ?Authenticatable
      */
     public static function findByCredential(array $credentials)
@@ -121,8 +155,8 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
 
     /**
      * @param Authenticatable $login_user
-     * @param array $credentials
-     * @return false
+     * @param array<string, mixed> $credentials
+     * @return bool
      */
     public static function ValidateCredential(Authenticatable $login_user, array $credentials)
     {
@@ -139,6 +173,10 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
         return $classname::validateCredential($login_user, $credentials);
     }
 
+    /**
+     * @param array<string, mixed> $credentials
+     * @return string|null
+     */
     protected static function getClassName($credentials)
     {
         // has login type, set LoginType::PURE
@@ -149,6 +187,10 @@ class LoginUserProvider extends \Illuminate\Auth\EloquentUserProvider
         return LoginType::getLoginServiceClassName($credentials['login_type']);
     }
 
+    /**
+     * @param array<string, mixed> $credentials
+     * @return array<string, mixed>
+     */
     protected static function getCredentialDefault(array $credentials)
     {
         return array_merge(

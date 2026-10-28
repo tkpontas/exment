@@ -4,15 +4,16 @@ namespace Exceedone\Exment\DashboardBoxItems\SystemItems;
 
 use Exceedone\Exment\Model\DashboardBox;
 use Exceedone\Exment\Model\Define;
-use Encore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\NotifyNavbar as NotifyNavbarModel;
-use Encore\Admin\Widgets\Table as WidgetTable;
+use ExmentAdminCore\Admin\Widgets\Table as WidgetTable;
 use Illuminate\Support\Collection;
 
 class NotifyNavbar
 {
+    // @phpstan-ignore-next-line
     protected $dashboard_box;
 
     /**
@@ -20,6 +21,7 @@ class NotifyNavbar
      *
      * @var array|Collection
      */
+    // @phpstan-ignore-next-line
     protected $items = [];
 
     public function __construct(?DashboardBox $dashboard_box)
@@ -30,6 +32,7 @@ class NotifyNavbar
     /**
      * get header
      */
+    // @phpstan-ignore-next-line
     public function header()
     {
         return null;
@@ -38,6 +41,7 @@ class NotifyNavbar
     /**
      * get footer
      */
+    // @phpstan-ignore-next-line
     public function footer()
     {
         $link = admin_url('notify_navbar');
@@ -48,6 +52,7 @@ class NotifyNavbar
     /**
      * get html body
      */
+    // @phpstan-ignore-next-line
     public function body()
     {
         $this->setItems();
@@ -104,7 +109,7 @@ class NotifyNavbar
         $widgetTable = new WidgetTable($headers, $bodies);
         $widgetTable->class('table table-hover');
 
-        /** @phpstan-ignore-next-line Expression on left side of ?? is not nullable. */
+        // @phpstan-ignore-next-line
         return $widgetTable->render() ?? null;
     }
 
@@ -134,6 +139,7 @@ class NotifyNavbar
     /**
      * set laravel admin embeds option
      */
+    // @phpstan-ignore-next-line
     public static function setAdminOptions(&$form, $dashboard)
     {
         $grid_per_pages = stringToArray(config('exment.grid_per_pages'));

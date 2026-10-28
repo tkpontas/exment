@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Console;
 
-use Encore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid;
 use Illuminate\Console\Command;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomView;
@@ -46,6 +46,7 @@ class ExportChunkCommand extends Command
         $this->initExmentCommand();
     }
 
+    // @phpstan-ignore-next-line
     protected function getParameters()
     {
         /** @var null|string $table_name */

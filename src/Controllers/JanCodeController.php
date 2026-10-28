@@ -8,10 +8,10 @@ use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Enums\DataScanSubmitRedirect;
 use Exceedone\Exment\Model\CustomForm;
 use Illuminate\Support\Facades\DB;
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Layout\Row;
-use Encore\Admin\Grid;
-use Encore\Admin\Widgets\Grid\Column;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Layout\Row;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Widgets\Grid\Column;
 
 class JanCodeController extends Controller
 {
@@ -22,7 +22,8 @@ class JanCodeController extends Controller
      * @param $id
      * @return string
      */
-    protected function scanRedirect(Request $request, $id)
+    // @phpstan-ignore-next-line
+    public function scanRedirect(Request $request, $id)
     {
         $jan_code = DB::table("jan_codes")
             ->where('jan_code', $id)
@@ -74,6 +75,7 @@ class JanCodeController extends Controller
             }
         }
 
+        // @phpstan-ignore-next-line
         return redirect($url);
     }
 
@@ -83,7 +85,8 @@ class JanCodeController extends Controller
      * @param Request $request
      * @param $id
      */
-    protected function listTable(Request $request, $id, Content $content)
+    // @phpstan-ignore-next-line
+    public function listTable(Request $request, $id, Content $content)
     {
         $grid = $this->grid($id);
         $row = new Row();
@@ -100,6 +103,7 @@ class JanCodeController extends Controller
      *
      * @return Grid
      */
+    // @phpstan-ignore-next-line
     protected function grid($id)
     {
         $grid = new Grid(new CustomTable());
@@ -137,7 +141,8 @@ class JanCodeController extends Controller
      *
      * @param Request $request
      */
-    protected function assignJancode(Request $request)
+    // @phpstan-ignore-next-line
+    public function assignJancode(Request $request)
     {
         $table_id = $request->get('table_id');
         $jan_code_id = $request->get('jan_code_id');
@@ -156,6 +161,7 @@ class JanCodeController extends Controller
      * @param $id
      * @param $table_id
      */
+    // @phpstan-ignore-next-line
     protected function generateCreateUrl($id, $table_id)
     {
         $custom_table = CustomTable::getEloquent($table_id);

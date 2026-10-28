@@ -2,19 +2,24 @@
 
 namespace Exceedone\Exment\Form\Tools;
 
-use Encore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Facades\Admin;
 
 /**
  * Open Modal button.
  */
 class ModalButton
 {
+    // @phpstan-ignore-next-line
     protected $url;
+    // @phpstan-ignore-next-line
     protected $label;
+    // @phpstan-ignore-next-line
     protected $btn_class;
+    // @phpstan-ignore-next-line
     protected $icon;
 
 
+    // @phpstan-ignore-next-line
     public function __construct($options = [])
     {
         foreach ($options as $key => $value) {
@@ -24,6 +29,7 @@ class ModalButton
         }
     }
 
+    // @phpstan-ignore-next-line
     public function render()
     {
         // get uuid

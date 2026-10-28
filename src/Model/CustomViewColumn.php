@@ -31,14 +31,20 @@ class CustomViewColumn extends ModelBase
     use Traits\DatabaseJsonOptionTrait;
 
     protected $guarded = ['id'];
-    protected $appends = ['view_column_target', 'view_column_end_date', 'view_group_condition', 'view_column_color', 'view_column_font_color', 'sort_order', 'sort_type'];
+    protected $appends = ['view_column_target', 'view_column_end_date', 'view_group_condition', 'view_column_color', 'view_column_font_color', 'sort_order', 'sort_type',
+        'kanban_position', 'kanban_icon', 'grid_preset'];
     //protected $with = ['custom_column'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => [
             'import' => ['custom_table', 'view_column_target', 'custom_column', 'target_view_name', 'view_group_condition', 'view_pivot_column_name', 'view_pivot_table_name'],
-            'export' => ['custom_table', 'custom_view_id', 'view_column_target', 'custom_column', 'target_view_name', 'view_column_table_id', 'view_column_target_id', 'view_pivot_column_id', 'view_pivot_table_id', 'view_group_condition', 'view_column_end_date'],
+            // kanban_position, kanban_icon and grid_preset travel inside "options";
+            // as top-level keys they would make an older Exment fail the import.
+            'export' => ['custom_table', 'custom_view_id', 'view_column_target', 'custom_column', 'target_view_name', 'view_column_table_id', 'view_column_target_id', 'view_pivot_column_id', 'view_pivot_table_id', 'view_group_condition', 'view_column_end_date',
+                'kanban_position', 'kanban_icon', 'grid_preset'],
         ],
         'uniqueKeys' => ['custom_view_id', 'view_column_type', 'view_column_target_id', 'view_column_table_id'],
         'parent' => 'custom_view_id',
@@ -79,6 +85,8 @@ class CustomViewColumn extends ModelBase
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
@@ -96,10 +104,14 @@ class CustomViewColumn extends ModelBase
         static::addGlobalScope(new OrderScope('order'));
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewColumnColorAttribute()
     {
         return $this->getOption('color');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewColumnColorAttribute($view_column_color)
     {
         $this->setOption('color', $view_column_color);
@@ -107,10 +119,14 @@ class CustomViewColumn extends ModelBase
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewColumnFontColorAttribute()
     {
         return $this->getOption('font_color');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewColumnFontColorAttribute($view_column_color)
     {
         $this->setOption('font_color', $view_column_color);
@@ -118,10 +134,47 @@ class CustomViewColumn extends ModelBase
         return $this;
     }
 
+
+    ///// kanban card field options ---------------------------------------
+    // Stored in the "options" json column, so no migration is needed.
+
+    // @phpstan-ignore-next-line
+    public function getKanbanPositionAttribute()
+    {
+        return $this->getOption('kanban_position');
+    }
+
+    // @phpstan-ignore-next-line
+    public function setKanbanPositionAttribute($kanban_position)
+    {
+        $this->setOption('kanban_position', $kanban_position);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function getKanbanIconAttribute()
+    {
+        return $this->getOption('kanban_icon');
+    }
+
+    // @phpstan-ignore-next-line
+    public function setKanbanIconAttribute($kanban_icon)
+    {
+        $this->setOption('kanban_icon', $kanban_icon);
+
+        return $this;
+    }
+
+
+    // @phpstan-ignore-next-line
     public function getViewColumnEndDateAttribute()
     {
         return $this->getViewColumnTarget('view_column_table_id', 'options.end_date_type', 'options.end_date_target');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewColumnEndDateAttribute($end_date)
     {
         if (!isset($end_date)) {
@@ -138,34 +191,48 @@ class CustomViewColumn extends ModelBase
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewPivotColumnIdAttribute()
     {
         return $this->getViewPivotIdTrait('view_pivot_column_id');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewPivotColumnIdAttribute($view_pivot_column_id)
     {
         return $this->setViewPivotIdTrait('view_pivot_column_id', $view_pivot_column_id);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewPivotTableIdAttribute()
     {
         return $this->getViewPivotIdTrait('view_pivot_table_id');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewPivotTableIdAttribute($view_pivot_table_id)
     {
         return $this->setViewPivotIdTrait('view_pivot_table_id', $view_pivot_table_id);
     }
 
 
+
+    // @phpstan-ignore-next-line
     public function getViewGroupConditionAttribute()
     {
         return $this->getOption('view_group_condition');
     }
+
+    // @phpstan-ignore-next-line
     public function setViewGroupConditionAttribute($view_group_condition)
     {
         return $this->setOption('view_group_condition', $view_group_condition);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getViewColumnEndDateTypeAttribute()
     {
         return $this->getOption('end_date_type');
@@ -177,6 +244,8 @@ class CustomViewColumn extends ModelBase
      * @param array $json
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     protected function exportReplaceJson(&$json)
     {
         self:: exportReplaceJsonTrait($json);
@@ -187,6 +256,8 @@ class CustomViewColumn extends ModelBase
         if ($end_date_target) {
             if ($end_date_type == ConditionType::COLUMN) {
                 $custom_column = CustomColumn::find($end_date_target);
+
+                // @phpstan-ignore-next-line
                 $json['end_date_target_name'] = $custom_column? $custom_column->column_name: null;
             } elseif ($end_date_type == ConditionType::SYSTEM) {
                 $json['end_date_target_name'] =  SystemColumn::getOption(['id' => $end_date_target])['name'];

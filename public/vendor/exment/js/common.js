@@ -28,6 +28,31 @@ var Exment;
             $(document).on('change', '[data-linkage]', {}, CommonEvent.setLinkageEvent);
             $(document).off('click', '[data-help-text]').on('click', '[data-help-text]', {}, CommonEvent.showHelpModalEvent);
             $(document).off('click', '[copyScript]').on('click', '[copyScript]', {}, CommonEvent.copyScriptEvent);
+
+            // Day-count filter value (X日前/X日後の日付): integer in [0, 99999] (max 5 digits).
+            // The number-spinner plugin reads the value with parseInt, so a full-width (IME) value such
+            // as "１２３" makes parseInt return NaN and breaks the +/- buttons. Normalize full-width digits
+            // to ASCII and strip any remaining non-digit. Cap at 5 digits because a huge value (e.g.
+            // "9999999999999999") overflows the server-side Carbon date math and the filter returns no rows.
+            // Run on input (but not while the IME is still composing) and on compositionend (when the IME
+            // commits, where the input event may be skipped).
+            const sanitizeDayCount = (el) => {
+                const s = String(el.value).replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+                const clean = s.replace(/[^0-9]/g, '').slice(0, 5);
+                if (el.value !== clean) {
+                    el.value = clean;
+                }
+            };
+            $(document)
+                .on('input', 'input[data-day-count]', {}, (ev) => {
+                    if (ev && ev.originalEvent && ev.originalEvent.isComposing) {
+                        return;
+                    }
+                    sanitizeDayCount(ev.currentTarget);
+                })
+                .on('compositionend', 'input[data-day-count]', {}, (ev) => {
+                    sanitizeDayCount(ev.currentTarget);
+                });
             $(document).on('pjax:complete', function (event) {
                 CommonEvent.AddEvent();
             });
@@ -36,6 +61,12 @@ var Exment;
             });
         }
         static AddEvent() {
+            // Safety: never keep the pre-show guard across screen transitions.
+            try {
+                document.documentElement.classList.remove('exment-dtp-opening');
+            }
+            catch (e) {
+            }
             CommonEvent.ToggleHelp();
             CommonEvent.addSelect2();
             CommonEvent.addShowModalEvent();
@@ -73,6 +104,10 @@ var Exment;
                 }
                 else {
                     isMatch = pathname.indexOf(uri) === 0;
+                }
+                // if has "query", match only when the url has the query string parameter(ex. qrcodesetting)
+                if (isMatch && hasValue(help.query)) {
+                    isMatch = new URLSearchParams(location.search).has(help.query);
                 }
                 if (isMatch) {
                     // set new url
@@ -121,15 +156,22 @@ var Exment;
                         $('.' + key).val(updatevalue);
                     }
                 }
-                if ($(".modal:visible").length > 0) {
-                    $(".modal").off("hidden.bs.modal").on("hidden.bs.modal", function () {
-                        // put your default event here
-                        $(".modal").off("hidden.bs.modal");
+                try {
+                    if ($(".modal:visible").length > 0) {
+                        $(".modal").off("hidden.bs.modal").on("hidden.bs.modal", function () {
+                            // put your default event here
+                            $(".modal").off("hidden.bs.modal");
+                            CommonEvent.redirectCallback(res);
+                        });
+                    }
+                    else {
                         CommonEvent.redirectCallback(res);
-                    });
-                }
-                else {
-                    CommonEvent.redirectCallback(res);
+                    }
+                } catch (e) {
+                    // Guard: a synchronous exception inside redirectCallback
+                    // (e.g. NProgress failing to find #app on the initialize page)
+                    // must not prevent resolve() from running and closing the dialog.
+                    console.warn('[Exment] redirectCallback error (suppressed):', e);
                 }
                 // show toastr
                 if (hasValue(res.toastr)) {
@@ -178,6 +220,11 @@ var Exment;
                 else {
                     Exment.CommonEvent.UndefinedError();
                     return;
+                }
+                // the answer may ask to draw the list again behind the message, because the row
+                // it was about is stale (WorkflowTaskController::rowDelete())
+                if (res.reload === true) {
+                    $.pjax.reload('#pjax-container');
                 }
             }
         }
@@ -357,46 +404,101 @@ var Exment;
          * if click grid row, move page
          */
         static tableHoverLink() {
+            // On a cell wired to the inline editor the first click has to
+            // wait out the double-click window before it is allowed to
+            // navigate - see the note further down. One timer for the whole
+            // table: the next click on any row cancels whatever is pending.
+            let rowClickTimer = null;
+            // Was an inline editor open when the mouse went down? While one
+            // is, the grid behaves like a form: a click on a row means "I am
+            // done with this cell", not "open this row". The answer is
+            // latched on mousedown because that is the last moment the editor
+            // is still marked - losing focus closes it about 80ms later, so a
+            // click held longer than that would find nothing left to test.
+            let inlineEditWasOpen = false;
             $('table').find('[data-id],.rowclick').closest('tr').not('.tableHoverLinkEvent').on('click', function (ev) {
+                if (rowClickTimer) {
+                    clearTimeout(rowClickTimer);
+                    rowClickTimer = null;
+                }
+                // The click that puts the editor away is spent doing exactly
+                // that. The editor commits itself on blur, and navigating now
+                // would leave the page while that save is still in flight.
+                if (inlineEditWasOpen || $('td.exm-editing,td.exm-saving').length > 0) {
+                    inlineEditWasOpen = false;
+                    return;
+                }
                 // if e.target closest"a" is length > 0, return
                 if ($(ev.target).closest('a,.rowclick').length > 0) {
+                    return;
+                }
+                // the batch checkbox is a control, not a link to the row:
+                // ticking it must not navigate away, otherwise selecting
+                // rows for a batch action is impossible
+                if ($(ev.target).closest('.grid-row-checkbox,.column-__row_selector__').length > 0) {
+                    return;
+                }
+                // the pen icon and an editor that is already open are
+                // controls in their own right - clicking either of them is
+                // never a request to leave the page
+                if ($(ev.target).closest('.exm-edit-pen,td.exm-editing').length > 0) {
                     return;
                 }
                 if ($(ev.target).closest('.popover').length > 0) {
                     return;
                 }
-                let editFlg = $('#gridrow_select_edit').val();
-                let tableOpt = $('#gridrow_select_transition').val();
-                let linkElem = $(ev.target).closest('tr').find('.rowclick');
-                if (tableOpt == 'edit') {
-                    editFlg = 1;
-                }
-                else if (tableOpt == 'show') {
-                    editFlg = 0;
-                }
-                if (editFlg) {
-                    if (!hasValue(linkElem)) {
-                        linkElem = $(ev.target).closest('tr').find('.fa-edit');
+                let openRow = function () {
+                    let editFlg = $('#gridrow_select_edit').val();
+                    let tableOpt = $('#gridrow_select_transition').val();
+                    let linkElem = $(ev.target).closest('tr').find('.rowclick');
+                    if (tableOpt == 'edit') {
+                        editFlg = 1;
+                    }
+                    else if (tableOpt == 'show') {
+                        editFlg = 0;
+                    }
+                    if (editFlg) {
+                        if (!hasValue(linkElem)) {
+                            linkElem = $(ev.target).closest('tr').find('.fa-edit');
+                        }
+                        if (!hasValue(linkElem)) {
+                            linkElem = $(ev.target).closest('tr').find('.fa-eye');
+                        }
+                    }
+                    else {
+                        if (!hasValue(linkElem)) {
+                            linkElem = $(ev.target).closest('tr').find('.fa-eye');
+                        }
+                        if (!hasValue(linkElem)) {
+                            linkElem = $(ev.target).closest('tr').find('.fa-edit');
+                        }
                     }
                     if (!hasValue(linkElem)) {
-                        linkElem = $(ev.target).closest('tr').find('.fa-eye');
-                    }
-                }
-                else {
-                    if (!hasValue(linkElem)) {
-                        linkElem = $(ev.target).closest('tr').find('.fa-eye');
+                        linkElem = $(ev.target).closest('tr').find('.fa-external-link');
                     }
                     if (!hasValue(linkElem)) {
-                        linkElem = $(ev.target).closest('tr').find('.fa-edit');
+                        return;
                     }
-                }
-                if (!hasValue(linkElem)) {
-                    linkElem = $(ev.target).closest('tr').find('.fa-external-link');
-                }
-                if (!hasValue(linkElem)) {
+                    linkElem.closest('a,.rowclick').trigger('click');
+                };
+                // An editable cell carries two gestures on the same spot:
+                // one click opens the row, like everywhere else in the grid,
+                // two clicks open the inline editor. The browser cannot know
+                // which is coming when the first click fires, so here the
+                // navigation is held back for the length of the double-click
+                // window; the second click arrives with detail == 2 and has
+                // already cancelled the timer at the top of this handler.
+                if ($(ev.target).closest('td.exm-editable').length > 0) {
+                    let clicks = ev.detail || (ev.originalEvent ? ev.originalEvent.detail : 0) || 1;
+                    if (clicks > 1) {
+                        return;
+                    }
+                    rowClickTimer = setTimeout(openRow, 250);
                     return;
                 }
-                linkElem.closest('a,.rowclick').trigger('click');
+                openRow();
+            }).on('mousedown', function () {
+                inlineEditWasOpen = $('td.exm-editing,td.exm-saving').length > 0;
             }).addClass('tableHoverLinkEvent');
 
             $('.janCodeRow').on('click', function (ev) {
@@ -720,8 +822,10 @@ var Exment;
                 if (hasValue($elem.data('add-select2-ajax'))) {
                     // get ue
                     options['ajax'] = Exment.WebApi.make().getSelect2AjaxOption($elem);
+                    // Ajax results and the selected value are server-provided record labels. Escape them
+                    // for html so a label like "<img onerror=...>" cannot run when select2 renders it.
                     options['escapeMarkup'] = function (markup) {
-                        return markup;
+                        return $('<div/>').text(markup == null ? '' : markup).html();
                     };
                     options['minimumInputLength'] = 1;
                 }
@@ -747,13 +851,256 @@ var Exment;
             return Exment.GetBox.make().getBox().children('.fields-group').children('.embed-value');
         }
         /**
-         * add field event (datepicker, icheck)
+         * Whether the element is a genuine Exment date-picker input.
+         *
+         * The "X days before/after" view-condition value field is a Number input, but it
+         * still inherits data-column_type="date" from its (date-type) column. So matching
+         * on input[data-column_type="date"] alone wrongly catches that Number field and
+         * turns it into a date picker. A real date field is marked with data-add-date, or
+         * is rendered by laravel-admin with a calendar icon (.fa-calendar) in its input-group;
+         * the Number field has neither (it has bootstrapNumber up/down buttons instead).
+         */
+        static isExmentDatePickerInput($el) {
+            if (!$el || !$el.length) {
+                return false;
+            }
+            if ($el.is('[data-add-date]') || $el.find('[data-add-date]').length > 0) {
+                return true;
+            }
+            return $el.closest('.input-group').find('.fa-calendar').length > 0;
+        }
+        static get DATE_INPUT_SELECTOR() {
+            return '[data-add-date], input[data-column_type="date"]';
+        }
+        static datePickerTarget($el) {
+            var $wrapper = $el.closest('.input-group.date');
+            return $wrapper.length ? $wrapper : $el;
+        }
+        /**
+         * Find an existing DateTimePicker instance on the element, its input-group, or the input inside.
+         */
+        static findDatePicker($el) {
+            if (!$el || !$el.length) {
+                return null;
+            }
+            var $group = $el.closest('.input-group');
+            var $input = $el.is('input') ? $el : $el.find('input');
+            if (!$input.length) {
+                $input = $group.find('input');
+            }
+            return $el.data('DateTimePicker') || $group.data('DateTimePicker') || $input.data('DateTimePicker') || null;
+        }
+        static initDatePicker($el) {
+            var $parent = $el.closest('.input-group');
+            if (!$parent.length) {
+                $parent = $el.closest('.form-group');
+            }
+            if (!$parent.length) {
+                $parent = $el.parent();
+            }
+            if ($parent.css('position') === 'static') {
+                $parent.css('position', 'relative');
+            }
+            CommonEvent.datePickerTarget($el)
+                .datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $parent })
+                .addClass('added-datepicker');
+            return CommonEvent.findDatePicker($el);
+        }
+        static setDatePickerOpeningGuard(on) {
+            var classList = document.documentElement.classList;
+            if (window.__exment_dtp_opening_timer) {
+                clearTimeout(window.__exment_dtp_opening_timer);
+                window.__exment_dtp_opening_timer = null;
+            }
+            if (!on) {
+                classList.remove('exment-dtp-opening');
+                return;
+            }
+            classList.add('exment-dtp-opening');
+            window.__exment_dtp_opening_timer = setTimeout(function () {
+                classList.remove('exment-dtp-opening');
+            }, 1500);
+        }
+        static placeDatePickerWidget($widget, $anchor) {
+            $widget.css({ position: 'absolute', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden', 'z-index': 9999 });
+            if ($widget.parent()[0] !== document.body) {
+                $(document.body).append($widget);
+            }
+            var off = $anchor.length ? $anchor.offset() : null;
+            if (off) {
+                var $win = $(window);
+                var winTop = $win.scrollTop(), winLeft = $win.scrollLeft(), winH = $win.height(), winW = $win.width();
+                var anchorTop = off.top - winTop, anchorLeft = off.left - winLeft;
+                var anchorH = $anchor.outerHeight(), anchorW = $anchor.outerWidth();
+                var widgetH = $widget.outerHeight(), widgetW = $widget.outerWidth();
+
+                // Vertical: prefer below, then above; otherwise clamp toward the side with more space.
+                var spaceBelow = winH - (anchorTop + anchorH), spaceAbove = anchorTop;
+                var placeBelow, top;
+                if (widgetH <= spaceBelow) {
+                    placeBelow = true;
+                    top = anchorTop + anchorH;
+                }
+                else if (widgetH <= spaceAbove) {
+                    placeBelow = false;
+                    top = anchorTop - widgetH;
+                }
+                else {
+                    placeBelow = spaceBelow >= spaceAbove;
+                    top = placeBelow ? Math.min(anchorTop + anchorH, Math.max(0, winH - widgetH)) : Math.max(0, anchorTop - widgetH);
+                }
+
+                // Horizontal: align left, else align the right edge, else clamp to the viewport.
+                var left;
+                if (anchorLeft + widgetW <= winW) {
+                    left = anchorLeft;
+                }
+                else if (anchorLeft + anchorW - widgetW >= 0) {
+                    left = anchorLeft + anchorW - widgetW;
+                }
+                else {
+                    left = Math.max(0, winW - widgetW);
+                }
+                // Shift slightly left when the input has an addon/icon so the arrow still points at the input.
+                var hasAddon = $anchor.closest('.input-group').find('.input-group-addon, .input-group-btn, .btn').length > 0;
+                left = Math.max(0, Math.min(left - (hasAddon ? 36 : 0), winW - widgetW));
+
+                $widget.toggleClass('top', !placeBelow).toggleClass('bottom', placeBelow)
+                    .css({ top: winTop + top, left: winLeft + left, bottom: 'auto', right: 'auto' });
+            }
+            $widget.css('visibility', 'visible');
+        }
+        /**
+         * add field event (datepicker positioning fix + icheck)
          */
         static addFieldEvent() {
-            $('[data-add-date]').not('.added-datepicker').each(function (index, elem) {
-                $(elem).datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true });
-                $(elem).addClass('added-datepicker');
-            });
+            var SELECTOR = CommonEvent.DATE_INPUT_SELECTOR;
+
+            // Lazy init/show (installed once): covers pages where the datetimepicker plugin loads after the initial AddEvent().
+            if (!window.__exment_datepicker_lazy_init) {
+                window.__exment_datepicker_lazy_init = true;
+                $(document)
+                    .off('click.exmentDtpLazy')
+                    .on('click.exmentDtpLazy', SELECTOR, function () {
+                        try {
+                            if (typeof $.fn.datetimepicker !== 'function') {
+                                return;
+                            }
+                            var $src = $(this);
+                            // Skip Number filter fields that merely inherit data-column_type="date".
+                            if (!CommonEvent.isExmentDatePickerInput($src)) {
+                                return;
+                            }
+                            var picker = CommonEvent.findDatePicker($src) || CommonEvent.initDatePicker($src);
+                            if (picker && typeof picker.show === 'function') {
+                                picker.show();
+                            }
+                        }
+                        catch (e) {
+                        }
+                    });
+            }
+
+            if (typeof $.fn.datetimepicker === 'function') {
+                if (!window.__exment_datetimepicker_body_fix) {
+                    window.__exment_datetimepicker_body_fix = true;
+
+                    // Pre-show guard for pickers inside scrollable tables (see setDatePickerOpeningGuard).
+                    $(document)
+                        .off('mousedown.exmentDtpPrep pointerdown.exmentDtpPrep touchstart.exmentDtpPrep focusin.exmentDtpPrep')
+                        .on('mousedown.exmentDtpPrep pointerdown.exmentDtpPrep touchstart.exmentDtpPrep focusin.exmentDtpPrep', SELECTOR + ', .input-group .input-group-addon, .input-group .btn', function (e) {
+                            try {
+                                var $src = $(this);
+                                var $dateInput = $src.is(SELECTOR) ? $src : $src.closest('.input-group').find('input[data-column_type="date"], input[data-add-date]').first();
+                                // Skip Number filter fields (e.g. "X days before/after") that only inherit
+                                // data-column_type="date"; their up/down buttons must keep working.
+                                if (!CommonEvent.isExmentDatePickerInput($dateInput) || !$dateInput.closest('.table-responsive').length) {
+                                    return;
+                                }
+                                CommonEvent.setDatePickerOpeningGuard(true);
+
+                                // Clicking the input itself already opens the picker (allowInputToggle); calling show() too
+                                // would open two widgets. For an addon/button click, open it ourselves and stop the default.
+                                if (e && (e.type === 'mousedown' || e.type === 'pointerdown' || e.type === 'touchstart') && !$src.is('input')) {
+                                    var picker = CommonEvent.findDatePicker($dateInput);
+                                    if (picker && typeof picker.show === 'function') {
+                                        picker.show();
+                                    }
+                                    return false;
+                                }
+                            }
+                            catch (e2) {
+                            }
+                        })
+                        .off('dp.hide.exmentDtpPrep')
+                        .on('dp.hide.exmentDtpPrep', function () {
+                            CommonEvent.setDatePickerOpeningGuard(false);
+                        });
+
+                    // dp.show may be triggered on a plain .input-group wrapper (no .date class); only act for Exment date inputs.
+                    $(document)
+                        .off('dp.show.exmentFix')
+                        .on('dp.show.exmentFix', function (ev) {
+                            try {
+                                var $t = $(ev.target);
+                                var isExmentDate = $t.is(SELECTOR) ||
+                                    $t.closest('[data-add-date]').length > 0 ||
+                                    $t.closest('.input-group').find('input[data-column_type="date"]').length > 0;
+                                if (!isExmentDate) {
+                                    return;
+                                }
+
+                                // If another datepicker plugin is also bound, hide it to avoid "two calendars".
+                                $('.datepicker.datepicker-dropdown:visible').hide();
+
+                                var $anchor = $t.is('input') ? $t : $t.closest('.input-group').find('input[data-column_type="date"], input[data-add-date], input').first();
+                                // Ensure the pre-show guard is set even for a keyboard-triggered show.
+                                if ($anchor.length && $anchor.closest('.table-responsive').length) {
+                                    CommonEvent.setDatePickerOpeningGuard(true);
+                                }
+
+                                // IMPORTANT: do not call picker.widgetParent() here; that method triggers hide/show.
+                                var picker = CommonEvent.findDatePicker($t);
+                                var $widget = (picker && typeof picker.widget === 'function') ? picker.widget() : null;
+                                if (!$widget || !$widget.length) {
+                                    // Fallback: some pages store the instance differently.
+                                    $widget = $('.bootstrap-datetimepicker-widget:visible').first();
+                                }
+                                if (!$widget.length) {
+                                    return;
+                                }
+                                // Repeated init or a race can leave more than one widget; keep only this one visible.
+                                $('.bootstrap-datetimepicker-widget:visible').not($widget)
+                                    .css({ position: 'absolute', top: 0, left: 0, right: 'auto', bottom: 'auto', visibility: 'hidden' })
+                                    .hide();
+                                CommonEvent.placeDatePickerWidget($widget, $anchor);
+                                CommonEvent.setDatePickerOpeningGuard(false);
+                            }
+                            catch (e) {
+                                // swallow to avoid breaking picker display
+                            }
+                        });
+                }
+
+                // Initialize pickers for the date inputs already on the page.
+                var targets = $(SELECTOR).filter(function () {
+                    return CommonEvent.isExmentDatePickerInput($(this));
+                }).map(function () {
+                    return CommonEvent.datePickerTarget($(this)).get(0);
+                }).get();
+                targets = targets.filter(function (dom, i) {
+                    return targets.indexOf(dom) === i;
+                });
+                $(targets).not('.added-datepicker').each(function (index, elem) {
+                    var $elem = $(elem);
+                    if (CommonEvent.findDatePicker($elem)) {
+                        // Already initialized elsewhere.
+                        $elem.addClass('added-datepicker');
+                        return;
+                    }
+                    CommonEvent.initDatePicker($elem);
+                });
+            }
             $('[data-add-icheck]').not('.added-icheck').each(function (index, elem) {
                 $(elem).iCheck({ checkboxClass: 'icheckbox_minimal-blue' });
                 $(elem).addClass('added-icheck');

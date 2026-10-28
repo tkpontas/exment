@@ -2,14 +2,14 @@
 
 namespace Exceedone\Exment\Form\Show;
 
-use Encore\Admin\Show;
+use ExmentAdminCore\Admin\Show;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 
 /**
  * Public show panel for child.
  */
-class PublicShowPanelChild extends \Encore\Admin\Show\Panel
+class PublicShowPanelChild extends \ExmentAdminCore\Admin\Show\Panel
 {
     /**
      * The view to be rendered.
@@ -23,7 +23,7 @@ class PublicShowPanelChild extends \Encore\Admin\Show\Panel
      */
     public function render()
     {
-        /** @phpstan-ignore-next-line Need laravel-admin php doc. */
+        // @phpstan-ignore-next-line
         return parent::render()->with([
         ]);
     }

@@ -22,7 +22,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
      */
     public function getSchemaBuilder()
     {
-        /** @phpstan-ignore-next-line Call to function is_null() with Illuminate\Database\Schema\Grammars\Grammar will always evaluate to false. */
+        // @phpstan-ignore-next-line
         if (is_null($this->schemaGrammar)) {
             $this->useDefaultSchemaGrammar();
         }
@@ -37,7 +37,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
      */
     protected function getDefaultSchemaGrammar()
     {
-        return $this->withTablePrefix(new SchemaGrammar());
+        return new SchemaGrammar($this);
     }
 
     /**
@@ -47,7 +47,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
      */
     protected function getDefaultQueryGrammar()
     {
-        return $this->withTablePrefix(new QueryGrammar());
+        return new QueryGrammar($this);
     }
 
     /**
@@ -106,11 +106,13 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
      *
      * @param string $dirFullPath restore file path
      */
+    // @phpstan-ignore-next-line
     public function importTsv($dirFullPath)
     {
     }
 
 
+    // @phpstan-ignore-next-line
     public function createView($viewName, $query)
     {
         $viewName = $this->getQueryGrammar()->wrapTable($viewName);
@@ -125,6 +127,7 @@ class SqlServerConnection extends BaseConnection implements ConnectionInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public function dropView($viewName)
     {
         $viewName = $this->getQueryGrammar()->wrapTable($viewName);

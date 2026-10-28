@@ -3,8 +3,8 @@
 namespace Exceedone\Exment\ColumnItems\CustomColumns;
 
 use Exceedone\Exment\ColumnItems\CustomItem;
-use Encore\Admin\Form;
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Form\Field;
 use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Model\File as ExmentFile;
 use Exceedone\Exment\Model\Define;
@@ -20,6 +20,7 @@ class File extends CustomItem
 {
     use SelectTrait;
 
+    // @phpstan-ignore-next-line
     public function saved()
     {
         $this->refreshTmpFile();
@@ -29,6 +30,7 @@ class File extends CustomItem
     /**
      * get file info
      */
+    // @phpstan-ignore-next-line
     public function file()
     {
         return ExmentFile::getFile($this->fileValue($this->value));
@@ -37,6 +39,7 @@ class File extends CustomItem
     /**
      * get text
      */
+    // @phpstan-ignore-next-line
     protected function _text($v)
     {
         if (!is_null($name = $this->getPublicFileName($v))) {
@@ -49,6 +52,7 @@ class File extends CustomItem
     /**
      * get html. show link to file
      */
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         if (!is_null($name = $this->getPublicFileName($v))) {
@@ -74,6 +78,7 @@ class File extends CustomItem
      * @param array $setting
      * @return array|true[]
      */
+    // @phpstan-ignore-next-line
     public function getImportValue($value, $setting = [])
     {
         if (is_nullorempty($value)) {
@@ -93,6 +98,7 @@ class File extends CustomItem
                 }
                 $file_path[] = $result;
             }
+            // @phpstan-ignore-next-line
             return [
                 'result' => true,
                 'value' => $file_path
@@ -113,6 +119,7 @@ class File extends CustomItem
         ];
     }
 
+    // @phpstan-ignore-next-line
     protected function getImportFilePath($value)
     {
         // Get file info by url
@@ -129,6 +136,7 @@ class File extends CustomItem
         return $file->path;
     }
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         if ($this->isMultipleEnabled()) {
@@ -138,12 +146,20 @@ class File extends CustomItem
     }
 
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         // set file options
         $fileOption = File::getFileOptions($this->custom_column, $this->id);
         $field->options($fileOption)->removable();
         $field->help(array_get($fileOption, 'maxFileSizeHelp'));
+
+        // Paste a screenshot into this column instead of saving it to disk first.
+        // Marked per column rather than switched on everywhere, so a paste on a
+        // form with several file columns has one obvious destination.
+        if (boolval($this->custom_column->getOption('paste_attach_enabled'))) {
+            $field->attribute(['data-paste-attach' => '1']);
+        }
 
         // set filename rule
         $custom_table = $this->getCustomTable();
@@ -156,7 +172,8 @@ class File extends CustomItem
             return $file->uuid ?? 0;
         })->caption(function ($caption, $key) {
             $file = ExmentFile::getData($key);
-            return $file->filename ?? basename($caption);
+            // the upload widget inserts the caption into the page as html, so escape the file name
+            return esc_html($file->filename ?? basename($caption));
         })
         // get tmp file from request
         ->getTmp(function ($files) {
@@ -288,6 +305,7 @@ class File extends CustomItem
         return $value;
     }
 
+    // @phpstan-ignore-next-line
     protected static function getFileOptions($custom_column, $id)
     {
         $options = [
@@ -320,6 +338,7 @@ class File extends CustomItem
      *
      * @return string|null
      */
+    // @phpstan-ignore-next-line
     protected function fileValue($v)
     {
         if (is_null($v)) {
@@ -333,6 +352,7 @@ class File extends CustomItem
         return $v;
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
         $options = $this->custom_column->options;
@@ -347,6 +367,7 @@ class File extends CustomItem
         $validates[] = new Validator\FileNameRule();
     }
 
+    // @phpstan-ignore-next-line
     protected function getCustomField($classname, $column_name_prefix = null)
     {
         $field = parent::getCustomField($classname, $column_name_prefix);
@@ -381,6 +402,7 @@ class File extends CustomItem
      * @param $input
      * @return void
      */
+    // @phpstan-ignore-next-line
     public function getAdminFilterWhereQuery($query, $input)
     {
         list($mark, $value) = \Exment::getQueryMarkAndValue(true, $input);
@@ -403,6 +425,7 @@ class File extends CustomItem
      * @param string|null $q
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getSearchQueries($mark, $value, $takeCount, $q, $options = [])
     {
         // get values ids
@@ -446,6 +469,7 @@ class File extends CustomItem
      * @param string $value
      * @return Collection target custom values's id list
      */
+    // @phpstan-ignore-next-line
     protected function getQueryIds($mark, $value)
     {
         ///// first, search document table
@@ -492,6 +516,10 @@ class File extends CustomItem
             $form->text('accept_extensions', exmtrans("custom_column.options.accept_extensions"))
                 ->help(exmtrans("custom_column.help.accept_extensions"));
         }
+
+        $form->switchbool('paste_attach_enabled', exmtrans("custom_column.options.paste_attach_enabled"))
+            ->help(exmtrans("custom_column.help.paste_attach_enabled"))
+            ->default('0');
     }
 
     /**

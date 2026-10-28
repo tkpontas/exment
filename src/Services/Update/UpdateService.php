@@ -16,6 +16,7 @@ use Exceedone\Exment\Exceptions\BackupRestoreNotSupportedException;
  */
 class UpdateService
 {
+    // @phpstan-ignore-next-line
     public static function update(array $options = [])
     {
         \Exment::setTimeLimitLong();
@@ -48,6 +49,7 @@ class UpdateService
     }
 
 
+    // @phpstan-ignore-next-line
     public static function callBackup()
     {
         $backup = new Backup();
@@ -92,13 +94,14 @@ class UpdateService
         $helper = new UpdateHelper($event);
 
         $upgrades = array(
-            Define::COMPOSER_PACKAGE_NAME_LARAVEL_ADMIN => '*',
+            Define::COMPOSER_PACKAGE_NAME_EXMENT_ADMIN => '*',
             Define::COMPOSER_PACKAGE_NAME => '*',
         );
         $helper->setDependencyVersions($upgrades)->require($upgrades);
     }
 
 
+    // @phpstan-ignore-next-line
     public static function callPublish()
     {
         \Artisan::call('exment:update');

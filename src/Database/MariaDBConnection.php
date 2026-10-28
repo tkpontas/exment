@@ -19,7 +19,7 @@ class MariaDBConnection extends MySqlConnection
      */
     public function getSchemaBuilder()
     {
-        /** @phpstan-ignore-next-line Call to function is_null() with Illuminate\Database\Schema\Grammars\Grammar will always evaluate to false. */
+        // @phpstan-ignore-next-line
         if (is_null($this->schemaGrammar)) {
             $this->useDefaultSchemaGrammar();
         }
@@ -34,17 +34,17 @@ class MariaDBConnection extends MySqlConnection
      */
     protected function getDefaultSchemaGrammar()
     {
-        return $this->withTablePrefix(new SchemaGrammar());
+        return new SchemaGrammar($this);
     }
 
     /**
      * Get the default query grammar instance.
      *
-     * @return Grammar|QueryGrammar
+     * @return Grammar|SchemaGrammar
      */
     protected function getDefaultQueryGrammar()
     {
-        return $this->withTablePrefix(new QueryGrammar());
+        return new QueryGrammar($this);
     }
 
     /**

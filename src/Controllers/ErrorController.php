@@ -4,10 +4,10 @@ namespace Exceedone\Exment\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Facades\Admin;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Widgets\Box;
 
 class ErrorController extends Controller
 {
@@ -19,9 +19,10 @@ class ErrorController extends Controller
     /**
      * Index interface.
      */
+    // @phpstan-ignore-next-line
     public function error(Request $request, $exception)
     {
-        /** @phpstan-ignore-next-line response expects array|Illuminate\Contracts\View\View|string|null, Encore\Admin\Layout\Content given */
+        /** @phpstan-ignore-next-line response expects array|Illuminate\Contracts\View\View|string|null, ExmentAdminCore\Admin\Layout\Content given */
         return response(Admin::content(function (Content $content) use ($exception) {
             $content->header(exmtrans('error.header'));
             $content->description(exmtrans('error.description'));
@@ -53,12 +54,12 @@ class ErrorController extends Controller
                     ->default(exmtrans("error.check_error_log"))
                 ;
             }
-            /** @phpstan-ignore-next-line constructor expects string, Encore\Admin\Widgets\Form given */
             $content->row(new Box(exmtrans("error.header"), $form));
         }));
     }
 
 
+    // @phpstan-ignore-next-line
     public function maintenance()
     {
         return response(view('exment::exception.maintenance', [

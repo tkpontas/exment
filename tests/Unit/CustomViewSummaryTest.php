@@ -829,7 +829,7 @@ class CustomViewSummaryTest extends UnitTestBase
             $result = collect($defaults)->filter(function ($data) use ($summary) {
                 return $data['multiples_of_3'] == $summary['key'];
             })->sum(function ($data) {
-                return collect($data['child_table.integer'])->sum();
+                return array_sum($data['child_table.integer']);
             });
             $this->assertTrue($result == $summary['value']);
         }
@@ -872,6 +872,8 @@ class CustomViewSummaryTest extends UnitTestBase
                     return empty($summary['key']) && empty($data['date']);
                 }
             })->min(function ($data) {
+                // a list of the child dates; collect()->min() skips the empty ones
+                $this->assertIsArray($data['child_table.date']);
                 return collect($data['child_table.date'])->min();
             });
             $this->assertTrue($result == $summary['value']);
@@ -911,7 +913,7 @@ class CustomViewSummaryTest extends UnitTestBase
             $result = collect($defaults)->filter(function ($data) use ($summary) {
                 return $data['multiples_of_3'] == $summary['key'];
             })->sum(function ($data) {
-                return collect($data['child_table.integer'])->sum();
+                return array_sum($data['child_table.integer']);
             });
             $this->assertTrue($result == $summary['value']);
         }
@@ -921,6 +923,7 @@ class CustomViewSummaryTest extends UnitTestBase
      * FilterOption = Group(parent:user,order:2), Summary(integer/sum/child_table,order:1)
      * bugfix: set order to child table column occurs exception. 
      */
+    // @phpstan-ignore-next-line
     public function testFuncSummaryChildOrder()
     {
         $this->init();
@@ -954,7 +957,7 @@ class CustomViewSummaryTest extends UnitTestBase
             $result = collect($defaults)->filter(function ($data) use ($summary) {
                 return $data['user'] == $summary['key'];
             })->sum(function ($data) {
-                return collect($data['child_table.integer'])->sum();
+                return array_sum($data['child_table.integer']);
             });
             $this->assertTrue($result == $summary['value']);
         }
@@ -964,6 +967,7 @@ class CustomViewSummaryTest extends UnitTestBase
      * FilterOption = Group(parent:user,order:1), Summary(integer/sum/child_table)
      * check if user sort by id as number
      */
+    // @phpstan-ignore-next-line
     public function testFuncSummaryChildOrder2()
     {
         if (\Exment::isSqlServer()) {
@@ -991,7 +995,7 @@ class CustomViewSummaryTest extends UnitTestBase
 
         $summaries = $this->getCustomViewSummary($options);
 
-        $users = collect($summaries)->map(function($summary) {
+        $users = $summaries->map(function($summary) {
             return (int)$summary['key'];
         });
 
@@ -1129,7 +1133,7 @@ class CustomViewSummaryTest extends UnitTestBase
             $result = collect($defaults)->filter(function ($data) use ($summary) {
                 return $data['parent_table.user'] == $summary['key'];
             })->max(function ($data) {
-                return collect($data['integer'])->max();
+                return $data['integer'];
             });
             $this->assertTrue($result == $summary['value']);
         }
@@ -1414,7 +1418,7 @@ class CustomViewSummaryTest extends UnitTestBase
 
     /**
      * @param array<string, mixed> $options
-     * @return mixed
+     * @return \Illuminate\Support\Collection<int, array{key: mixed, value: mixed}>
      */
     protected function getCustomViewSummary($options)
     {
@@ -1443,7 +1447,7 @@ class CustomViewSummaryTest extends UnitTestBase
 
     /**
      * @param array<string, mixed> $options
-     * @return mixed
+     * @return array<int, array<string, mixed>> one row per record, column => value
      */
     protected function getCustomViewDataAll($options)
     {
@@ -1503,11 +1507,9 @@ class CustomViewSummaryTest extends UnitTestBase
                 }
                 $column_data = $this->getColumnValue($data, $column_name, $condition_type);
 
-                /** @phpstan-ignore-next-line Instanceof between Exceedone\Exment\Model\CustomValue|null and Illuminate\Support\Collection will always evaluate to false. */
                 if ($column_data instanceof \Illuminate\Support\Collection) {
                     $column_data = $column_data->map(function ($item) {
                         if ($item instanceof Model) {
-                            /** @var mixed $item */
                             return $item->id;
                         }
                         return $item;
@@ -1524,7 +1526,7 @@ class CustomViewSummaryTest extends UnitTestBase
      * @param mixed $data
      * @param string $column_name
      * @param string|null $condition_type
-     * @return CustomValue|null
+     * @return mixed
      */
     protected function getColumnValue($data, $column_name, $condition_type)
     {

@@ -503,7 +503,7 @@ class WorkflowTestDataSeeder extends Seeder
                     $workflowaction->status_from = $action['status_from'];
                     $actionStatusFromTo['status_from'] = null;
                 } else {
-                    /** @phpstan-ignore-next-line  Because an error occurs in SQLServer's UT when the 'id' is set */
+                    // @phpstan-ignore-next-line
                     $workflowaction->status_from = $workflow['statuses'][$action['status_from']]['id'];
                     $actionStatusFromTo['status_from'] = $workflowaction->status_from;
                 }
@@ -532,7 +532,7 @@ class WorkflowTestDataSeeder extends Seeder
                         $header->status_to = $item['status_to'];
                         $actionStatusFromTo['status_to'] = null;
                     } else {
-                        /** @phpstan-ignore-next-line  Because an error occurs in SQLServer's UT when the 'id' is set */
+                        // @phpstan-ignore-next-line
                         $header->status_to = $workflow['statuses'][$item['status_to']]['id'];
                         $actionStatusFromTo['status_to'] = $header->status_to;
                     }
@@ -615,6 +615,7 @@ class WorkflowTestDataSeeder extends Seeder
 
                         // get target $actionStatusFromTo
                         $actionStatusFromTo = collect($actionStatusFromTos)->first(function ($actionStatusFromTo) use ($wfValueStatuses, $index) {
+                            // @phpstan-ignore-next-line
                             return $wfValueStatuses[$index - 1]['id'] == $actionStatusFromTo['status_from'] && $wfValueStatuses[$index]['id'] == $actionStatusFromTo['status_to'];
                         });
                         if (!isset($actionStatusFromTo)) {

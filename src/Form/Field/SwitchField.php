@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\SwitchField as AdminSwitchField;
+use ExmentAdminCore\Admin\Form\Field\SwitchField as AdminSwitchField;
 
 class SwitchField extends AdminSwitchField
 {
@@ -15,7 +15,6 @@ class SwitchField extends AdminSwitchField
 
     public function render()
     {
-        /** @phpstan-ignore-next-line Call to function is_null() with string will always evaluate to false. it needs to fix laravel-admin */
         if (is_null($this->value()) && is_null($this->getOld())) {
             $this->value = $this->states['off']['value'];
         }
@@ -52,6 +51,7 @@ EOT;
         ]);
     }
 
+    // @phpstan-ignore-next-line
     protected function getParentClassname()
     {
         return get_parent_class(get_parent_class($this));

@@ -2,7 +2,10 @@
 
 namespace Exceedone\Exment\Console;
 
+use Exceedone\Exment\Enums\SystemTableName;
+use Exceedone\Exment\Model\CustomTable;
 use Illuminate\Console\Command;
+use Exceedone\Exment\Services\Installer\SkeletonMigrationReconciler;
 use Exceedone\Exment\Services\TemplateImportExport\TemplateImporter;
 
 class UpdateCommand extends Command
@@ -73,10 +76,36 @@ class UpdateCommand extends Command
             }
         }
 
+        $this->prepareSkeletonMigrations();
+
         $this->call('migrate');
 
         // Remove template import if update
         // $importer = new TemplateImporter;
         // $importer->importSystemTemplate(true);
+        $customTable = CustomTable::where('table_name', SystemTableName::SYSTEM_LOGS)->first();
+        if (!$customTable) {
+            $importer = new TemplateImporter();
+            $importer->importSystemLogsTemplate();
+        }
+
+    }
+
+    /**
+     * Run the Laravel 11+ skeleton migrations (0001_01_01_*) that find their tables already there,
+     * e.g. a v6 backup restored into a fresh v7 install, so that `migrate` does not stop on them.
+     *
+     * @return void
+     */
+    protected function prepareSkeletonMigrations()
+    {
+        /** @var \Illuminate\Database\Migrations\Migrator $migrator */
+        $migrator = $this->laravel->make('migrator');
+        $migrator->setOutput($this->output);
+        $reconciler = new SkeletonMigrationReconciler($migrator);
+
+        foreach ($reconciler->reconcile() as $migration => $created) {
+            $this->info("$migration: kept the existing tables" . (empty($created) ? '' : ', created ' . implode(', ', $created)));
+        }
     }
 }

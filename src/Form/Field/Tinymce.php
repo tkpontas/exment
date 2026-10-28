@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\Textarea;
+use ExmentAdminCore\Admin\Form\Field\Textarea;
 use Exceedone\Exment\Model\Define;
 
 class Tinymce extends Textarea
@@ -13,8 +13,10 @@ class Tinymce extends Textarea
         '/vendor/exment/tinymce/tinymce.min.js',
     ];
 
+    // @phpstan-ignore-next-line
     protected $config = [];
 
+    // @phpstan-ignore-next-line
     protected $disableImage = false;
 
     /**
@@ -61,6 +63,7 @@ class Tinymce extends Textarea
         return parent::readonly();
     }
 
+    // @phpstan-ignore-next-line
     protected function getValidElements()
     {
         $tags = Define::HTML_ALLOWED_EDITOR_DEFAULT;

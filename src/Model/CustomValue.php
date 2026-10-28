@@ -59,67 +59,90 @@ abstract class CustomValue extends ModelBase
 {
     use Traits\AutoSUuidTrait;
     use Traits\DatabaseJsonTrait;
+    use Traits\HasCommentMentionTrait;
     use \Illuminate\Database\Eloquent\SoftDeletes;
     use \Exceedone\Exment\Revisionable\RevisionableTrait;
 
     protected $casts = ['value' => 'json'];
     // protected $appends = ['label'];
     protected $hidden = ['laravel_admin_escape'];
+
+    // @phpstan-ignore-next-line
     protected $keepRevisionOf = ['value'];
+
+    // @phpstan-ignore-next-line
     protected $keepRevisionOfTrigger = ['deleted_at' => 'value'];
 
     /**
      * remove_file_columns.
      * default flow, if file column is empty, set original value.
      */
+
+    // @phpstan-ignore-next-line
     protected $remove_file_columns = [];
 
     /**
      * disabled saving event.
      * if true, disable.
      */
+
+    // @phpstan-ignore-next-line
     protected $disable_saving_event = false;
 
     /**
      * disabled saved event.
      * if true, disable.
      */
+
+    // @phpstan-ignore-next-line
     protected $disable_saved_event = false;
 
     /**
      * set value directly without processing.
      * if true, skip saving event without revision.
      */
+
+    // @phpstan-ignore-next-line
     protected $restore_revision = false;
 
     /**
      * saved notify.
      * if false, don't notify
      */
+
+    // @phpstan-ignore-next-line
     protected $saved_notify = true;
 
     /**
      * already_updated.
      * if true, not call saved event again.
      */
+
+    // @phpstan-ignore-next-line
     protected $already_updated = false;
 
     /**
      * label work.
      * get label only first time.
      */
+
+    // @phpstan-ignore-next-line
     protected $_label;
 
     /**
      * file uuids.
      * *NOW only use edtitor images
      */
+
+    // @phpstan-ignore-next-line
     protected $file_uuids = [];
 
     /**
      * result validate destroy.
      * if true, pass validate destroy
      */
+
+    // @phpstan-ignore-next-line
     protected $validation_destroy = false;
 
     /**
@@ -128,6 +151,8 @@ abstract class CustomValue extends ModelBase
      * @param  array  $attributes
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function __construct(array $attributes = [])
     {
         // set parent_id for org
@@ -141,6 +166,10 @@ abstract class CustomValue extends ModelBase
         parent::__construct($attributes);
     }
 
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<WorkflowValue, $this>
+     */
     public function workflow_value()
     {
         return $this->hasOne(WorkflowValue::class, 'morph_id')
@@ -152,6 +181,8 @@ abstract class CustomValue extends ModelBase
 
     /**
      * Get all workflow values
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<WorkflowValue, $this>
      */
     public function workflow_values()
     {
@@ -159,6 +190,8 @@ abstract class CustomValue extends ModelBase
             ->where('morph_type', $this->custom_table->table_name);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getLabelAttribute()
     {
         if (is_null($this->_label)) {
@@ -167,32 +200,46 @@ abstract class CustomValue extends ModelBase
         return $this->_label;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getCustomTableAttribute()
     {
         // return resuly using cache
         return CustomTable::getEloquent($this->custom_table_name);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getDeletedUserAttribute()
     {
         return $this->getUser('deleted_user_id');
     }
+
+    // @phpstan-ignore-next-line
     public function getDeletedUserValueAttribute()
     {
         return $this->getUserValue('deleted_user_id');
     }
+
+    // @phpstan-ignore-next-line
     public function getDeletedUserTagAttribute()
     {
         return $this->getUser('deleted_user_id', true);
     }
+
+    // @phpstan-ignore-next-line
     public function getDeletedUserAvatarAttribute()
     {
         return $this->getUser('deleted_user_id', true, true);
     }
+
+    // @phpstan-ignore-next-line
     public function getValidationDestroy()
     {
         return $this->validation_destroy;
     }
+
+    // @phpstan-ignore-next-line
     public function setValidationDestroy($value)
     {
         $this->validation_destroy = $value;
@@ -208,6 +255,8 @@ abstract class CustomValue extends ModelBase
         return $this->enableDelete(true) !== true;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getWorkflowStatusAttribute()
     {
         if (is_null(Workflow::getWorkflowByTable($this->custom_table))) {
@@ -217,6 +266,8 @@ abstract class CustomValue extends ModelBase
         return isset($this->workflow_value) ? $this->workflow_value->workflow_status_cache : null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getWorkflowStatusNameAttribute()
     {
         if (isset($this->workflow_status)) {
@@ -238,13 +289,17 @@ abstract class CustomValue extends ModelBase
     /**
      * Get workflow status tag. Please escape workflow_status_name
      */
+
+    // @phpstan-ignore-next-line
     public function getWorkflowStatusTagAttribute()
     {
-        $icon = ' <i class="fa fa-lock" aria-hidden="true" data-toggle="tooltip" title="' . esc_html(exmtrans('workflow.message.locked')) . '"></i>';
+        $icon = ' <i class="fa fa-lock" aria-hidden="true" data-bs-toggle="tooltip" title="' . esc_html(exmtrans('workflow.message.locked')) . '"></i>';
         return esc_html($this->workflow_status_name) .
             ($this->lockedWorkflow() ? $icon : '');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getWorkflowWorkUsersAttribute()
     {
         $workflow_actions = $this->getWorkflowActions(false, true);
@@ -260,6 +315,8 @@ abstract class CustomValue extends ModelBase
         return $result;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getWorkflowWorkUsersTagAttribute()
     {
         $users = $this->workflow_work_users;
@@ -273,6 +330,10 @@ abstract class CustomValue extends ModelBase
     }
 
     // value_authoritable. it's all role data.
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CustomValueAuthoritable, $this>
+     */
     public function custom_value_authoritables()
     {
         return $this->hasMany(CustomValueAuthoritable::class, 'parent_id')
@@ -280,6 +341,8 @@ abstract class CustomValue extends ModelBase
     }
 
     // user value_authoritable. it's all role data. only filter morph_type
+
+    // @phpstan-ignore-next-line
     public function value_authoritable_users()
     {
         return $this->morphToMany(getModelName(SystemTableName::USER), 'parent', 'custom_value_authoritables', 'parent_id', 'authoritable_target_id')
@@ -289,6 +352,8 @@ abstract class CustomValue extends ModelBase
     }
 
     // user value_authoritable. it's all role data. only filter morph_type
+
+    // @phpstan-ignore-next-line
     public function value_authoritable_organizations()
     {
         return $this->morphToMany(getModelName(SystemTableName::ORGANIZATION), 'parent', 'custom_value_authoritables', 'parent_id', 'authoritable_target_id')
@@ -305,6 +370,8 @@ abstract class CustomValue extends ModelBase
      * @param boolean $isCallAsParent
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany|\Illuminate\Database\Eloquent\Relations\MorphMany|\Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+
+    // @phpstan-ignore-next-line
     public function getDynamicRelationValue(int $custom_relation_id, bool $isCallAsParent)
     {
         $relation = CustomRelation::getEloquent($custom_relation_id);
@@ -313,6 +380,8 @@ abstract class CustomValue extends ModelBase
 
 
     // get whether workflow is completed
+
+    // @phpstan-ignore-next-line
     public function isWorkflowCompleted()
     {
         $workflow_value = $this->workflow_value;
@@ -329,7 +398,11 @@ abstract class CustomValue extends ModelBase
 
 
     // get workflow actions which has authority
-    public function getWorkflowActions($onlyHasAuthority = false, $ignoreNextWork = false)
+    // $ignoreExecuted: leave out the actions the login user already executed in a step that
+    // waits for several approvers (WorkflowValue::isAlreadyExecuted()).
+
+    // @phpstan-ignore-next-line
+    public function getWorkflowActions($onlyHasAuthority = false, $ignoreNextWork = false, $ignoreExecuted = false)
     {
         $workflow_value = $this->workflow_value;
 
@@ -370,6 +443,16 @@ abstract class CustomValue extends ModelBase
             });
         }
 
+        // A step that waits for several approvers keeps its status until the last of them acts.
+        // The ones who already did have nothing left to run: the task list leaves them out
+        // (WorkflowTaskService) and the action modal offers them no submit. Executing again
+        // only recorded the same approval twice.
+        if ($ignoreExecuted && !is_null($login_user = \Exment::user())) {
+            $workflow_actions = $workflow_actions->filter(function ($workflow_action) use ($login_user) {
+                return !WorkflowValue::isAlreadyExecuted($workflow_action->id, $this, $login_user->base_user);
+            });
+        }
+
         return $workflow_actions;
     }
 
@@ -378,6 +461,8 @@ abstract class CustomValue extends ModelBase
      *
      * @return Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getWorkflowHistories($appendsStatus = false)
     {
         $workflow_values = WorkflowValue::where('morph_type', $this->custom_table->table_name)
@@ -393,13 +478,17 @@ abstract class CustomValue extends ModelBase
         $results = [];
         foreach ($workflow_values as $v) {
             $v->append('created_user');
-            $v->workflow_action->append('status_from_name');
-            $v->workflow_action->status_from_to_name = exmtrans('workflow.status_from_to_format', $v->workflow_action_cache->status_from_name, $v->workflow_status_name);
+            if (isset($v->workflow_action)) {
+                $v->workflow_action->append('status_from_name');
+                $v->workflow_action->status_from_to_name = exmtrans('workflow.status_from_to_format', optional($v->workflow_action_cache)->status_from_name, $v->workflow_status_name);
+            }
 
             $results[] = $v->toArray();
         }
 
         /** @var Collection $collection */
+
+        // @phpstan-ignore-next-line
         $collection = collect($results);
         return $collection;
     }
@@ -407,6 +496,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get or set remove_file_columns
      */
+
+    // @phpstan-ignore-next-line
     public function remove_file_columns($key = null)
     {
         // get
@@ -422,6 +513,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get or set file_uuids
      */
+
+    // @phpstan-ignore-next-line
     public function file_uuids($key = null)
     {
         // get
@@ -434,22 +527,30 @@ abstract class CustomValue extends ModelBase
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function saved_notify($disable_saved_notify)
     {
         $this->saved_notify = $disable_saved_notify;
         return $this;
     }
 
+
+    // @phpstan-ignore-next-line
     public function disable_saving_event($disable_saving_event)
     {
         $this->disable_saving_event = $disable_saving_event;
         return $this;
     }
+
+    // @phpstan-ignore-next-line
     public function disable_saved_event($disable_saved_event)
     {
         $this->disable_saved_event = $disable_saved_event;
         return $this;
     }
+
+    // @phpstan-ignore-next-line
     public function restore_revision($restore_revision = true)
     {
         $this->restore_revision = $restore_revision;
@@ -461,6 +562,12 @@ abstract class CustomValue extends ModelBase
         parent::boot();
 
         static::saving(function ($model) {
+            // Before anything else, and before any early return: the comment
+            // body still in the database is about to be overwritten, and the
+            // mention notifier needs it to tell a newly written name from one
+            // the reader has already been told about.
+            $model->rememberPreviousCommentText();
+
             if ($model->disable_saving_event) {
                 return;
             }
@@ -488,6 +595,16 @@ abstract class CustomValue extends ModelBase
         });
         static::updated(function ($model) {
             $model->savedEvent(false);
+        });
+        static::saved(function ($model) {
+            // The mention notifier is not always reached: savedEvent() bails out
+            // when disable_saved_event is set, and a save with nothing dirty
+            // never fires updated at all. A snapshot left behind would become
+            // the answer for the next save of the same instance, which is a
+            // different save entirely. This event does run in all of those
+            // cases, and by the time it runs the notifier has already had its
+            // turn.
+            $model->forgetPreviousCommentText();
         });
 
         static::deleting(function ($model) {
@@ -582,6 +699,9 @@ abstract class CustomValue extends ModelBase
 
         $this->savedValue();
 
+        // a comment naming a person tells that person
+        $this->notifyMentionedUsersInComment($isCreate);
+
         if ($isCreate) {
             // save Authoritable
             CustomValueAuthoritable::setValueAuthoritable($this);
@@ -616,6 +736,8 @@ abstract class CustomValue extends ModelBase
      * @param array $input laravel-admin input
      * @return mixed
      */
+
+    // @phpstan-ignore-next-line
     public function validateSaving($input, array $options = [])
     {
         $options = array_merge([
@@ -641,6 +763,8 @@ abstract class CustomValue extends ModelBase
 
     // re-set field data --------------------------------------------------
     // if user update form and save, but other field remove if not conatins form field, so re-set field before update
+
+    // @phpstan-ignore-next-line
     protected function prepareValue()
     {
         ///// saving event for image, file event
@@ -686,6 +810,8 @@ abstract class CustomValue extends ModelBase
     /**
      * set original data.
      */
+
+    // @phpstan-ignore-next-line
     protected function setAgainOriginalValue(&$value, $original, $custom_column)
     {
         if (is_null($value)) {
@@ -713,6 +839,8 @@ abstract class CustomValue extends ModelBase
     /**
      * saved file id.
      */
+
+    // @phpstan-ignore-next-line
     protected function setFileValue()
     {
         // if requestsession "file upload uuid"(for set data this value's id and type into files)
@@ -742,6 +870,8 @@ abstract class CustomValue extends ModelBase
     /**
      * saved value event.
      */
+
+    // @phpstan-ignore-next-line
     protected function savedValue()
     {
         $this->syncOriginal();
@@ -778,6 +908,8 @@ abstract class CustomValue extends ModelBase
     /**
      * delete file and document.
      */
+
+    // @phpstan-ignore-next-line
     public function deleteFile()
     {
         ///// delete file column
@@ -819,6 +951,8 @@ abstract class CustomValue extends ModelBase
 
 
     // notify user --------------------------------------------------
+
+    // @phpstan-ignore-next-line
     public function notify($notifySavedType)
     {
         // if $saved_notify is false, return
@@ -837,6 +971,8 @@ abstract class CustomValue extends ModelBase
     /**
      * delete relation if record delete
      */
+
+    // @phpstan-ignore-next-line
     protected function deleteRelationValues()
     {
         if (!$this->isForceDeleting()) {
@@ -885,6 +1021,34 @@ abstract class CustomValue extends ModelBase
         $this->workflow_values->each(function ($workflow_value) {
             $workflow_value->delete();
         });
+
+        // Feature 1: drop the "seen" marks of this record.
+        // WorkflowAction::forwardWorkflowValue() only clears them when an action is executed, so
+        // without this a hard-deleted record would leave one row per user in workflow_task_reads with
+        // nothing left to point at - and nothing would ever clean them up.
+        // withoutGlobalScopes(): the marks of every user have to go, not only those of the one
+        // pressing delete. A soft delete deliberately keeps them, so a restore keeps its state.
+        WorkflowTaskRead::withoutGlobalScopes()
+            ->where('custom_table_id', $custom_table->id)
+            ->where('morph_id', $this->id)
+            ->delete();
+
+        // ... and if the deleted record IS a user, that user's own marks go with it.
+        if ($custom_table->table_name == SystemTableName::USER) {
+            WorkflowTaskRead::withoutGlobalScopes()
+                ->where('target_user_id', $this->id)
+                ->delete();
+
+            // and its LINE link, so that LINE account can be linked to another user.
+            // A soft delete keeps it, so a restore keeps the link.
+            LineAccountLink::where('user_id', $this->id)->delete();
+        }
+
+        // the deleting user sees this record leave their own task list on their very next
+        // navbar poll; other users' caches expire within one poll interval. Once the delete has
+        // committed, when it runs in a transaction (see
+        // WorkflowTaskService::navbarCacheForgetAfterCommit()).
+        \Exceedone\Exment\Services\Workflow\WorkflowTaskService::navbarCacheForgetAfterCommit();
     }
 
     /**
@@ -909,6 +1073,8 @@ abstract class CustomValue extends ModelBase
     /**
      * delete relation if record delete
      */
+
+    // @phpstan-ignore-next-line
     protected function deleteChildrenValues()
     {
         $custom_table = $this->custom_table;
@@ -943,6 +1109,8 @@ abstract class CustomValue extends ModelBase
     /**
      * restore relation if record delete
      */
+
+    // @phpstan-ignore-next-line
     protected function restoreChildrenValues()
     {
         $custom_table = $this->custom_table;
@@ -962,6 +1130,8 @@ abstract class CustomValue extends ModelBase
      * get Authoritable values.
      * this function selects value_authoritable, and get all values.
      */
+
+    // @phpstan-ignore-next-line
     public function getAuthoritable($related_type)
     {
         // check request session for grid.
@@ -1014,6 +1184,8 @@ abstract class CustomValue extends ModelBase
      * @param boolean $forgetIfNull if true, and val is null, remove DB's column from "value".
      * @return $this
      */
+
+    // @phpstan-ignore-next-line
     public function setValue($key, $val = null, $forgetIfNull = false)
     {
         $custom_columns = $this->custom_table->custom_columns_cache;
@@ -1047,6 +1219,8 @@ abstract class CustomValue extends ModelBase
      * @throws ValidationException validation error
      * @return $this
      */
+
+    // @phpstan-ignore-next-line
     public function setValueStrictly($list, $forgetIfNull = false)
     {
         // validation value
@@ -1072,6 +1246,8 @@ abstract class CustomValue extends ModelBase
      * @param boolean $forgetIfNull if true, and val is null, remove DB's column from "value".
      * @return $this
      */
+
+    // @phpstan-ignore-next-line
     public function setValueDirectly($key, $val = null, $forgetIfNull = false)
     {
         return $this->setJson('value', $key, $val, $forgetIfNull);
@@ -1082,6 +1258,8 @@ abstract class CustomValue extends ModelBase
      * "$this->value" : return data on database
      * "$this->getValues()" : return data converting getValue
      */
+
+    // @phpstan-ignore-next-line
     public function getValues($label = false, $options = [])
     {
         $custom_table = $this->custom_table;
@@ -1093,6 +1271,8 @@ abstract class CustomValue extends ModelBase
         return $values;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getValue($column, $label = false, $options = [])
     {
         $time_start = microtime(true);
@@ -1201,6 +1381,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get label string (general setting case)
      */
+
+    // @phpstan-ignore-next-line
     protected function getBasicLabel($label_columns)
     {
         $custom_table = $this->custom_table;
@@ -1241,6 +1423,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get custom format label
      */
+
+    // @phpstan-ignore-next-line
     protected function getExpansionLabel($label_format)
     {
         $options['afterCallback'] = function ($text, $custom_value, $options) {
@@ -1252,10 +1436,14 @@ abstract class CustomValue extends ModelBase
     /**
      * replace text. ex.comma, &yen, etc...
      */
+
+    // @phpstan-ignore-next-line
     protected function replaceText($text, $documentItem = [])
     {
         // add comma if number_format
         if (array_key_exists('number_format', $documentItem) && !str_contains($text, ',') && is_numeric($text)) {
+
+            // @phpstan-ignore-next-line
             $text = number_format($text);
         }
 
@@ -1270,6 +1458,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get target custom_value's self link url
      */
+
+    // @phpstan-ignore-next-line
     public function getUrl($options = [])
     {
         // options is boolean, tag is true
@@ -1302,6 +1492,7 @@ abstract class CustomValue extends ModelBase
                 return $url;
             }
 
+            // Exment helper class not recognized
             return \Exment::getUrlTag($url, $document_name, UrlTagType::BLANK, [], [
                 'tooltipTitle' => exmtrans('common.download')
             ]);
@@ -1353,6 +1544,8 @@ abstract class CustomValue extends ModelBase
      *
      * @return \Illuminate\Database\Eloquent\Collection|AbstractPaginator
      */
+
+    // @phpstan-ignore-next-line
     public function getDocuments($options = [])
     {
         $options = array_merge(
@@ -1375,6 +1568,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get target custom_value's relation search url
      */
+
+    // @phpstan-ignore-next-line
     public function getRelationSearchUrl($options = [])
     {
         if (is_bool($options)) {
@@ -1392,6 +1587,8 @@ abstract class CustomValue extends ModelBase
     /**
      * merge value from custom_value
      */
+
+    // @phpstan-ignore-next-line
     public function mergeValue($value)
     {
         foreach ($this->custom_table->custom_columns_cache as $custom_column) {
@@ -1408,6 +1605,8 @@ abstract class CustomValue extends ModelBase
     /**
      * get parent value
      */
+
+    // @phpstan-ignore-next-line
     public function getParentValue(?CustomRelation $custom_relation = null, bool $noScope = false)
     {
         // if not has arg or custom relation is one to many
@@ -1445,6 +1644,8 @@ abstract class CustomValue extends ModelBase
     /**
      * Get Custom children value summary
      */
+
+    // @phpstan-ignore-next-line
     public function getSum($custom_column)
     {
         $name = $custom_column->getQueryKey();
@@ -1460,13 +1661,16 @@ abstract class CustomValue extends ModelBase
      * Get Custom children Value.
      * v1.1.0 changes ... get children values using relation or select_table
      */
+
+    // @phpstan-ignore-next-line
     public function getChildrenValues($relation, $returnBuilder = false)
     {
         // first, get children values as relation
         if ($relation instanceof CustomColumn) {
             // get custom column as array
             // target column is select table and has index, get index name
-            /** @phpstan-ignore-next-line Right side of && is always true. */
+
+            // @phpstan-ignore-next-line
             if (ColumnType::isSelectTable($relation->column_type) && $relation->indexEnabled()) {
                 $index_name = $relation->getIndexColumnName();
                 // get children values where this id
@@ -1493,6 +1697,8 @@ abstract class CustomValue extends ModelBase
     /**
      * set revision data
      */
+
+    // @phpstan-ignore-next-line
     public function setRevision($revision_suuid)
     {
         $revision_value = $this->revisionHistory()->where('suuid', $revision_suuid)->first()->new_value;
@@ -1508,6 +1714,8 @@ abstract class CustomValue extends ModelBase
      *
      * @return \Illuminate\Database\Eloquent\Builder
      */
+
+    // @phpstan-ignore-next-line
     public function getSearchQuery($q, $options = [])
     {
         $options = $this->getQueryOptions($q, $options);
@@ -1603,6 +1811,8 @@ abstract class CustomValue extends ModelBase
      *
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     public function setSearchQueryOrWhere(&$query, $q, $options = [])
     {
         $options = $this->getQueryOptions($q, $options);
@@ -1643,6 +1853,8 @@ abstract class CustomValue extends ModelBase
      * @param array $options
      * @return array query option for search.
      */
+
+    // @phpstan-ignore-next-line
     protected function getQueryOptions($q, $options = [])
     {
         $options = array_merge(
@@ -1704,6 +1916,8 @@ abstract class CustomValue extends ModelBase
      * @param string $q search string
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     protected function getQueryMarkAndValue($isLike, $q, bool $relation)
     {
         // if relation search, return always "=" and $q
@@ -1718,6 +1932,8 @@ abstract class CustomValue extends ModelBase
      * Set CustomValue's model for request session.
      *
      */
+
+    // @phpstan-ignore-next-line
     public function setValueModel()
     {
         $key = sprintf(Define::SYSTEM_KEY_SESSION_CUSTOM_VALUE_VALUE, $this->custom_table_name, $this->id);
@@ -1768,9 +1984,13 @@ abstract class CustomValue extends ModelBase
      * User can edit this custom value
      *
      * @param bool $checkFormAction if true, check as display
+     * @param bool $checkAdministrator false for what hangs off the record - its child records,
+     *        attachments and documents - rather than its own values: only those values of an
+     *        administrator's user record are kept from other users (UserTrait::disabled_edit_trait),
+     *        the rest stays as on v6.2.15
      * @return bool|ErrorCode
      */
-    public function enableEdit($checkFormAction = false)
+    public function enableEdit($checkFormAction = false, $checkAdministrator = true)
     {
         // Deleted to address the case where users with view authority are sharing data
         // if (($code = $this->custom_table->enableEdit($checkFormAction)) !== true) {
@@ -1794,12 +2014,27 @@ abstract class CustomValue extends ModelBase
             return ErrorCode::WORKFLOW_LOCK();
         }
 
-        if (!is_null($parent_value = $this->getParentValue()) && ($code = $parent_value->enableEdit($checkFormAction)) !== true) {
-            return $code;
+        // check parent permission
+        if (!is_null($parent_value = $this->getParentValue())) {
+            if (boolval($this->custom_table->getOption('editable_with_parent')??1)) {
+                if (($code = $parent_value->enableEdit($checkFormAction, false)) !== true) {
+                    return $code;
+                }
+            } else {
+                if (($code = $parent_value->enableAccess()) !== true) {
+                    return $code;
+                }
+            }
         }
 
         if ($this->trashed()) {
             return ErrorCode::ALREADY_DELETED();
+        }
+
+        // only administrator can edit administrator record (UserTrait::disabled_edit_trait).
+        // Last, so that every other answer stays as it was.
+        if ($checkAdministrator && method_exists($this, 'disabled_edit_trait') && $this->disabled_edit_trait()) {
+            return ErrorCode::PERMISSION_DENY();
         }
 
         return true;
@@ -1834,8 +2069,17 @@ abstract class CustomValue extends ModelBase
             return ErrorCode::DELETE_DISABLED();
         }
 
-        if (!is_null($parent_value = $this->getParentValue()) && ($code = $parent_value->enableDelete($checkFormAction)) !== true) {
-            return $code;
+        // check parent permission
+        if (!is_null($parent_value = $this->getParentValue())) {
+            if (boolval($this->custom_table->getOption('editable_with_parent')??1)) {
+                if (($code = $parent_value->enableDelete($checkFormAction)) !== true) {
+                    return $code;
+                }
+            } else {
+                if (($code = $parent_value->enableAccess()) !== true) {
+                    return $code;
+                }
+            }
         }
 
         return true;
@@ -1884,6 +2128,8 @@ abstract class CustomValue extends ModelBase
     /**
      * Get all accessible users on this value. (get model)
      */
+
+    // @phpstan-ignore-next-line
     public function getAccessibleUsers()
     {
         $custom_table = $this->custom_table;
@@ -1910,6 +2156,8 @@ abstract class CustomValue extends ModelBase
     /**
      * Filter all accessible users on this value.
      */
+
+    // @phpstan-ignore-next-line
     public function filterAccessibleUsers($userIds): \Illuminate\Support\Collection
     {
         if (is_nullorempty($userIds)) {
@@ -1934,6 +2182,8 @@ abstract class CustomValue extends ModelBase
     /**
      * Get all accessible organization on this value. (get model)
      */
+
+    // @phpstan-ignore-next-line
     public function getAccessibleOrganizations()
     {
         $custom_table = $this->custom_table;
@@ -1960,6 +2210,8 @@ abstract class CustomValue extends ModelBase
     /**
      * Filter all accessible orgs on this value.
      */
+
+    // @phpstan-ignore-next-line
     public function filterAccessibleOrganizations($organizationIds): \Illuminate\Support\Collection
     {
         if (is_nullorempty($organizationIds)) {

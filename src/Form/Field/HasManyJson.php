@@ -37,6 +37,7 @@ class HasManyJson extends HasMany
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function buildRelatedForms()
     {
         return $this->buildRelatedFormsTrait();
@@ -48,6 +49,7 @@ class HasManyJson extends HasMany
         return $this->buildNestedFormTrait($column, $builder, $key, $index);
     }
 
+    // @phpstan-ignore-next-line
     protected function getParentRenderClass()
     {
         return get_parent_class(get_parent_class(get_parent_class($this)));

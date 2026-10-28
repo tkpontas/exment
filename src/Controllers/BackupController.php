@@ -2,9 +2,9 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Exceedone\Exment\Validator\ExmentCustomValidator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,7 +19,9 @@ use DB;
 
 class BackupController extends AdminControllerBase
 {
+    // @phpstan-ignore-next-line
     protected $backup;
+    // @phpstan-ignore-next-line
     protected $restore;
 
     public function __construct()
@@ -52,6 +54,7 @@ class BackupController extends AdminControllerBase
         }
 
         // get all archive files
+        // @phpstan-ignore-next-line
         $files = collect($disk->files('list'))->filter(function ($file) {
             return preg_match('/list\/' . Define::RULES_REGEX_BACKUP_FILENAME . '\.zip$/i', $file);
         })->sortByDesc(function ($file) use ($disk) {
@@ -87,6 +90,7 @@ class BackupController extends AdminControllerBase
         return $content;
     }
 
+    // @phpstan-ignore-next-line
     protected function settingFormBox()
     {
         $form = new WidgetForm(System::get_system_values());
@@ -118,7 +122,6 @@ class BackupController extends AdminControllerBase
             ->min(0)
             ->attribute(['data-filter' => json_encode(['key' => 'backup_enable_automatic', 'value' => '1'])]);
 
-        /** @phpstan-ignore-next-line  constructor expects string, Encore\Admin\Widgets\Form given. */
         return new Box(exmtrans("backup.setting_header"), $form);
     }
 
@@ -225,6 +228,7 @@ class BackupController extends AdminControllerBase
     /**
      * Download file
      */
+    // @phpstan-ignore-next-line
     public function download($arg)
     {
         $ymdhms = urldecode($arg);
@@ -256,7 +260,7 @@ class BackupController extends AdminControllerBase
      * @param $file_key
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    protected function importModal($file_key = null)
+    public function importModal($file_key = null)
     {
         $import_path = admin_url(url_join('backup', 'import'));
         // create form fields
@@ -311,7 +315,7 @@ class BackupController extends AdminControllerBase
     /**
      * Upload zip file
      */
-    protected function import(Request $request)
+    public function import(Request $request)
     {
         \Exment::setTimeLimitLong();
 

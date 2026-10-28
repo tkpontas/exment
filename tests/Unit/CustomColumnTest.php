@@ -825,6 +825,7 @@ class CustomColumnTest extends UnitTestBase
     }
 
     // SELECT(multiple) ----------------------------------------------------
+    /** @var list<string> read through static::, which a subclass could override */
     public const SELECT_VALUE_MULTIPLE = ['orange', 'banana'];
     /**
      * @param mixed $value_type
@@ -914,6 +915,7 @@ class CustomColumnTest extends UnitTestBase
 
     // SELECT_VALTEXT(multiple) ----------------------------------------------------
     public const SELECT_VALTEXT_VALUE_MULTIPLE = ['orange', 'banana'];
+    /** @var list<string> read through static::, which a subclass could override */
     public const SELECT_VALTEXT_TEXT_MULTIPLE = ['Orange', 'Banana'];
 
     /**

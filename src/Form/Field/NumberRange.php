@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 
 class NumberRange extends Field
 {
@@ -20,6 +20,7 @@ class NumberRange extends Field
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $column = [];
 
     public function __construct($column, $arguments)

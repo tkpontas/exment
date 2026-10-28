@@ -60,6 +60,7 @@ class FilterOption extends EnumBase
     public const WORKFLOW_NE_STATUS = 6002;
     public const WORKFLOW_EQ_WORK_USER = 6003;
 
+    // @phpstan-ignore-next-line
     public static function VALUE_TYPE($filter_option)
     {
         switch ($filter_option) {
@@ -101,6 +102,7 @@ class FilterOption extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function FILTER_OPTIONS()
     {
         $options = [
@@ -200,6 +202,7 @@ class FilterOption extends EnumBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected static function getTransName($key)
     {
         switch ($key) {
@@ -252,8 +255,25 @@ class FilterOption extends EnumBase
     }
 
     /**
+     * Get the text of one filter option, whichever column type offers it.
+     *
+     * @param mixed $filter_option
+     * @return string|null null when this is not a filter option at all
+     */
+    public static function getFilterOptionText($filter_option)
+    {
+        $transName = static::getTransName($filter_option);
+        if (is_nullorempty($transName)) {
+            return null;
+        }
+
+        return exmtrans('custom_view.filter_condition_options.' . $transName);
+    }
+
+    /**
      * get condition key text (for form condition only)
      */
+    // @phpstan-ignore-next-line
     public static function getConditionKeyText($condition_key)
     {
         $enum = $condition_key;

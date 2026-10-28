@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Console;
 
-use Encore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid;
 use Illuminate\Console\Command;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomView;
@@ -31,7 +31,7 @@ class ExportCommand extends Command
     /**
      * full path stored export files.
      *
-     * @var string
+     * @var string|null
      */
     protected $dirpath;
 
@@ -47,6 +47,11 @@ class ExportCommand extends Command
         $this->initExmentCommand();
     }
 
+    /**
+     * Get command parameters
+     *
+     * @return array{0: \Exceedone\Exment\Model\CustomTable, 1: array<string, mixed>}
+     */
     protected function getParameters()
     {
         /** @var null|string $table_name */

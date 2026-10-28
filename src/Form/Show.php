@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\Form;
 
-use Encore\Admin\Show\Field;
-use Encore\Admin\Show as AdminShow;
+use ExmentAdminCore\Admin\Show\Field;
+use ExmentAdminCore\Admin\Show as AdminShow;
 use Exceedone\Exment\Form\Field\FieldGroupTrait;
 use Exceedone\Exment\Form\Show\GridShowPanel;
 
@@ -22,7 +22,7 @@ class Show extends AdminShow
     /**
      * Whether grid shows
      *
-     * @var boolean
+     * @var bool
      */
     protected $gridShows = false;
 
@@ -33,7 +33,7 @@ class Show extends AdminShow
      *     'options' => [], // Set row no, column no, width
      *     'field' => AdminField, // Set adminfield
      * ]
-     * @var array
+     * @var array<int, array<string, mixed>>
      */
     protected $fieldAndOptions = [];
 
@@ -65,7 +65,7 @@ class Show extends AdminShow
      * Push field and set for grid
      *
      * @param Field $field
-     * @param array $options
+     * @param array<string, mixed> $options
      * @return Field
      */
     public function addFieldAndOption($field, array $options)
@@ -80,6 +80,10 @@ class Show extends AdminShow
         return $field;
     }
 
+    /**
+     * @param mixed $data
+     * @return mixed
+     */
     protected function renderView($data)
     {
         if (!$this->gridShows) {

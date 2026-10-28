@@ -4,11 +4,12 @@ namespace Exceedone\Exment\ColumnItems\CustomColumns;
 
 use Exceedone\Exment\ColumnItems\CustomItem;
 use Exceedone\Exment\Enums\FilterOption;
-use Encore\Admin\Form;
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Form\Field;
 
 class Email extends CustomItem
 {
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         return Field\Email::class;

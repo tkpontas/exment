@@ -34,7 +34,7 @@ class ApiKeyGrant extends AbstractGrant
         ServerRequestInterface $request,
         ResponseTypeInterface $responseType,
         \DateInterval $accessTokenTTL
-    ) {
+    ): ResponseTypeInterface {
         // Validate request
         $client = $this->validateClient($request);
         $scopes = $this->validateScopes($this->getRequestParameter('scope', $request));
@@ -54,7 +54,10 @@ class ApiKeyGrant extends AbstractGrant
         return $responseType;
     }
 
-    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client)
+    /**
+     * @return UserEntityInterface
+     */
+    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client): UserEntityInterface
     {
         $api_key = $this->getRequestParameter('api_key', $request);
         if (is_null($api_key)) {
@@ -75,13 +78,15 @@ class ApiKeyGrant extends AbstractGrant
     /**
      * {@inheritdoc}
      */
-    public function getIdentifier()
+    public function getIdentifier(): string
     {
         return 'api_key';
     }
 
     /**
      * {@inheritdoc}
+     * @param string $api_key
+     * @return UserEntityInterface|null
      */
     public function getUserEntityByUserCredentials($api_key)
     {

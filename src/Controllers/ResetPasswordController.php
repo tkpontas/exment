@@ -19,7 +19,9 @@ class ResetPasswordController extends Controller
     use ResetsPasswords;
     use \Exceedone\Exment\Controllers\AuthTrait;
 
+    // @phpstan-ignore-next-line
     protected $login_user;
+    // @phpstan-ignore-next-line
     protected $redirectTo;
 
     /**
@@ -37,6 +39,7 @@ class ResetPasswordController extends Controller
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function rules()
     {
         return [
@@ -53,6 +56,7 @@ class ResetPasswordController extends Controller
      * @param $token
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\View|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
+    // @phpstan-ignore-next-line
     public function showResetForm(Request $request, $token)
     {
         // get email
@@ -81,7 +85,7 @@ class ResetPasswordController extends Controller
         $email = $this->getEmailByToken($request->get('token'));
         if (!isset($email)) {
             admin_toastr(trans('passwords.token'));
-            return back()->withInput();
+            return back()->withInput(get_flash_input());
         }
 
         $array = [
@@ -93,7 +97,7 @@ class ResetPasswordController extends Controller
         // get user for password history validation
         $this->login_user = $broker->getUser($array);
 
-        $this->validate($request, $this->rules(), $this->validationErrorMessages());
+        $request->validate($this->rules(), $this->validationErrorMessages());
 
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
@@ -143,17 +147,22 @@ class ResetPasswordController extends Controller
 
         //$user->setRememberToken(Str::random(60));
 
+        // the user chose a password: an admin-imposed "change password at next login" is satisfied
+        $user->password_reset_flg = false;
+
         $user->saveOrFail();
 
         event(new PasswordReset($user));
     }
 
     //defining which password broker to use, in our case its the exment
+    // @phpstan-ignore-next-line
     protected function broker()
     {
         return Password::broker('exment_admins');
     }
 
+    // @phpstan-ignore-next-line
     protected function guard()
     {
         return Auth::guard('admin');
@@ -164,13 +173,19 @@ class ResetPasswordController extends Controller
      *
      * @return string|null
      */
+    // @phpstan-ignore-next-line
     protected function getEmailByToken($token)
     {
         $broker = $this->broker();
+        $expire = (int)config('auth.passwords.exment_admins.expire', 60);
         // get email by table 'password_resets'
         $records = \DB::table(SystemTableName::PASSWORD_RESET)->get()->toArray();
 
         foreach ($records as $record) {
+            // skip expired records (same expiry rule as PasswordBroker::tokenExpired)
+            if (\Carbon\Carbon::parse($record->created_at)->addMinutes($expire)->isPast()) {
+                continue;
+            }
             // if match token
             if ($broker->getRepository()->getHasher()->check($token, $record->token)) {
                 return $record->email;

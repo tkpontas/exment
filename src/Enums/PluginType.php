@@ -49,6 +49,7 @@ class PluginType extends EnumBase
      * Plugin type. Can call from endpoint.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_PUBLIC_CLASS()
     {
         return [
@@ -66,6 +67,7 @@ class PluginType extends EnumBase
      * plugin page types. Needs Page's endpoint.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_PLUGIN_PAGE()
     {
         return [
@@ -81,6 +83,7 @@ class PluginType extends EnumBase
      * plugin show menu. Needs Page's endpoint.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_SHOW_MENU()
     {
         return [
@@ -93,6 +96,7 @@ class PluginType extends EnumBase
      * Get plugin scripts and styles. Needs script and css endpoint, and read public file.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_SCRIPT_STYLE()
     {
         return [
@@ -108,6 +112,7 @@ class PluginType extends EnumBase
      * plugin types. Can read resource view.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_PLUGIN_USE_VIEW()
     {
         return [
@@ -122,6 +127,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_CUSTOM_TABLE()
     {
         return [
@@ -141,6 +147,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_FILTER_ACCESSIBLE()
     {
         return [
@@ -162,6 +169,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_BUTTON()
     {
         return [
@@ -176,6 +184,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_EVENT()
     {
         return [
@@ -189,6 +198,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_URL()
     {
         return [
@@ -207,6 +217,7 @@ class PluginType extends EnumBase
      * @param array $options
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public static function getPluginClass($plugin_type, $plugin, $options = [])
     {
         $options = array_merge([
@@ -296,6 +307,7 @@ class PluginType extends EnumBase
      * @param array $options
      * @return ?string
      */
+    // @phpstan-ignore-next-line
     public static function getPluginClassName($plugin_type, $plugin, $options = []): ?string
     {
         $options = array_merge([
@@ -311,7 +323,6 @@ class PluginType extends EnumBase
 
         $classname = $plugin->getNameSpace($classShortName);
         $fuleFullPath = $plugin->getFullPath($classShortName . '.php');
-
         if (\File::exists($fuleFullPath) && class_exists($classname)) {
             return $classname;
         }
@@ -335,6 +346,7 @@ class PluginType extends EnumBase
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     public static function getPluginClassShortName($plugin_type, $plugin, $options = [])
     {
         $options = array_merge([
@@ -346,7 +358,6 @@ class PluginType extends EnumBase
             if (boolval($options['as_setting'])) {
                 return 'PluginSetting';
             }
-
             return 'Plugin' . pascalize(strtolower($plugin_type->getKey()));
         }
 

@@ -27,10 +27,12 @@ trait CustomViewColumnTrait
 {
     use ColumnOptionQueryTrait;
 
+
+    // @phpstan-ignore-next-line
     private $_custom_item;
 
     /**
-     * @return BelongsTo
+     * @return BelongsTo<CustomView, $this>
      */
     public function custom_view(): BelongsTo
     {
@@ -48,7 +50,7 @@ trait CustomViewColumnTrait
     }
 
     /**
-     * @return BelongsTo
+     * @return BelongsTo<CustomTable, $this>
      */
     public function custom_table(): BelongsTo
     {
@@ -455,6 +457,8 @@ trait CustomViewColumnTrait
      * @param array $json
      * @return void
      */
+
+    // @phpstan-ignore-next-line
     protected function exportReplaceJson(&$json)
     {
         $view_pivot_column_id = array_get($json, 'options.view_pivot_column_id');
@@ -463,7 +467,11 @@ trait CustomViewColumnTrait
         if ($view_pivot_column_id && $view_pivot_table_id) {
             $view_pivot_column = CustomColumn::find($view_pivot_column_id);
 
+
+            // @phpstan-ignore-next-line
             if ($view_pivot_column && $view_pivot_column->custom_table_id != $view_pivot_table_id) {
+
+                // @phpstan-ignore-next-line
                 $json['view_pivot_column_table'] = $view_pivot_column->custom_table->table_name;
             }
         }

@@ -35,7 +35,7 @@ class PasswordGrant extends PasswordGrantBase
      *
      * @return UserEntityInterface
      */
-    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client)
+    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client): UserEntityInterface
     {
         $login_type = $this->getRequestParameter('login_type', $request);
         if (is_null($login_type)) {
@@ -94,6 +94,7 @@ class PasswordGrant extends PasswordGrantBase
     /**
      * {@inheritdoc}
      */
+    // @phpstan-ignore-next-line
     public function getUserEntityByUserCredentials($username, $password, $login_type, $login_setting, $grantType, ClientEntityInterface $clientEntity)
     {
         $provider = config('auth.guards.api.provider');
@@ -110,14 +111,17 @@ class PasswordGrant extends PasswordGrantBase
         ];
 
         if (method_exists($model, 'findForPassport')) {
+            // @phpstan-ignore-next-line
             $user = (new $model())->findForPassport($username, $credentials);
         } else {
+            // @phpstan-ignore-next-line
             $user = (new $model())->where('email', $username)->first();
         }
 
         if (! $user) {
             return;
         } elseif (method_exists($user, 'validateForPassportPasswordGrant')) {
+            // @phpstan-ignore-next-line
             if (! $user->validateForPassportPasswordGrant($password, $credentials)) {
                 return;
             }

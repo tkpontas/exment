@@ -77,6 +77,8 @@ class TestDataSeeder extends Seeder
 
         $this->createUnicodeDataTable($menu, $users);
 
+        $this->createOneRecordTable($menu, $users);
+
         $this->createApiSetting();
 
         $this->createMailTemplate();
@@ -176,7 +178,7 @@ class TestDataSeeder extends Seeder
                     \DB::table($relationName)->insert($inserts);
                 }
 
-                /** @phpstan-ignore-next-line Right side of && is always true. */
+                // @phpstan-ignore-next-line
                 if (isset($rolegroups[$type][$user_key]) && is_array($rolegroups[$type][$user_key])) {
                     foreach ($rolegroups[$type][$user_key] as $rolegroup) {
                         $roleGroupUserOrg = new RoleGroupUserOrganization();
@@ -241,6 +243,7 @@ class TestDataSeeder extends Seeder
             $childOptions = [
                 'users' => $users,
                 'menuParentId' => $menu->id,
+                'createSummaryView' => true,
                 'createColumnFirstCallback' => function ($custom_table, &$custom_columns) use ($parent_table, $relationItem) {
                     // set relation if select_table
                     if (!is_null($relationItem['relation_type'])) {
@@ -366,7 +369,7 @@ class TestDataSeeder extends Seeder
 
                         for ($i = 1; $i <= 10; $i++) {
                             $index++;
-                            $new_id = ($custom_table->getValueModel()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
+                            $new_id = ($custom_table->getValueModel()->withoutGlobalScopes()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
 
                             $custom_value = $custom_table->getValueModel();
                             // only use rand
@@ -633,7 +636,7 @@ class TestDataSeeder extends Seeder
 
                         for ($i = 1; $i <= 10; $i++) {
                             $index++;
-                            $new_id = ($custom_table->getValueModel()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
+                            $new_id = ($custom_table->getValueModel()->withoutGlobalScopes()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
 
                             $custom_value = $custom_table->getValueModel();
                             // only use rand
@@ -723,7 +726,7 @@ class TestDataSeeder extends Seeder
 
                     for ($i = 1; $i <= 10; $i++) {
                         $index++;
-                        $new_id = ($custom_table->getValueModel()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
+                        $new_id = ($custom_table->getValueModel()->withoutGlobalScopes()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
 
                         $custom_value = $custom_table->getValueModel();
                         // only use rand
@@ -767,6 +770,37 @@ class TestDataSeeder extends Seeder
         }
         return $result;
     }
+
+    /**
+     * Create the "table_a" one-record custom table used by
+     * OneRecordBatchBypassTest. It has a single required text column "name"
+     * and starts empty.
+     *
+     * @param mixed $menu
+     * @param mixed $users
+     * @return void
+     */
+    protected function createOneRecordTable($menu, $users)
+    {
+        $custom_table = $this->createTable('table_a', [
+            'menuParentId' => $menu->id,
+            'customTableOptions' => ['one_record_flg' => 1, 'search_enabled' => 1],
+            'createColumnCallback' => function ($custom_table, &$custom_columns) {
+                $custom_column = CustomColumn::create([
+                    'custom_table_id' => $custom_table->id,
+                    'column_name' => 'name',
+                    'column_view_name' => 'name',
+                    'column_type' => ColumnType::TEXT,
+                    'options' => ['required' => '1'],
+                ]);
+                $custom_columns[] = $custom_column;
+            },
+            'createValue' => false,
+        ]);
+
+        $this->createPermission([Permission::CUSTOM_VALUE_EDIT => $custom_table]);
+    }
+
     /**
      * Create relation filter to custom form column
      *
@@ -889,6 +923,7 @@ class TestDataSeeder extends Seeder
             $custom_table = $this->createTable($permission, [
                 'users' => $users,
                 'menuParentId' => $menu->id,
+                'createSummaryView' => true
             ]);
             $tables[$permission] = $custom_table;
         }
@@ -1088,15 +1123,15 @@ class TestDataSeeder extends Seeder
 
             for ($i = 1; $i <= $options['count']; $i++) {
                 $count++;
-                $new_id = ($custom_table->getValueModel()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
+                $new_id = ($custom_table->getValueModel()->withoutGlobalScopes()->orderBy('id', 'desc')->max('id') ?? 0) + 1;
 
                 $custom_value = $custom_table->getValueModel();
                 $custom_value->setValue("text", 'test_'.$user_id);
                 $custom_value->setValue("user", $user_id);
                 $custom_value->setValue("index_text", 'index_'.sprintf('%03d', $user_id).'_'.sprintf('%03d', $i));
-                $custom_value->setValue("odd_even", (($i == 1 || rand(0, 1) == 0) ? 'even' : 'odd'));
+                $custom_value->setValue("odd_even", ($count % 2 == 0? 'even' : 'odd'));
                 $custom_value->setValue("multiples_of_3", (($i == 1 || $count % 3 == 0) ? 1 : 0));
-                $custom_value->setValue("date", \Carbon\Carbon::now()->addDays($count % 3));
+                $custom_value->setValue("date", \Carbon\Carbon::now()->addDays(rand(0, 100)));
                 $custom_value->setValue("init_text", 'init_text');
                 $custom_value->setValue("integer", $new_id * pow(10, ($new_id % 3) + 1));
                 $custom_value->setValue("decimal", $new_id * pow(10, ($new_id % 5) + 1) * ($new_id % 2 + 1) / 10000);
@@ -1574,9 +1609,10 @@ class TestDataSeeder extends Seeder
             $custom_view = $this->createCustomView($custom_table, ViewType::SYSTEM, ViewKindType::AGGREGATE, $custom_table->table_name . '-view-summary', []);
             collect($custom_columns)->filter(function ($custom_column) {
                 return $custom_column->indexEnabled && $custom_column->column_type == ColumnType::DATE;
-                /** @phpstan-ignore-next-line Illuminate\Support\Collection<(int|string),mixed>::first() expects
+                /** Illuminate\Support\Collection<(int|string),mixed>::first() expects
                  * (callable(mixed, int|string): bool)|null, Closure(mixed, mixed): void
                  * given.   */
+            // @phpstan-ignore-next-line
             })->first(function ($custom_column, $index) use ($custom_view, $custom_table) {
                 /** @phpstan-ignore-next-line  */
                 return $this->createViewColumn($custom_view->id, $custom_table->id, $custom_column->id, $index + 1, [
@@ -1584,21 +1620,23 @@ class TestDataSeeder extends Seeder
                 ]);
             });
             collect($custom_columns)->filter(function ($custom_column) {
-                return $custom_column->indexEnabled && $custom_column->column_type == ColumnType::INTEGER;
-                /** @phpstan-ignore-next-line Parameter #1 $callback of method
+                return $custom_column->column_type == ColumnType::INTEGER;
+                /** Parameter #1 $callback of method
                  * Illuminate\Support\Collection<(int|string),mixed>::first() expects
                  * (callable(mixed, int|string): bool)|null, Closure(mixed, mixed): void
                  * given.   */
+            // @phpstan-ignore-next-line
             })->first(function ($custom_column, $index) use ($custom_view, $custom_table) {
                 /** @phpstan-ignore-next-line */
                 return $this->createSummaryColumn($custom_view->id, $custom_table->id, $custom_column->id, SummaryCondition::SUM);
             });
             collect($custom_columns)->filter(function ($custom_column) {
                 return $custom_column->indexEnabled && $custom_column->column_name == 'select';
-                /** @phpstan-ignore-next-line Parameter #1 $callback of method
+                /** Parameter #1 $callback of method
                  * Illuminate\Support\Collection<(int|string),mixed>::first() expects
                  * (callable(mixed, int|string): bool)|null, Closure(mixed, mixed): void
                  * given.   */
+            // @phpstan-ignore-next-line
             })->first(function ($custom_column, $index) use ($custom_view, $custom_table) {
                 /** @phpstan-ignore-next-line */
                 return $this->createCustomViewFilter(
@@ -1856,6 +1894,7 @@ class TestDataSeeder extends Seeder
             }
 
             // copy file
+            // @phpstan-ignore-next-line
             PluginInstaller::copySavePlugin($config_paths[0], pathinfo($testPluginDir, PATHINFO_BASENAME), $diskService);
         }
     }
