@@ -77,6 +77,9 @@ return [
         'grid_density_comfortable' => 'Comfortable',
         'grid_density_spacious' => 'Spacious',
         'grid_nowrap' => 'Single line rows',
+        'grid_keyboard' => 'Excel-like editing',
+        'grid_keyboard_hint' => 'arrow keys to move, F2 or type to edit',
+        'grid_keyboard_label' => 'Excel mode',
         'grid_auto_refresh' => 'Auto refresh',
         'grid_auto_refresh_off' => 'Off',
         'grid_auto_refresh_30' => '30 seconds',
@@ -86,7 +89,7 @@ return [
         'grid_pin_preset_2' => 'Pin first 2 columns',
         'grid_pin_preset_3' => 'Pin first 3 columns',
         'grid_pin_none' => 'Unpin all',
-        'grid_pin_actions' => 'Pin action column to the right',
+        'grid_pin_actions' => 'Pin action column',
         'grid_pin_head' => 'Pin header row',
         'grid_pin_flag' => 'Pinned',
         'grid_pin_narrow' => 'Some columns were left unpinned because the screen is too narrow.',
@@ -357,6 +360,8 @@ return [
         'site_favicon' => 'Site Favicon(ico)',
         'site_skin' => 'Site Skin',
         'site_layout' => 'Site Menu Layout',
+        'ui_design' => 'Screen Design',
+        'ui_design_forced' => '%s (set by the server)',
         'default_date_format' => 'Date and time display format',
         'filter_search_type' => 'Data search method',
         'grid_filter_disable_flg' => 'Disable Grid Filter',
@@ -498,6 +503,11 @@ return [
             "skin-black-light" => "Header:White&nbsp;&nbsp;&nbsp;&nbsp;SideBar:White",
         ],
         
+        'ui_design_options' => [
+            "modern" => "Modern",
+            "classic" => "Classic",
+        ],
+
         'site_layout_options' => [
             "layout_default" => "Default",
             "layout_mini" => "Small Icon",
@@ -578,6 +588,7 @@ return [
             'site_favicon' => 'Site Favicon(.ico). It is used for bookmarks on the homepage. Recommended size:16px * 16px',
             'site_skin' => 'Select the site theme color. *After saving, it will be reflected in reloading.',
             'site_layout' => 'On the left side of the page, select the layout of the site menu. *After saving, it will be reflected in reloading.',
+            'ui_design' => 'Select the design of the login page and the admin pages. "Modern" is the new white-and-gray design, "Classic" is the design used until now. The default is "Modern". To go back to the previous design, select "Classic". *After saving, it will be reflected in reloading.<br/>If the design is set by the server (EXMENT_UI_DESIGN in .env), that value wins and it cannot be changed here.',
             'filter_search_type' => 'Set the search method for registered data. *In the case of partial match, performance may be affected depending on the number of data.',
             'grid_filter_disable_flg' => 'The checked item will be hidden in the filter item of the data list page.',
             'system_values_pos' => 'Set the position to display system values on the data edit screen and data details screen.',
@@ -3464,6 +3475,7 @@ return [
             'unsupported_view_kind_type' => 'The view type is not supported by the API.',
             'not_contains_custom_form' => 'The specified API cannot be executed on this form.',
             'one_record_already' => 'This table allows only one record.',
+            'demo_mode' => 'This operation is not available on this demo site.',
         ],
 
         'help' =>[
@@ -3641,5 +3653,14 @@ return [
         'answer_invalid_link' => 'This link is invalid. Please contact your administrator.',
         'answer_link_expired' => 'This link has expired. Please contact your administrator.',
         'answer_invalid_status' => 'The submitted answer is invalid. Please go back and try again.',
+    ],
+    'demo_mode' => [
+        'banner' => 'This is a demo site. Some operations (plugins, backup, mail and login settings, etc.) are not available. The data is reset every night.',
+        'message_blocked' => 'This operation is not available on this demo site.',
+        'message_system_setting' => 'This is a demo site: the mail server, LINE, full-text search server, IP filter, reCAPTCHA, API and outside connection settings are not saved.',
+        'message_login_id' => 'This is a demo site: the user code and e-mail address of a user who can log in cannot be changed.',
+        'message_user_delete' => 'This is a demo site: a user who can log in cannot be deleted.',
+        'message_public_form_script' => 'This is a demo site: custom CSS and JavaScript of public forms are not saved.',
+        'message_system_admin' => 'This is a demo site: the system administrators are not changed.',
     ],
 ];

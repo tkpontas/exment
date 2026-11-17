@@ -77,6 +77,9 @@ return [
         'grid_density_comfortable' => '標準',
         'grid_density_spacious' => '広め',
         'grid_nowrap' => '1行で表示',
+        'grid_keyboard' => 'Excel 風に編集',
+        'grid_keyboard_hint' => '矢印キーで移動・F2 / 入力で編集',
+        'grid_keyboard_label' => 'Excel 風',
         'grid_auto_refresh' => '自動更新',
         'grid_auto_refresh_off' => 'オフ',
         'grid_auto_refresh_30' => '30秒',
@@ -86,7 +89,7 @@ return [
         'grid_pin_preset_2' => '先頭2列を固定',
         'grid_pin_preset_3' => '先頭3列を固定',
         'grid_pin_none' => '固定を解除',
-        'grid_pin_actions' => '操作列を右に固定',
+        'grid_pin_actions' => '操作列を固定',
         'grid_pin_head' => 'ヘッダー行を固定',
         'grid_pin_flag' => '固定中',
         'grid_pin_narrow' => '画面幅が足りないため、一部の列は固定されませんでした。',
@@ -357,6 +360,8 @@ return [
         'site_favicon' => 'サイトファビコン(ico)',
         'site_skin' => 'サイトスキン',
         'site_layout' => 'サイトメニューレイアウト',
+        'ui_design' => '画面のデザイン',
+        'ui_design_forced' => '%s (サーバーの設定で固定されています)',
         'default_date_format' => '日時表示書式',
         'filter_search_type' => 'データ検索方法',
         'grid_filter_disable_flg' => 'データ一覧のフィルタ非表示',
@@ -498,6 +503,11 @@ return [
             "skin-black-light" => "ヘッダー：白&nbsp;&nbsp;&nbsp;&nbsp;サイドバー：白",
         ],
         
+        'ui_design_options' => [
+            "modern" => "モダン",
+            "classic" => "クラシック",
+        ],
+
         'site_layout_options' => [
             "layout_default" => "標準",
             "layout_mini" => "小アイコン",
@@ -578,6 +588,7 @@ return [
             'site_favicon' => 'サイトのファビコン(.ico)です。ホームページのブックマークなどに利用されます。推奨サイズ：16px * 16px',
             'site_skin' => 'サイトのテーマ色を選択します。※保存後、再読込で反映されます。',
             'site_layout' => 'ページ左の、サイトメニューのレイアウトを選択します。※保存後、再読込で反映されます。',
+            'ui_design' => 'ログイン画面と管理画面のデザインを選択します。「モダン」は白と灰色を基本にした新しいデザイン、「クラシック」はこれまでのデザインです。初期値は「モダン」です。これまでのデザインに戻したい場合は「クラシック」を選択してください。※保存後、再読込で反映されます。<br/>サーバーの設定(.envのEXMENT_UI_DESIGN)がある場合は、そちらが優先され、この画面では変更できません。',
             'filter_search_type' => '登録データの検索方法を設定します。※部分一致の場合、データ件数によって、パフォーマンスに影響がある場合があります。',
             'grid_filter_disable_flg' => 'チェックした項目が、データ一覧画面のフィルタ項目で、非表示になります。',
             'system_values_pos' => 'データ編集画面及びデータ詳細画面でシステム項目を表示する位置を設定します。',
@@ -3463,6 +3474,7 @@ return [
             'unsupported_view_kind_type' => '指定したビューの種類は、APIでサポートされていません。',
             'not_contains_custom_form' => 'このフォームでは、指定のAPIは実行できません。',
             'one_record_already' => 'このテーブルは1レコードのみ登録可能です。',
+            'demo_mode' => 'デモ環境のため、この操作は使えません。',
         ],
         
         'help' =>[
@@ -3640,5 +3652,14 @@ return [
         'answer_invalid_link' => 'リンクが無効です。管理者にお問い合わせください。',
         'answer_link_expired' => 'このリンクは有効期限が切れています。管理者にお問い合わせください。',
         'answer_invalid_status' => '回答内容が正しくありません。もう一度お試しください。',
+    ],
+    'demo_mode' => [
+        'banner' => 'デモ環境です。一部の操作（プラグイン・バックアップ・メールやログインの設定など）は使えません。データは毎晩元に戻ります。',
+        'message_blocked' => 'デモ環境のため、この操作は使えません。',
+        'message_system_setting' => 'デモ環境のため、メールサーバー・LINE・全文検索サーバー・IPフィルタ・reCAPTCHA・API・外部接続の設定は保存されません。',
+        'message_login_id' => 'デモ環境のため、ログインできるユーザーのユーザーコードとメールアドレスは変更できません。',
+        'message_user_delete' => 'デモ環境のため、ログインできるユーザーは削除できません。',
+        'message_public_form_script' => 'デモ環境のため、公開フォームのカスタムCSS・JavaScriptは保存されません。',
+        'message_system_admin' => 'デモ環境のため、システム管理者は変更されません。',
     ],
 ];

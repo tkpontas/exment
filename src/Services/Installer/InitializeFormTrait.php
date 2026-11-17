@@ -8,6 +8,7 @@ use Exceedone\Exment\Enums;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Services\DemoMode;
 use Exceedone\Exment\Services\SafetyCheck\SafetyCheckDefine;
 use Exceedone\Exment\Services\SafetyCheck\SafetyCheckSender;
 use Exceedone\Exment\Services\TemplateImportExport;
@@ -86,6 +87,25 @@ trait InitializeFormTrait
             ->options(getTransArray(array_keys(Define::SYSTEM_LAYOUT), "system.site_layout_options"))
             ->disableClear()
             ->help(exmtrans("system.help.site_layout"));
+
+        // Screen design: on the system setting page only. The installer does
+        // not ask - a new installation starts with the default design.
+        // When the server fixes it (EXMENT_UI_DESIGN), a select would have no
+        // effect, so the design in effect is shown as text instead and
+        // nothing is posted.
+        if (!$isInitialize) {
+            $uiDesignForced = \Exment::getUiDesignForced();
+            if (is_null($uiDesignForced)) {
+                $form->select('ui_design', exmtrans("system.ui_design"))
+                    ->options(getTransArray(Define::SYSTEM_UI_DESIGN, "system.ui_design_options"))
+                    ->disableClear()
+                    ->help(exmtrans("system.help.ui_design"));
+            } else {
+                $form->display('ui_design_forced', exmtrans("system.ui_design"))
+                    ->displayText(exmtrans("system.ui_design_forced", exmtrans("system.ui_design_options.$uiDesignForced")))
+                    ->help(exmtrans("system.help.ui_design"));
+            }
+        }
 
         $form->switchbool('api_available', exmtrans("system.api_available"))
             ->default(0)
@@ -250,10 +270,24 @@ trait InitializeFormTrait
 
         $inputs = $request->all(System::get_system_keys($group));
         array_forget($inputs, 'initialized');
+        // Screen design: save only one of the known designs. The installer
+        // form, and the system setting page when the server fixes the design,
+        // have no select; a missing or unknown value must not replace the
+        // stored one.
+        if (array_key_exists('ui_design', $inputs) && !in_array($inputs['ui_design'], Define::SYSTEM_UI_DESIGN, true)) {
+            array_forget($inputs, 'ui_design');
+        }
+
+        // demo mode: the mail, LINE, search server, IP filter, reCAPTCHA and API settings are kept
+        $inputs = DemoMode::filterSystemInputs($inputs);
 
         // set system_key and value
         foreach ($inputs as $k => $input) {
             System::{$k}($input);
+        }
+        // demo mode: no template upload or import
+        if (DemoMode::enabled()) {
+            return true;
         }
         // upload zip file
         $this->uploadTemplate($request);
