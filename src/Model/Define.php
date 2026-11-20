@@ -18,7 +18,9 @@ class Define
     public const COMPOSER_PACKAGE_NAME = 'exceedone/exment';
     public const COMPOSER_PACKAGE_NAME_EXMENT_ADMIN = 'exceedone/exment-admin-core';
     public const COMPOSER_VERSION_CHECK_URL = 'https://packagist.org/packages/exceedone/exment.json';
-    public const EXMENT_NEWS_API_URL = 'https://exment.net/wp-json/wp/v2/posts';
+    // A static JSON file in the WordPress REST API format (the WordPress path /wp-json/wp/v2/posts redirects here).
+    // It takes no query, so Exment picks the news itself (News::filterItems()).
+    public const EXMENT_NEWS_API_URL = 'https://exment.net/api/posts.json';
     public const EXMENT_NEWS_LINK = 'https://exment.net/category/news';
     public const USER_IMAGE_LINK = 'vendor/exment/images/user.png';
     public const ORGANIZATION_IMAGE_LINK = 'vendor/exment/images/organization.png';
@@ -65,6 +67,10 @@ class Define
         'permission_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'initialize'],
         'organization_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'initialize'],
         'logging_toggle_available' => ['type' => 'boolean', 'default' => '0', 'group' => 'initialize'],
+        // system performance log: save only slow requests (seconds; both 0 = every request), at most N logs in an hour (0 = no limit)
+        'logging_slow_request_seconds' => ['type' => 'int', 'default' => '3', 'group' => 'initialize'],
+        'logging_slow_sql_seconds' => ['type' => 'int', 'default' => '1', 'group' => 'initialize'],
+        'logging_max_per_hour' => ['type' => 'int', 'default' => '100', 'group' => 'initialize'],
 
         // Advanced ----------------------------------
         'filter_search_type' => ['default' => 'forward', 'group' => 'advanced'],
@@ -150,6 +156,10 @@ class Define
         'safety_check_resend_throttle_minutes' => ['type' => 'int', 'default' => '5', 'group' => 'notify'],
         'safety_check_answer_url_expire_days' => ['type' => 'int', 'default' => '7', 'group' => 'notify'],
         'safety_check_last_feed_time' => ['type' => 'datetime'],
+        // Comments written before this time ('Y-m-d H:i:s') are shown as the plain text they were
+        // written as; later ones are shown as Markdown. Set once, by the migration that brings
+        // Markdown comments. Not set: every comment is Markdown.
+        'comment_markdown_start' => [],
 
         // Backup
         'backup_enable_automatic' => ['type' => 'boolean', 'default' => '0', 'group' => 'backup'],
@@ -198,6 +208,9 @@ class Define
         'modern',
         'classic',
     ];
+
+    /** Cookie holding how the sidebar was last left: "collapsed" or "expanded". */
+    public const COOKIE_SIDEBAR_STATE = 'exment_sidebar';
 
     public const SYSTEM_LAYOUT = [
         'layout_default' => ['sidebar-mini'],
@@ -253,6 +266,7 @@ class Define
     public const SYSTEM_KEY_SESSION_IMPORT_KEY_VALUE = "import_key_value_%s_%s_%s";
     public const SYSTEM_KEY_SESSION_IMPORT_KEY_VALUE_PREFIX = "import_key_value_";
     public const SYSTEM_KEY_SESSION_ORGANIZATION_TREE = "organization_tree";
+    public const SYSTEM_KEY_SESSION_ORGANIZATION_PARENT_INDEX = "organization_parent_index";
     public const SYSTEM_KEY_SESSION_GRID_AUTHORITABLE = "grid_authoritable_%s";
     public const SYSTEM_KEY_SESSION_ACCESSIBLE_TABLE = "accessible_table_%s_%s";
     public const SYSTEM_KEY_SESSION_DISABLE_DATA_URL_TAG = "disable_data_url_tag";

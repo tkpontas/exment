@@ -27,6 +27,9 @@ use Cache;
  * @method static boolean|void permission_available($arg = null)
  * @method static boolean|void organization_available($arg = null)
  * @method static boolean|void logging_toggle_available($arg = null)
+ * @method static int|void logging_slow_request_seconds($arg = null)
+ * @method static int|void logging_slow_sql_seconds($arg = null)
+ * @method static int|void logging_max_per_hour($arg = null)
  * @method static string|void filter_search_type($arg = null)
  * @method static string|void system_mail_host($arg = null)
  * @method static string|void system_mail_port($arg = null)
@@ -92,6 +95,7 @@ use Cache;
  * @method static int|void safety_check_resend_throttle_minutes($arg = null)
  * @method static int|void safety_check_answer_url_expire_days($arg = null)
  * @method static Carbon|void safety_check_last_feed_time($arg = null)
+ * @method static string|null|void comment_markdown_start($arg = null)
  * @method static bool|void publicform_available($arg = null)
  * @method static string|void recaptcha_site_key($arg = null)
  * @method static string|void recaptcha_secret_key($arg = null)
@@ -307,6 +311,29 @@ class System extends ModelBase
             Cache::flush();
         } else {
             Cache::forget($key);
+        }
+    }
+
+    /**
+     * Clear the whole cache once the writes of the current transaction are committed.
+     * Outside a transaction it clears immediately. A rolled back transaction drops the callback.
+     *
+     * Use it when the cached data depends on rows written in the same transaction (e.g. the
+     * organization membership pivot): clearing before the commit lets a concurrent request
+     * rebuild the cache from the old rows.
+     *
+     * @param string|null $connection connection that performs the writes. null: default connection
+     * @return void
+     */
+    public static function clearCacheAfterCommit(?string $connection = null): void
+    {
+        try {
+            \DB::connection($connection)->afterCommit(function () {
+                static::clearCache();
+            });
+        } catch (\Throwable $ex) {
+            // a connection without a transactions manager (none is set outside the framework)
+            static::clearCache();
         }
     }
 

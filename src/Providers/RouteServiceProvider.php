@@ -305,6 +305,8 @@ class RouteServiceProvider extends ServiceProvider
             $router->post("data/{tableKey}/import", 'CustomValueController@import');
             $router->post("data/{tableKey}/pluginClick", 'CustomValueController@pluginClick');
             $router->post("data/{tableKey}/operationClick", 'CustomValueController@operationClick');
+            $router->get("data/{tableKey}/workflowBulkModal", 'CustomValueController@workflowBulkModal');
+            $router->post("data/{tableKey}/workflowBulkClick", 'CustomValueController@workflowBulkClick');
             $router->get("data/{tableKey}/{id}/compare", 'CustomValueController@compare');
             $router->get("data/{tableKey}/{id}/compareitem", 'CustomValueController@compareitem');
             $router->post("data/{tableKey}/{id}/compare", 'CustomValueController@restoreRevision');
@@ -330,6 +332,8 @@ class RouteServiceProvider extends ServiceProvider
             $router->put("data/{tableKey}/{id}/filedelete", 'CustomValueController@filedelete');
             $router->post("data/{tableKey}/{id}/fileupload", 'CustomValueController@fileupload');
             $router->post("data/{tableKey}/{id}/addcomment", 'CustomValueController@addComment');
+            $router->post("data/{tableKey}/{id}/previewcomment", 'CustomValueController@previewComment');
+            $router->post("data/{tableKey}/{id}/commentimage", 'CustomValueController@uploadCommentImage');
             $router->delete("data/{tableKey}/{id}/deletecomment/{suuid}", 'CustomValueController@deleteComment');
             $router->post("data/{tableKey}/qrcode_download", 'CustomValueController@qrcodeDownload')->name('exment.qrcode_download');
             $router->get("data/{tableKey}/form_create_qrcode", 'CustomValueController@formCreateQrcode')->name('exment.form_create_qrcode');
@@ -385,6 +389,7 @@ class RouteServiceProvider extends ServiceProvider
             $router->post('data/{tableKey}/preview', 'CustomValueController@preview')->name('exment.data.preview');
             $router->post('data/{tableKey}/{id}/preview', 'CustomValueController@preview');
 
+            $router->get('data/{tableKey}/{id}/lazy-relation/{blockId}', 'CustomValueController@lazyRelation')->name('exment.data.lazy-relation');
             $this->setTableResouce($router, 'data', 'CustomValueController', true);
             $this->setTableResouce($router, 'column', 'CustomColumnController');
             $this->setTableResouce($router, 'form', 'CustomFormController');
@@ -563,6 +568,14 @@ class RouteServiceProvider extends ServiceProvider
                     $router->post("data/{tableKey}", 'ApiDataController@dataCreate')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_WRITE));
                     $router->put("data/{tableKey}/{id}", 'ApiDataController@dataUpdate')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_WRITE));
                     $router->delete("data/{tableKey}/{id}", 'ApiDataController@dataDelete')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_WRITE));
+
+                    // comment -------------------------------------------------
+                    // The same shape and scopes as document/{tableKey}/{id}. A public form has
+                    // no comments, so these are private only. Registered after
+                    // data/{tableKey}/column/{column_name}, which a column named "comments" has to reach.
+                    $router->get("data/{tableKey}/{id}/comments", 'ApiDataController@getComments')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_READ, ApiScope::VALUE_WRITE));
+                    $router->post("data/{tableKey}/{id}/comments", 'ApiDataController@createComment')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_WRITE));
+                    $router->delete("data/{tableKey}/{id}/comments/{suuid}", 'ApiDataController@deleteComment')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_WRITE));
 
                     // viewdata ----------------------------------------------------
                     $router->get("viewdata/{tableKey}/{viewid}", 'ApiDataController@viewDataList')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_READ, ApiScope::VALUE_WRITE));

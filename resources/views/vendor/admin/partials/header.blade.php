@@ -43,6 +43,11 @@
                                 <small>{!! Admin::user()->getHeaderInfo() !!}</small>
                             </p>
                         </li>
+                        @if(\Exceedone\Exment\Services\Line\LineInstaller::linkAvailable())
+                        <li class="user-body">
+                            <a href="{{ admin_url('line/link') }}" class="btn btn-default btn-flat btn-block"><i class="fa fa-comments"></i> {{ exmtrans('line.link_menu_title') }}</a>
+                        </li>
+                        @endif
                         <li class="user-footer">
                             @if(Admin::user()->visible('auth/setting'))
                             <div class="pull-left">
@@ -76,6 +81,11 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 // Desktop: use sidebar-collapse to collapse/expand sidebar
                 document.body.classList.toggle('sidebar-collapse');
+                // Remembered, so the next page opens the same way: the server
+                // reads it (Middleware\Initialize::applySidebarState).
+                var state = document.body.classList.contains('sidebar-collapse') ? 'collapsed' : 'expanded';
+                document.cookie = '{{ \Exceedone\Exment\Model\Define::COOKIE_SIDEBAR_STATE }}=' + state
+                    + '; path=/; max-age=31536000; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
             }
         });
     }

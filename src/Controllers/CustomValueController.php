@@ -45,6 +45,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\Form\Widgets\ModalForm;
 use Exceedone\Exment\Model\CustomValue;
 use Exceedone\Exment\Services\TableService;
+use Exceedone\Exment\Services\Workflow\WorkflowBulkService;
+use Exceedone\Exment\Enums\WorkflowCommentType;
 use Carbon\Carbon;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Elibyy\TCPDF\Facades\TCPDF;
@@ -218,7 +220,6 @@ class CustomValueController extends AdminControllerTableBase
                 'page_type' => PluginPageType::LIST
             ]);
         }
-
         $this->AdminContent($content);
 
         // if table setting is "one_record_flg" (can save only one record)
@@ -300,6 +301,9 @@ class CustomValueController extends AdminControllerTableBase
                     TableService::appendCreateAndDownloadButtonQRCode($tools, $this->custom_table);
                 });
             }
+            if ($request->boolean('lazy_grid_rows') && $grid instanceof Grid) {
+                return response($grid->render());
+            }
             if ($modal) {
                 $content = $grid_item->renderModal($grid);
                 Plugin::pluginExecuteEvent(PluginEventType::LOADED, $this->custom_table, [
@@ -327,7 +331,6 @@ class CustomValueController extends AdminControllerTableBase
         if (!$modal) {
             PartialCrudService::setGridContent($this->custom_table, $content);
         }
-
         if (!$modalframe || $modal) {
             Plugin::pluginExecuteEvent(PluginEventType::LOADED, $this->custom_table, [
                 'is_modal' => $modal,
@@ -552,8 +555,9 @@ class CustomValueController extends AdminControllerTableBase
             static::DATANAME_CUSTOM_VIEW_SUUID => $this->custom_view->suuid,
             static::DATANAME_CUSTOM_VIEW_NAME => $this->custom_view->view_view_name,
         ]);
-        $content->row($row);
 
+        $content->row($row);
+        $this->appendBackToListButton();
         Plugin::pluginExecuteEvent(PluginEventType::LOADED, $this->custom_table, [
             'page_type' => PluginPageType::EDIT,
             'custom_value' => $custom_value
@@ -768,6 +772,50 @@ class CustomValueController extends AdminControllerTableBase
     }
 
     /**
+     * Render one opt-in relation block after the edit page has loaded.
+     *
+     * @param Request $request
+     * @param string $tableKey
+     * @param int|string $id
+     * @param int|string $blockId
+      * @return \Illuminate\Http\JsonResponse|Response
+     */
+    public function lazyRelation(Request $request, $tableKey, $id, $blockId)
+    {
+        if (($response = $this->firstFlow($request, CustomValuePageType::EDIT, $id)) instanceof Response) {
+            return $response;
+        }
+
+        if ($this->redirectShow($id) !== null) {
+            abort(403);
+        }
+
+        return response()->json($this->custom_form->form_item->id($id)->renderLazyRelationBlock($blockId));
+    }
+
+    /**
+     * A "back to the list" button on the right of the page title of the data show and edit pages.
+     * It goes where the small "list" button of the box goes (the table's list).
+     * Added by script: the page title is made by the admin layout, which has no place for buttons.
+     */
+    protected function appendBackToListButton(): void
+    {
+        $url = json_encode($this->custom_table->getGridUrl(true));
+        $label = json_encode(exmtrans('custom_value.back_to_list'));
+        \Admin::script(<<<EOT
+(function () {
+    var h1 = $('#pjax-container .content-header > h1').first();
+    if (!h1.length || h1.find('.exm-back-to-list').length) {
+        return;
+    }
+    var a = $('<a class="btn exm-back-to-list"><i class="fa fa-arrow-left"></i> </a>').attr('href', {$url});
+    a.append(document.createTextNode({$label}));
+    h1.addClass('exm-has-back-to-list').append(a);
+})();
+EOT);
+    }
+
+    /**
      * Show interface.
      *
      * @param Request $request
@@ -812,6 +860,7 @@ class CustomValueController extends AdminControllerTableBase
                 }
                 $show_item->setOptionBoxes($row);
             });
+            $this->appendBackToListButton();
         }
 
         Plugin::pluginExecuteEvent(PluginEventType::LOADED, $this->custom_table, [
@@ -909,6 +958,42 @@ class CustomValueController extends AdminControllerTableBase
         return $show_item->addComment($comment);
     }
 
+
+    /**
+     * The html a comment will be shown as (the preview of the comment box).
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @param mixed $id
+     * @return mixed
+     */
+    public function previewComment(Request $request, $tableKey, $id)
+    {
+        if (($response = $this->firstFlow($request, CustomValuePageType::SHOW, $id)) instanceof Response) {
+            return $response;
+        }
+
+        $show_item = $this->custom_form->show_item->id($id);
+        return $show_item->previewComment($request->get('comment'));
+    }
+
+    /**
+     * Attach an image pasted or dropped into the comment box.
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @param mixed $id
+     * @return mixed
+     */
+    public function uploadCommentImage(Request $request, $tableKey, $id)
+    {
+        if (($response = $this->firstFlow($request, CustomValuePageType::SHOW, $id)) instanceof Response) {
+            return $response;
+        }
+
+        $show_item = $this->custom_form->show_item->id($id);
+        return $show_item->uploadCommentImage($request->file('file'));
+    }
 
     /**
      * remove comment.
@@ -1321,6 +1406,138 @@ class CustomValueController extends AdminControllerTableBase
             'result'  => true,
             'toastr' => sprintf(exmtrans('common.message.success_execute')),
         ]);
+    }
+
+    /**
+     * The modal of the workflow action run on the ticked records of the list (#1648).
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @return Response
+     */
+    public function workflowBulkModal(Request $request, $tableKey)
+    {
+        $service = new WorkflowBulkService($this->custom_table, $request->input('id'));
+        $count = count($service->getIds());
+        $candidates = $service->getCandidates();
+
+        $form = new ModalForm();
+        $form->action(admin_urls('data', $this->custom_table->table_name, 'workflowBulkClick'));
+        $form->method('POST');
+
+        if ($candidates->count() == 0) {
+            $form->descriptionHtml('<p>' . esc_html(exmtrans('workflow.bulk.message.no_action', $count)) . '</p>');
+            return getAjaxResponse([
+                'body'  => $form->render(),
+                'script' => $form->getScript(),
+                'title' => exmtrans('workflow.bulk.title'),
+                'showSubmit' => false,
+            ]);
+        }
+
+        $form->descriptionHtml('<p>' . esc_html(exmtrans('workflow.bulk.message.description', $count)) . '</p>');
+
+        $options = $candidates->mapWithKeys(function ($candidate) use ($count) {
+            $action = $candidate['action'];
+            return [$action->id => exmtrans('workflow.bulk.action_option', $action->action_name, count($candidate['ids']), $count)];
+        })->toArray();
+        $field = $form->select('action_id', exmtrans('workflow.action_name'))
+            ->options($options)
+            ->required()
+            ->disableClear();
+        if (count($options) == 1) {
+            $field->default(array_key_first($options));
+        }
+
+        // the next work users: only when one of the actions asks for them on one of the records
+        $selectActions = $candidates->filter(function ($candidate) use ($service) {
+            return $service->needsNextWorkUsers($candidate['action']);
+        });
+        if ($selectActions->count() > 0) {
+            list($userOptions, $ajax) = CustomValueAuthoritable::getUserOrgSelectOptions($this->custom_table, null, true);
+            $field = $form->multipleSelect('next_work_users', exmtrans('workflow.next_work_users'))
+                ->options($userOptions)
+                ->ajax($ajax)
+                ->help(exmtrans('workflow.bulk.help.next_work_users', $selectActions->map(function ($candidate) {
+                    return $candidate['action']->action_name;
+                })->implode(exmtrans('common.separate_word'))));
+            if ($selectActions->count() == $candidates->count()) {
+                $field->required();
+            }
+        }
+
+        $commentActions = $candidates->filter(function ($candidate) {
+            return $candidate['action']->comment_type != WorkflowCommentType::NOTUSE;
+        });
+        if ($commentActions->count() > 0) {
+            $field = $form->textarea('comment', exmtrans('common.comment'))->rows(3);
+            $requiredActions = $candidates->filter(function ($candidate) {
+                return $candidate['action']->comment_type == WorkflowCommentType::REQUIRED;
+            });
+            if ($requiredActions->count() == $candidates->count()) {
+                $field->required();
+            } elseif ($requiredActions->count() > 0) {
+                $field->help(exmtrans('workflow.bulk.help.comment', $requiredActions->map(function ($candidate) {
+                    return $candidate['action']->action_name;
+                })->implode(exmtrans('common.separate_word'))));
+            }
+        }
+
+        $form->hidden('id')->default(implode(',', $service->getIds()));
+        $form->setWidth(9, 3);
+
+        return getAjaxResponse([
+            'body'  => $form->render(),
+            'script' => $form->getScript(),
+            'title' => exmtrans('workflow.bulk.title'),
+            'submitlabel' => exmtrans('workflow.bulk.submit'),
+        ]);
+    }
+
+    /**
+     * Run the workflow action on the ticked records of the list (#1648).
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @return array<string, mixed>
+     */
+    public function workflowBulkClick(Request $request, $tableKey)
+    {
+        $service = new WorkflowBulkService($this->custom_table, $request->input('id'));
+        $action = is_numeric($request->input('action_id')) ? WorkflowAction::where('id', $request->input('action_id'))->first() : null;
+        $data = [
+            'comment' => $request->get('comment'),
+            'next_work_users' => $request->get('next_work_users'),
+        ];
+
+        $error = $service->validate($action, $data);
+        if (!is_null($error)) {
+            return [
+                'result'  => false,
+                'toastr' => $error,
+            ];
+        }
+
+        \Exment::setTimeLimitLong();
+        /** @var WorkflowAction $action */
+        $result = $service->execute($action, $data);
+        $skipped = WorkflowBulkService::skippedText($result);
+
+        if (count($result['executed']) == 0) {
+            return [
+                'result'  => false,
+                'swal' => exmtrans('workflow.bulk.message.none_executed'),
+                'swaltext' => $skipped,
+                // the list behind is stale
+                'reload' => true,
+            ];
+        }
+
+        return [
+            'result'  => true,
+            'swal' => exmtrans('workflow.bulk.message.executed', count($result['executed'])),
+            'swaltext' => $skipped,
+        ];
     }
 
     /**

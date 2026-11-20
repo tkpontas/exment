@@ -161,7 +161,11 @@ abstract class CustomValue extends ModelBase
             // treeview
             $this->titleColumn = 'label';
             $this->orderColumn = 'id';
-            $this->parentColumn = CustomColumn::getEloquent('parent_organization', $this->custom_table)->getIndexColumnName();
+            // the same for every organization: read once in a request (cleared with the other request sessions)
+            $custom_table = $this->custom_table;
+            $this->parentColumn = System::requestSession(Define::SYSTEM_KEY_SESSION_ORGANIZATION_PARENT_INDEX, function () use ($custom_table) {
+                return CustomColumn::getEloquent('parent_organization', $custom_table)->getIndexColumnName();
+            });
         }
 
         parent::__construct($attributes);
@@ -1364,15 +1368,16 @@ abstract class CustomValue extends ModelBase
 
     /**
      * Get vustom_value's label
+    * @param \Illuminate\Support\Collection<int, mixed>|string|null $label_columns
      * @return string
      */
-    public function getLabel()
+    public function getLabel($label_columns = null)
     {
         if (!is_null($this->_label)) {
             return $this->_label;
         }
 
-        $label_columns = $this->custom_table->getLabelColumns();
+        $label_columns = $label_columns ?? $this->custom_table->getLabelColumns();
 
         if (isset($label_columns) && is_string($label_columns)) {
             $this->_label = $this->getExpansionLabel($label_columns);
@@ -1393,6 +1398,8 @@ abstract class CustomValue extends ModelBase
 
         if (!isset($label_columns) || count($label_columns) == 0) {
             $columns = [$custom_table->custom_columns_cache->first()];
+        } elseif ($label_columns->first() instanceof CustomColumn) {
+            $columns = $label_columns;
         } else {
             $columns = $label_columns->map(function ($label_column) {
                 return CustomColumn::getEloquent($label_column->table_label_id);
@@ -1567,6 +1574,99 @@ abstract class CustomValue extends ModelBase
             return $query->paginate($options['count']);
         }
         return $query->get();
+    }
+
+    /**
+     * Whether the table of this data takes comments (the table setting "comment_flg").
+     *
+     * @return bool
+     */
+    public function isCommentEnabled(): bool
+    {
+        return boolval($this->custom_table->getOption('comment_flg') ?? true);
+    }
+
+    /**
+     * Get the comments of this data, oldest first.
+     *
+     * @param array<string, mixed> $options count: rows per page, paginate: whether to paginate
+     * @return \Illuminate\Database\Eloquent\Collection|AbstractPaginator
+     */
+    // @phpstan-ignore-next-line
+    public function getComments($options = [])
+    {
+        $options = array_merge(
+            [
+                'count' => 20,
+                'paginate' => false,
+            ],
+            $options
+        );
+        $query = getModelName(SystemTableName::COMMENT)::where('parent_id', $this->id)
+            ->where('parent_type', $this->custom_table_name)
+            ->orderBy('id')
+        ;
+
+        if ($options['paginate']) {
+            return $query->paginate($options['count']);
+        }
+        return $query->get();
+    }
+
+    /**
+     * Add a comment to this data and notify (NotifySavedType::COMMENT).
+     * The screen and the API both come here, so both save and notify the same way.
+     *
+     * @param string $comment
+     * @return CustomValue the saved comment
+     */
+    public function addComment($comment)
+    {
+        $model = CustomTable::getEloquent(SystemTableName::COMMENT)->getValueModel();
+        $model->parent_id = $this->id;
+        $model->parent_type = $this->custom_table_name;
+        $model->setValue([
+            'comment_detail' => $comment,
+        ]);
+        $model->save();
+
+        // execute notify
+        foreach ($this->custom_table->notifies as $notify) {
+            $notify->notifyCreateUpdateUser($this, NotifySavedType::COMMENT, ['comment' => $comment]);
+        }
+
+        return $model;
+    }
+
+    /**
+     * Delete a comment of this data. Only the user who wrote it, or a system administrator, can.
+     * The screen and the API both come here.
+     *
+     * @param string $suuid suuid of the comment
+     * @return true|ErrorCode true: deleted, DATA_NOT_FOUND: this data has no such comment, PERMISSION_DENY: written by another user
+     */
+    public function deleteComment($suuid)
+    {
+        if (is_nullorempty($suuid)) {
+            return ErrorCode::DATA_NOT_FOUND();
+        }
+
+        $comment = getModelName(SystemTableName::COMMENT)::where('suuid', $suuid)
+            ->where('parent_id', $this->id)
+            ->where('parent_type', $this->custom_table_name)
+            ->first();
+        if (!isset($comment)) {
+            return ErrorCode::DATA_NOT_FOUND();
+        }
+
+        $login_user = \Exment::user();
+        $isAuthor = isset($login_user) && isMatchString($comment->created_user_id, \Exment::getUserId());
+        if (!$isAuthor && !(isset($login_user) && $login_user->isAdministrator())) {
+            return ErrorCode::PERMISSION_DENY();
+        }
+
+        $comment->delete();
+        return true;
     }
 
     /**

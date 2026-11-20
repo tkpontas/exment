@@ -59,6 +59,10 @@ class DefaultGrid extends GridBase
         $classname = getModelName($this->custom_table);
         $grid = new Grid(new $classname());
 
+        if (!$this->modal && boolval($this->custom_table->getOption('lazy_grid_enabled'))) {
+            $grid->lazyLoad();
+        }
+
         // if modal, Change view model
         if ($this->modal) {
             $this->gridFilterForModal($grid, $this->callback);
@@ -718,6 +722,12 @@ class DefaultGrid extends GridBase
                 } else {
                     // if cannot edit, disable delete and update operations
                     $batch->disableDelete();
+                }
+
+                // run a workflow action on the ticked rows (#1648). Not by the edit permission:
+                // the users who approve may only see the records.
+                if (request()->get('_scope_') != 'trashed' && !is_null(Workflow::getWorkflowByTable($this->custom_table))) {
+                    $batch->add(exmtrans('workflow.bulk.title'), new GridTools\BatchWorkflow());
                 }
             });
         });

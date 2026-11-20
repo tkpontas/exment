@@ -124,6 +124,22 @@ trait InitializeFormTrait
         $form->switchbool('logging_toggle_available', exmtrans("system.logging_toggle_available"))
             ->help(exmtrans("system.help.logging_toggle_available"));
 
+        // which requests the system performance log saves (not on the install screen)
+        if (!$isInitialize) {
+            $form->number('logging_slow_request_seconds', exmtrans("system.logging_slow_request_seconds"))
+                ->min(0)
+                ->default(3)
+                ->help(exmtrans("system.help.logging_slow_request_seconds"));
+            $form->number('logging_slow_sql_seconds', exmtrans("system.logging_slow_sql_seconds"))
+                ->min(0)
+                ->default(1)
+                ->help(exmtrans("system.help.logging_slow_sql_seconds"));
+            $form->number('logging_max_per_hour', exmtrans("system.logging_max_per_hour"))
+                ->min(0)
+                ->default(100)
+                ->help(exmtrans("system.help.logging_max_per_hour"));
+        }
+
         // template list
         if ($isInitialize) {
             $this->addTemplateTile($form);
@@ -281,10 +297,15 @@ trait InitializeFormTrait
         // demo mode: the mail, LINE, search server, IP filter, reCAPTCHA and API settings are kept
         $inputs = DemoMode::filterSystemInputs($inputs);
 
+        $loggingWasOn = boolval(System::logging_toggle_available());
+
         // set system_key and value
         foreach ($inputs as $k => $input) {
             System::{$k}($input);
         }
+        // the log is on: make the table "System Performance Log" if it is not there yet,
+        // and its menu too when the log has just been turned on
+        TemplateImportExport\TemplateImporter::importSystemLogsTemplateIfEnabled(!$loggingWasOn);
         // demo mode: no template upload or import
         if (DemoMode::enabled()) {
             return true;

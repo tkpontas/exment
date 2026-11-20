@@ -34,6 +34,7 @@ use Exceedone\Exment\Enums\FormColumnType;
 use Exceedone\Exment\Enums\PluginEventTrigger;
 use Exceedone\Exment\Enums\NotifyTrigger;
 use Exceedone\Exment\Enums\ErrorCode;
+use Exceedone\Exment\Services\CommentMarkdown;
 use Exceedone\Exment\Enums\NotifySavedType;
 use Exceedone\Exment\Enums\CustomOperationType;
 use Exceedone\Exment\Enums\ShowGridType;
@@ -738,12 +739,14 @@ EOT;
         $form->setWidth(10, 2);
 
         if (count($comments) > 0) {
+            $login_user = \Exment::user();
+            $isAdministrator = isset($login_user) && $login_user->isAdministrator();
             $html = [];
             foreach ($comments as $index => $comment) {
                 $html[] = "<div class='commentline'>" . view('exment::form.field.commentline', [
                     'comment' => $comment,
                     'table_name' => $this->custom_table->table_name,
-                    'isAbleRemove' => ($comment->created_user_id == \Exment::getUserId()),
+                    'isAbleRemove' => ($comment->created_user_id == \Exment::getUserId() || $isAdministrator),
                     'deleteUrl' => admin_urls('data', $this->custom_table->table_name, $this->custom_value->id, 'deletecomment', $comment->suuid),
                 ])->render() . "</div>";
             }
@@ -762,11 +765,21 @@ EOT;
             ->setLabelClass(['d-none'])
             // "@" opens the member picker; mention.js reads both attributes off
             // the field, so no page-level script tag is needed
+            // comment_markdown.js reads the data-comment-* attributes: the preview, and a
+            // pasted or dropped image, which is attached to the data and written as Markdown
             ->attribute([
                 'data-mention' => '1',
                 'data-mention-url' => admin_url('webapi/mention/users'),
                 'placeholder' => exmtrans('common.message.comment_mention'),
+                'data-comment-markdown' => '1',
+                'data-comment-preview-url' => admin_urls('data', $this->custom_table->table_name, $this->custom_value->id, 'previewcomment'),
+                'data-comment-image-url' => admin_urls('data', $this->custom_table->table_name, $this->custom_value->id, 'commentimage'),
+                'data-comment-label-write' => exmtrans('common.comment_markdown.write'),
+                'data-comment-label-preview' => exmtrans('common.comment_markdown.preview'),
+                'data-comment-label-uploading' => exmtrans('common.comment_markdown.uploading'),
+                'data-comment-label-error' => exmtrans('common.comment_markdown.upload_error'),
             ])
+            ->help(exmtrans('common.comment_markdown.help'))
             ->setWidth(12, 0);
         }
         $row->column(['xs' => 12, 'sm' => 6], (new Box(exmtrans("common.comment"), $form))->style('info'));
@@ -882,6 +895,67 @@ EOT;
     }
 
     /**
+     * The html a comment will be shown as, for the preview of the comment box.
+     *
+     * @param string|null $comment
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function previewComment($comment)
+    {
+        return getAjaxResponse([
+            'result' => true,
+            'html' => CommentMarkdown::toHtml($comment),
+        ]);
+    }
+
+    /**
+     * Attach an image pasted or dropped into the comment box to the data, and answer the
+     * Markdown that shows it. The file is an attachment of the data like any other, so it is
+     * seen by the users who can see the data.
+     *
+     * @param \Illuminate\Http\UploadedFile|array<mixed>|null $httpfile
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function uploadCommentImage($httpfile)
+    {
+        $validator = \Validator::make(['file' => $httpfile], [
+            'file' => [
+                'required',
+                'file',
+                // by the content, not by the name. No svg: it can hold a script.
+                'mimetypes:image/png,image/jpeg,image/gif,image/webp',
+                'max:' . intval(config('exment.comment_image_max_size_kb', 10240)),
+            ],
+        ]);
+        if ($validator->fails() || !($httpfile instanceof \Illuminate\Http\UploadedFile)) {
+            return response()->json([
+                'result' => false,
+                'message' => $validator->errors()->first('file') ?: exmtrans('common.message.error_execute'),
+            ], 400);
+        }
+
+        // the name decides whether the file is shown as a picture, so it follows the content
+        $extensions = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+        $extension = $extensions[strval($httpfile->getMimeType())];
+        $filename = pathinfo(strval($httpfile->getClientOriginalName()), PATHINFO_FILENAME);
+        $filename = (is_nullorempty($filename) ? 'image' : $filename) . '.' . $extension;
+
+        $file = ExmentFile::storeAs(FileType::CUSTOM_VALUE_DOCUMENT, $httpfile, $this->custom_table->table_name, $filename)
+            ->saveCustomValue($this->custom_value->id, null, $this->custom_table);
+        $file->saveDocumentModel($this->custom_value, $filename);
+
+        $url = admin_urls('files', $file->uuid);
+        // "[" and "]" would end the alt text
+        $alt = str_replace(['[', ']', "\r", "\n"], ['(', ')', ' ', ' '], pathinfo($filename, PATHINFO_FILENAME));
+
+        return getAjaxResponse([
+            'result' => true,
+            'url' => $url,
+            'markdown' => "![{$alt}]({$url})",
+        ]);
+    }
+
+    /**
      * file delete custom column.
      */
    public function filedelete(Request $request, $form)
@@ -929,23 +1003,19 @@ EOT;
     // @phpstan-ignore-next-line
     public function addComment($comment)
     {
-        if (!empty($comment)) {
-            // save Comment Model
-            $model = CustomTable::getEloquent(SystemTableName::COMMENT)->getValueModel();
-            $model->parent_id = $this->custom_value->id;
-            $model->parent_type = $this->custom_table->table_name;
-            $model->setValue([
-                'comment_detail' => $comment,
-            ]);
-            $model->save();
+        $url = admin_urls('data', $this->custom_table->table_name, $this->custom_value->id);
 
-            // execute notify
-            foreach ($this->custom_table->notifies as $notify) {
-                $notify->notifyCreateUpdateUser($this->custom_value, NotifySavedType::COMMENT, ['comment' => $comment]);
-            }
+        // a table set not to use comments has no comment box: refuse a request made by hand
+        if (!$this->custom_value->isCommentEnabled()) {
+            admin_toastr(ErrorCode::FORM_ACTION_DISABLED()->getMessage(), 'error');
+            return redirect($url);
         }
 
-        $url = admin_urls('data', $this->custom_table->table_name, $this->custom_value->id);
+        if (!empty($comment)) {
+            // save Comment Model and notify. The API (ApiDataController) shares this.
+            $this->custom_value->addComment($comment);
+        }
+
         admin_toastr(trans('admin.save_succeeded'));
         return redirect($url);
     }
@@ -957,14 +1027,16 @@ EOT;
     // @phpstan-ignore-next-line
     public function deleteComment($id, $suuid)
     {
-        if (!empty($suuid)) {
-            // save Comment Model
-            CustomTable::getEloquent(SystemTableName::COMMENT)->getValueModel()
-                ->where('suuid', $suuid)
-                ->where('parent_id', $id)
-                ->where('parent_type', $this->custom_table->table_name)
-                ->delete();
+        // The API (ApiDataController) shares this. The trash icon is only shown to the user
+        // who wrote the comment, and the model refuses the others also when asked by hand.
+        $result = $this->custom_value->deleteComment($suuid);
+        if ($result instanceof ErrorCode && $result == ErrorCode::PERMISSION_DENY) {
+            return getAjaxResponse([
+                'result' => false,
+                'toastr' => trans('admin.deny'),
+            ]);
         }
+
         return getAjaxResponse([
             'result' => true,
             'toastr' => trans('admin.delete_succeeded'),
