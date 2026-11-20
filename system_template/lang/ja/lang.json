@@ -510,14 +510,14 @@
             "title": "プラグイン"
         },
         {
-            "menu_type": "table",
-            "menu_name": "mail_template",
-            "title": "通知テンプレート"
+            "menu_type": "system",
+            "menu_name": "studio",
+            "title": "スタジオ"
         },
         {
             "menu_type": "table",
-            "menu_name": "mail_send_log",
-            "title": "メール送信履歴"
+            "menu_name": "mail_template",
+            "title": "通知テンプレート"
         },
         {
             "menu_type": "system",
