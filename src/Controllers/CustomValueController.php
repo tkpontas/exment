@@ -12,6 +12,7 @@ use ExmentAdminCore\Admin\Grid;
 use ExmentAdminCore\Admin\Grid\Exporter;
 use Exceedone\Exment\Enums\ColumnType;
 use Exceedone\Exment\Enums\CustomOperationType;
+use Exceedone\Exment\Enums\ErrorCode;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
@@ -930,6 +931,32 @@ EOT);
     }
 
     /**
+     * Replace the file of an attachment (the file it had becomes an older version).
+     */
+    // @phpstan-ignore-next-line
+    public function documentReplace(Request $request, $tableKey, $id, $documentId)
+    {
+        if (($response = $this->firstFlow($request, CustomValuePageType::SHOW, $id)) instanceof Response) {
+            return $response;
+        }
+        $show_item = $this->custom_form->show_item->id($id);
+        return $show_item->documentReplace($request->file('file_data'), $documentId);
+    }
+
+    /**
+     * The older versions of an attachment.
+     */
+    // @phpstan-ignore-next-line
+    public function documentVersions(Request $request, $tableKey, $id, $documentId)
+    {
+        if (($response = $this->firstFlow($request, CustomValuePageType::SHOW, $id)) instanceof Response) {
+            return $response;
+        }
+        $show_item = $this->custom_form->show_item->id($id);
+        return $show_item->documentVersions($documentId);
+    }
+
+    /**
      * file delete custom column.
      */
     // @phpstan-ignore-next-line
@@ -1055,6 +1082,20 @@ EOT);
         $plugin = Plugin::getPluginByUUID($request->input('uuid'));
         if (!isset($plugin)) {
             abort(404);
+        }
+        // only a plugin the page offers: active, set for this table, usable by the user
+        $offered = Plugin::getPluginsByTable($this->custom_table)->contains(function ($p) use ($plugin) {
+            return $p->id == $plugin->id;
+        });
+        if (!$offered) {
+            abort(404);
+        }
+        // and on a record the user may see
+        if (isset($id)) {
+            $custom_value = $this->custom_table->getValueModel($id);
+            if (!isset($custom_value) || $custom_value->enableAccess() !== true) {
+                return getAjaxResponse(['result' => false, 'swaltext' => ErrorCode::PERMISSION_DENY()->getMessage()]);
+            }
         }
 
         \Exment::setTimeLimitLong();
@@ -1678,8 +1719,22 @@ EOT);
             abort(404);
         }
 
-        // execute copy
+        // The copy is a setting of this table; the record is one the user may
+        // see; the copy creates a record in the other table, so the user may
+        // create there (the button holds to the same).
+        if ($copy->from_custom_table_id != $this->custom_table->id) {
+            abort(404);
+        }
         $custom_value = getModelName($this->custom_table)::find($id);
+        if (!isset($custom_value) || $custom_value->enableAccess() !== true) {
+            return getAjaxResponse(['result' => false, 'swaltext' => ErrorCode::PERMISSION_DENY()->getMessage()]);
+        }
+        $to_custom_table = $copy->to_custom_table;
+        if (!isset($to_custom_table) || $to_custom_table->enableCreate(true) !== true) {
+            return getAjaxResponse(['result' => false, 'swaltext' => ErrorCode::PERMISSION_DENY()->getMessage()]);
+        }
+
+        // execute copy
         $response = $copy->executeRequest($custom_value, $request);
 
         if (isset($response)) {

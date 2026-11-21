@@ -250,6 +250,9 @@ class Permission
                 return true;
             case "assign-jan-code":
                 return true;
+            case "file_server":
+                // every user; the workspaces, folders and files have their own permissions (Services\FileServer\Access)
+                return true;
             case "notify_navbar":
             case "workflow_task":
             case "tmpfiles":
@@ -262,6 +265,7 @@ class Permission
             case "database":
             case "auth/menu":
             case "auth/logs":
+            case "tuning":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_key_exists('system', $this->permission_details);
                 }
@@ -294,6 +298,9 @@ class Permission
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_keys_exists(PermissionEnum::WORKFLOW, $this->permission_details);
                 }
+                return false;
+            case "feature":
+                // Feature management: the system administrators only (they passed above)
                 return false;
             case "role":
             case "role_group":

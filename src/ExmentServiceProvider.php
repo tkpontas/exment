@@ -60,6 +60,7 @@ class ExmentServiceProvider extends ServiceProvider
         ExmentProviders\RouteOAuthServiceProvider::class,
         ExmentProviders\PasswordResetServiceProvider::class,
         ExmentProviders\RoutePublicFormServiceProvider::class,
+        ExmentProviders\RouteFileShareServiceProvider::class,
         ExmentProviders\PluginServiceProvider::class,
     ];
 
@@ -98,6 +99,8 @@ class ExmentServiceProvider extends ServiceProvider
         \Exceedone\Exment\Console\ResetPasswordCommand::class,
         \Exceedone\Exment\Console\CheckConnectionCommand::class,
         \Exceedone\Exment\Console\TotalUpdateCommand::class,
+        \Exceedone\Exment\Console\FileServerPurgeCommand::class,
+        \Exceedone\Exment\Console\FileServerIndexCommand::class,
         \Exceedone\Exment\Console\FileColumnImportCommand::class,
         \Exceedone\Exment\Console\DocumentImportCommand::class,
         \Exceedone\Exment\Console\WorkflowClearCommand::class,
@@ -130,6 +133,7 @@ class ExmentServiceProvider extends ServiceProvider
     // @phpstan-ignore-next-line
     protected $routeMiddleware = [
         'admin.auth'       => \Exceedone\Exment\Middleware\Authenticate::class,
+        'admin.security-headers' => \Exceedone\Exment\Middleware\SecurityHeaders::class,
         'log.exec.time' => \Exceedone\Exment\Middleware\LogRouteExecutionTime::class,
         'check.logging.enabled' => \Exceedone\Exment\Middleware\CheckLoggingEnabled::class,
         'admin.auth-2factor'       => \Exceedone\Exment\Middleware\Authenticate2factor::class,
@@ -160,6 +164,7 @@ class ExmentServiceProvider extends ServiceProvider
         'scope' => \Exceedone\Exment\Middleware\CheckForAnyScope::class,
 
         'admin.demo-mode' => \Exceedone\Exment\Middleware\DemoModeGuard::class,
+        'admin.feature' => \Exceedone\Exment\Middleware\FeatureGuard::class,
     ];
 
     /**
@@ -171,6 +176,7 @@ class ExmentServiceProvider extends ServiceProvider
     protected $middlewareGroups = [
         // Exment web page default
         'admin' => [
+            'admin.security-headers',
             'admin.browser',
             'admin.web-ipfilter',
             'admin.initialize',
@@ -187,9 +193,12 @@ class ExmentServiceProvider extends ServiceProvider
             'admin.permission',
             'admin.session',
             'admin.demo-mode',
+            // the features not used (Admin setting → Feature management)
+            'admin.feature',
         ],
         // Exment not login web page. (Ex. login, forget password)
         'admin_anonymous' => [
+            'admin.security-headers',
             'admin.browser',
             'admin.web-ipfilter',
             'admin.initialize',
@@ -242,6 +251,7 @@ class ExmentServiceProvider extends ServiceProvider
             //　↓
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             'admin.demo-mode',
+            'admin.feature',
         ],
         // Exment Plugin API
         'pluginapi' => [
@@ -372,6 +382,9 @@ class ExmentServiceProvider extends ServiceProvider
     {
         parent::register();
         require_once(__DIR__ . '/Services/Helpers.php');
+
+        // the class of a custom table is built when it is first used (ISS00413)
+        Services\ClassBuilder::registerAutoloader();
 
         $this->mergeConfigFrom(
             __DIR__ . '/../config/exment.php',
@@ -520,6 +533,8 @@ class ExmentServiceProvider extends ServiceProvider
             $schedule = $this->app->make(Schedule::class);
             $schedule->command('exment:schedule')->hourly();
             $schedule->command('exment:safetywatch')->everyMinute()->withoutOverlapping(10);
+            // file server: empty the trash past the days of each workspace (ISS00293)
+            $schedule->command('exment:file-server-purge')->dailyAt('03:30')->withoutOverlapping(60);
 
             // Daily index repair (fix drift accumulated from missed/failed sync
             // jobs). Uses exment:meili-reconcile (only re-indexes missing docs + removes

@@ -165,20 +165,87 @@ class RouteServiceProvider extends ServiceProvider
 
             $router->post('system/call_update', 'SystemController@callUpdate');
 
+            // Tuning: what would make the site faster (ISS00414)
+            $router->get('tuning', 'TuningController@index');
+            $router->post('tuning/action', 'TuningController@action');
+
             // The preset library: what the pickers on the column and view
             // screens offer, managed as one list.
             $this->setResouce($router, 'cell_style_preset', 'CellStylePresetSettingController');
 
             // Studio: the screens of the site on one page (ISS00231 phase 1)
+            $router->get('feature', 'FeatureController@index');
+            $router->post('feature', 'FeatureController@store');
+            $router->post('feature/bundled/{uuid}/{action}', 'FeatureController@bundled')->where('action', 'install|rollback');
             $router->get('studio', 'StudioController@index');
             $router->get('studio/create', 'StudioController@create');
             $router->post('studio', 'StudioController@store');
             $router->post('studio/sheet', 'StudioController@readSheet');
+            $router->get('studio/screens/{id}/edit', 'StudioController@edit');
+            $router->post('studio/screens/{id}', 'StudioController@update');
             // the phone app of the Studio (PWA)
             $router->get('app', 'StudioAppController@index');
             $router->get('app/manifest.webmanifest', 'StudioAppController@manifest');
             $router->get('app/sw.js', 'StudioAppController@serviceWorker');
             $router->get('app/code', 'StudioAppController@code');
+            // File server: workspaces, folders and files (ISS00293)
+            $router->get('file_server', 'FileServerController@index');
+            $router->get('file_server/create', 'FileServerController@create');
+            $router->post('file_server', 'FileServerController@store');
+            $router->get('file_server/search', 'FileServerMetaController@search');
+            $router->get('file_server/data_lookup', 'FileServerMetaController@dataLookup');
+            $router->group(['prefix' => 'file_server/{workspace}', 'where' => ['workspace' => '[0-9]+']], function (Router $router) {
+                $router->get('/', 'FileServerController@folder');
+                $router->get('folder/{node}', 'FileServerController@folder')->where('node', '[0-9]+');
+                $router->get('settings', 'FileServerController@settings');
+                $router->post('settings', 'FileServerController@updateSettings');
+                $router->delete('/', 'FileServerController@destroyWorkspace');
+                $router->get('trash', 'FileServerController@trash');
+                $router->post('folders', 'FileServerController@createFolder');
+                $router->post('upload', 'FileServerController@upload');
+                $router->post('upload/init', 'FileServerController@uploadInit');
+                $router->get('upload/{session}', 'FileServerController@uploadStatus');
+                $router->post('upload/{session}/chunk', 'FileServerController@uploadChunk');
+                $router->post('upload/{session}/complete', 'FileServerController@uploadComplete');
+                $router->delete('upload/{session}', 'FileServerController@uploadCancel');
+                $router->post('download', 'FileServerController@downloadZip');
+                $router->get('folders.json', 'FileServerController@folderTree');
+                $router->post('metadata_fields', 'FileServerMetaController@saveFields');
+                $router->get('audit', 'FileServerGovernanceController@audit');
+                $router->get('approvals', 'FileServerGovernanceController@approvals');
+                $router->post('follow', 'FileServerGovernanceController@follow');
+                $router->group(['prefix' => 'nodes/{node}', 'where' => ['node' => '[0-9]+']], function (Router $router) {
+                    $router->get('/', 'FileServerController@showNode');
+                    $router->get('info', 'FileServerController@info');
+                    $router->get('download', 'FileServerController@download');
+                    $router->get('content', 'FileServerController@content');
+                    $router->get('thumbnail', 'FileServerController@thumbnail');
+                    $router->post('rename', 'FileServerController@rename');
+                    $router->post('move', 'FileServerController@move');
+                    $router->post('copy', 'FileServerController@copy');
+                    $router->post('trash', 'FileServerController@trashNode');
+                    $router->post('restore', 'FileServerController@restore');
+                    $router->post('purge', 'FileServerController@purge');
+                    $router->post('favorite', 'FileServerController@favorite');
+                    $router->post('version', 'FileServerController@uploadVersion');
+                    $router->post('versions/{version}/restore', 'FileServerController@restoreVersion')->where('version', '[0-9]+');
+                    $router->post('checkout', 'FileServerController@checkout');
+                    $router->post('checkin', 'FileServerController@checkin');
+                    $router->post('discard_checkout', 'FileServerController@discardCheckout');
+                    $router->post('permissions', 'FileServerController@updatePermissions');
+                    $router->post('links', 'FileServerController@createLink');
+                    $router->post('links/{link}/revoke', 'FileServerController@revokeLink')->where('link', '[0-9]+');
+                    $router->post('metadata', 'FileServerMetaController@saveValues');
+                    $router->post('data_links', 'FileServerMetaController@addDataLink');
+                    $router->post('data_links/{link}/remove', 'FileServerMetaController@removeDataLink')->where('link', '[0-9]+');
+                    $router->post('approve', 'FileServerGovernanceController@approve');
+                    $router->post('reject', 'FileServerGovernanceController@reject');
+                    $router->post('rules', 'FileServerGovernanceController@rules');
+                    $router->post('follow', 'FileServerGovernanceController@follow');
+                    $router->post('comments', 'FileServerGovernanceController@addComment');
+                    $router->post('comments/{comment}/delete', 'FileServerGovernanceController@deleteComment')->where('comment', '[0-9]+');
+                });
+            });
 
             $router->get('template', 'TemplateController@index');
             $router->post('template/import', 'TemplateController@import');
@@ -342,6 +409,8 @@ class RouteServiceProvider extends ServiceProvider
             $router->post("data/{tableKey}/rowRestore", 'CustomValueController@rowRestore');
             $router->put("data/{tableKey}/{id}/filedelete", 'CustomValueController@filedelete');
             $router->post("data/{tableKey}/{id}/fileupload", 'CustomValueController@fileupload');
+            $router->post("data/{tableKey}/{id}/documents/{documentId}/replace", 'CustomValueController@documentReplace');
+            $router->get("data/{tableKey}/{id}/documents/{documentId}/versions", 'CustomValueController@documentVersions');
             $router->post("data/{tableKey}/{id}/addcomment", 'CustomValueController@addComment');
             $router->post("data/{tableKey}/{id}/previewcomment", 'CustomValueController@previewComment');
             $router->post("data/{tableKey}/{id}/commentimage", 'CustomValueController@uploadCommentImage');

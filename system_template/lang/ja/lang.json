@@ -435,6 +435,11 @@
             "title": "HOME"
         },
         {
+            "menu_type": "system",
+            "menu_name": "file_server",
+            "title": "ファイルサーバー"
+        },
+        {
             "menu_type": "parent_node",
             "menu_name": "master",
             "title": "マスター管理"
@@ -515,6 +520,11 @@
             "title": "スタジオ"
         },
         {
+            "menu_type": "system",
+            "menu_name": "feature",
+            "title": "機能の管理"
+        },
+        {
             "menu_type": "table",
             "menu_name": "mail_template",
             "title": "通知テンプレート"
@@ -528,6 +538,11 @@
             "menu_type": "system",
             "menu_name": "api_setting",
             "title": "APIアプリ設定"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "tuning",
+            "title": "チューニング"
         }
     ]
 }
