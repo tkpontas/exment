@@ -857,6 +857,7 @@ return [
         'password_reset' => 'Password Reset',
         'back_login_page' => 'Back to Login Page',
         'sso_provider_error' => 'Failed to acquire login information from provider. If you fail many times, please contact your administrator.',
+        'sso_email_unverified' => 'The e-mail address is not confirmed at the service you logged in with. Please confirm it and log in again.',
         'noexists_user' => 'User did not exist in Exment. Please contact your administrator to add users first.',
         'throttle' => 'There are too many login attempts. Please try again after %s minutes.',
         'not_accept_domain' => 'Login in domain :domain is not allowed.',
@@ -2599,6 +2600,8 @@ return [
         ],
 
         'message' => [
+            'webhook_url_not_allowed' => 'Notifications cannot be sent to this URL (the server itself and internal addresses are not allowed).',
+            'webhook_url_not_sent' => 'Notifications are not sent to this URL (it is the server itself or an internal address). To send them, add the host name to EXMENT_NOTIFY_WEBHOOK_ALLOW_HOSTS in .env.',
             'no_action_target' => 'There was no notification target.',
             'notify_moved' => 'Notification settings have moved. Please delete it from the menu.',
         ],

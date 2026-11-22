@@ -96,6 +96,11 @@ class CustomFormPublicController extends AdminControllerTableBase
             return;
         }
 
+        // the edit screen of a public form of this table only
+        if (isset($id) && !$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            return;
+        }
+
         $form = new Form(new PublicForm());
         $form->disableValidate(); // Not working validation if tab.
         $public_form = PublicForm::find($id);
@@ -676,6 +681,11 @@ class CustomFormPublicController extends AdminControllerTableBase
     // @phpstan-ignore-next-line
     public function preview(Request $request, $tableKey, $id = null)
     {
+        if (isset($id) && !$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            // Checker::error() has already ended the request
+            // @phpstan-ignore-next-line
+            return;
+        }
         $original_public_form = PublicForm::find($id);
         // get this form's info
         $form = $this->form();
@@ -726,6 +736,9 @@ class CustomFormPublicController extends AdminControllerTableBase
         if (!$id) {
             return $trueResult;
         }
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            return;
+        }
 
         $original_public_form = PublicForm::find($id);
         if (!$original_public_form) {
@@ -758,6 +771,9 @@ class CustomFormPublicController extends AdminControllerTableBase
     // @phpstan-ignore-next-line
     public function activeModal(Request $request, $tableKey, $id)
     {
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            return;
+        }
         $public_form = PublicForm::find($id);
         if (!isset($public_form)) {
             abort(404);
@@ -831,6 +847,11 @@ class CustomFormPublicController extends AdminControllerTableBase
     // @phpstan-ignore-next-line
     public function export(Request $request, $tableKey, $id)
     {
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            // Checker::error() has already ended the request
+            // @phpstan-ignore-next-line
+            return;
+        }
         $public_form = PublicForm::find($id);
 
         // execute export
@@ -861,7 +882,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     // @phpstan-ignore-next-line
     protected function toggleActivate(Request $request, $id, bool $active_flg)
     {
-        if (!$this->validateTable($this->custom_table, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
             return;
         }
 
@@ -927,5 +948,15 @@ class CustomFormPublicController extends AdminControllerTableBase
             return false;
         }
         return parent::validateTable($table, $role_name);
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\PublicForm::class, \Exceedone\Exment\Enums\Permission::EDIT_CUSTOM_FORM_PUBLIC];
     }
 }

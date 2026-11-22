@@ -305,6 +305,15 @@ class CustomViewController extends AdminControllerTableBase
 
         // check filters and sorts count before save
         $form->saving(function (Form $form) {
+            // The table and the kind of view come as hidden inputs; the server
+            // decides them. A view for everyone (system view) needs the
+            // permission of system views on this table.
+            $form->input('custom_table_id', $this->custom_table->id);
+            if (!$this->custom_table->hasSystemViewPermission()) {
+                // @phpstan-ignore-next-line laravel-admin 4 documents the value as null
+                $form->input('view_type', Enums\ViewType::USER);
+            }
+
             if (!is_null($form->custom_view_filters)) {
                 $cnt = collect($form->custom_view_filters)->filter(function ($value) {
                     return $value[Form::REMOVE_FLAG_NAME] != 1;
@@ -488,5 +497,17 @@ class CustomViewController extends AdminControllerTableBase
     protected function validateDestroy($id)
     {
         return CustomView::validateDestroy($id);
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\CustomView::class, \Exceedone\Exment\Enums\Permission::AVAILABLE_VIEW_CUSTOM_VALUE, function ($view) {
+            return $view->hasEditPermission();
+        }];
     }
 }

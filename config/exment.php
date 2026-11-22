@@ -1213,6 +1213,34 @@ return [
     |
     */
     'role_group_import_export' => env('ROLE_GROUP_IMPORT_EXPORT', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notify webhook: deny private networks
+    |--------------------------------------------------------------------------
+    |
+    | Slack / Teams webhooks are never sent to the server itself or to the
+    | link-local range. With true, private networks (10/8, 172.16/12,
+    | 192.168/16, fc00::/7) are refused too, as on a shared service.
+    |
+    */
+    'notify_webhook_deny_private' => env('EXMENT_NOTIFY_WEBHOOK_DENY_PRIVATE', false),
+
+    // hosts webhooks may be sent to although the address is refused above
+    // (comma separated), e.g. "localhost,chat.internal"
+    'notify_webhook_allow_hosts' => env('EXMENT_NOTIFY_WEBHOOK_ALLOW_HOSTS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | X-Frame-Options of the admin pages
+    |--------------------------------------------------------------------------
+    |
+    | SAMEORIGIN: other sites may not show the admin pages in a frame.
+    | DENY: no frame at all. Empty: the header is not sent.
+    | (Public forms do not get it, so they can be embedded.)
+    |
+    */
+    'x_frame_options' => env('EXMENT_X_FRAME_OPTIONS', 'SAMEORIGIN'),
     /*
     |--------------------------------------------------------------------------
     | Unavailable user view ( for tables )

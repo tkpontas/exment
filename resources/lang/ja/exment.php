@@ -857,6 +857,7 @@ return [
         'password_reset' => 'パスワードリセット',
         'back_login_page' => 'ログインページに戻る',
         'sso_provider_error' => 'プロバイダからのログイン情報取得に失敗しました。何度も失敗する場合、管理者にお問い合わせください。',
+        'sso_email_unverified' => 'ログインしたサービスで、メールアドレスが確認されていません。確認してから、もう一度ログインしてください。',
         'noexists_user' => 'Exmentにユーザーが存在しませんでした。先にユーザーを追加するよう、管理者にお問い合わせください。',
         'throttle' => 'ログイン試行回数が多すぎます。%s分経過後、再度お試しください。',
         'not_accept_domain' => 'ドメイン :domain でのログインは、許可されていません。',
@@ -2599,6 +2600,8 @@ return [
         ],
 
         'message' => [
+            'webhook_url_not_allowed' => 'このURLには通知できません（このサーバー自身や内部のアドレスは指定できません）。',
+            'webhook_url_not_sent' => 'このURLには通知を送りません（このサーバー自身や内部のアドレスのため）。送るときは、.env の EXMENT_NOTIFY_WEBHOOK_ALLOW_HOSTS にホスト名を書いてください。',
             'no_action_target' => '通知対象がありませんでした。',
             'notify_moved' => '通知設定は移動しました。メニューから削除をお願いします。',
         ],
