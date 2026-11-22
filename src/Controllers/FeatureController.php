@@ -209,6 +209,7 @@ class FeatureController extends AdminControllerBase
             'has_menu' => isset($definition['menu']),
             'menu_exists' => isset($definition['menu']) && $this->systemMenuExists(strval($definition['menu'])),
             'note' => $key === Features::STUDIO ? exmtrans('feature.studio_note') : null,
+            'manual_url' => Features::manualUrl($key),
         ];
     }
 
@@ -325,7 +326,7 @@ class FeatureController extends AdminControllerBase
         DB::table($table)->insert([
             'parent_id' => $parentId,
             'order' => $order,
-            'title' => exmtrans('menu.system_definitions.' . $menuName),
+            'title' => \Exceedone\Exment\Model\Menu::systemTitle($menuName),
             'icon' => array_get($define, 'icon'),
             'uri' => array_get($define, 'uri'),
             'menu_type' => 'system',
