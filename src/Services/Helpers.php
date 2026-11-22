@@ -1386,7 +1386,7 @@ if (!function_exists('getYesNo')) {
     // @phpstan-ignore-next-line
     function getYesNo($value): string
     {
-        return boolval($value) ? 'YES' : 'NO';
+        return boolval($value) ? '〇' : '✖';
     }
 }
 
