@@ -3,8 +3,8 @@
 namespace Exceedone\Exment\Controllers;
 
 use Illuminate\Routing\Controller;
-use Encore\Admin\Form;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Form\PublicContent;
 use Exceedone\Exment\Model\CustomForm;
 use Exceedone\Exment\Model\PublicForm;
@@ -22,16 +22,17 @@ use Exceedone\Exment\Enums\Permission;
 class PublicFormController extends Controller
 {
     /**
-     * @var PublicForm
+     * @var PublicForm|null
      */
     protected $public_form;
 
     /**
      */
+    // @phpstan-ignore-next-line
     protected $form_item;
 
     /**
-     * @var CustomForm
+     * @var CustomForm|null
      */
     protected $custom_form;
 
@@ -60,6 +61,7 @@ class PublicFormController extends Controller
      * @param  array  $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function callAction($method, $parameters)
     {
         // if public_form is null or not active, throw new \Exceedone\Exment\Exceptions\PublicFormNotFoundException();
@@ -84,6 +86,7 @@ class PublicFormController extends Controller
         return $this->getInputContent($request);
     }
 
+    // @phpstan-ignore-next-line
     public function redirect(Request $request)
     {
         admin_error(exmtrans('common.error'), exmtrans('error.expired_error_reinput'));
@@ -93,7 +96,8 @@ class PublicFormController extends Controller
     /**
      * Backed interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function backed(Request $request)
     {
@@ -129,11 +133,13 @@ class PublicFormController extends Controller
         }
     }
 
-
     /**
      * confirm interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return PublicContent|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\RedirectResponse|Response
+     * @throws PublicFormNotFoundException
+     * @throws \Throwable
      */
     public function confirm(Request $request)
     {
@@ -156,9 +162,11 @@ class PublicFormController extends Controller
 
             $custom_value = $form->getModelByInputs();
 
-            // set session
+            // set session (with the form it belongs to: another form's confirm
+            // page does not stand for this form's reCAPTCHA)
             $inputs = $this->removeUploadedFile($request->all());
             $request->session()->put(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT, $inputs);
+            $request->session()->put(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT . '_form', $this->public_form->uuid);
 
             $show = $this->public_form->getShow($request, $custom_value, $inputs);
 
@@ -174,12 +182,13 @@ class PublicFormController extends Controller
         }
     }
 
-
-
     /**
      * create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return bool|PublicContent|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     * @throws PublicFormNotFoundException
+     * @throws \Throwable
      */
     public function create(Request $request)
     {
@@ -189,9 +198,15 @@ class PublicFormController extends Controller
             ;
         }
         // get data by session or result
-        $data = $request->session()->has(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT) ? $request->session()->pull(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT) : $request->all();
+        $confirmedForm = $request->session()->pull(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT . '_form');
+        $fromConfirm = $request->session()->has(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT)
+            && isMatchString($confirmedForm, $this->public_form->uuid);
+        $sessionData = $request->session()->pull(Define::SYSTEM_KEY_SESSION_PUBLIC_FORM_INPUT);
+        $data = $fromConfirm ? $sessionData : $request->all();
         try {
-            $form = $this->public_form->getForm($request, null, ['setRecaptcha' => false]);
+            // reCAPTCHA was checked on the confirm page; a request that did not
+            // come through it (no confirm page, or posted here directly) is checked here
+            $form = $this->public_form->getForm($request, null, ['setRecaptcha' => !$fromConfirm]);
             $public_form = $this->public_form;
             $custom_table = $this->custom_table;
 
@@ -226,7 +241,7 @@ class PublicFormController extends Controller
                 $public_form->setContentOption($content, ['isContainer' => true]);
 
                 $content->row($public_form->getCompleteView($request, $form->model()));
-
+                // @phpstan-ignore-next-line
                 return response($content);
             });
 
@@ -250,6 +265,7 @@ class PublicFormController extends Controller
      * @param array $inputs
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function removeUploadedFile(array $inputs): array
     {
         foreach ($inputs as &$input) {

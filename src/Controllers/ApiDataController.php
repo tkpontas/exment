@@ -2,12 +2,14 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Exceedone\Exment\Model\CustomViewColumn;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
+use Exceedone\Exment\Model\CustomValueModelScope;
 use Exceedone\Exment\Model\CustomView;
-use Exceedone\Exment\Model\Linkage;
+use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\File;
 use Exceedone\Exment\Enums\FileType;
 use Exceedone\Exment\Enums\Permission;
@@ -18,6 +20,7 @@ use Exceedone\Exment\Enums\ViewKindType;
 use Exceedone\Exment\Enums\ConditionType;
 use Exceedone\Exment\Enums\ErrorCode;
 use Exceedone\Exment\Enums\ValidateCalledType;
+use Exceedone\Exment\Grid\Tools\GridInlineEditor;
 use Exceedone\Exment\Services\DataImportExport\DataImportExportService;
 use Carbon\Carbon;
 use Validator;
@@ -38,6 +41,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param  array   $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function callAction($method, $parameters)
     {
         if (!$this->custom_table) {
@@ -56,6 +60,7 @@ class ApiDataController extends AdminControllerTableBase
     public function dataList(Request $request)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -81,6 +86,7 @@ class ApiDataController extends AdminControllerTableBase
         $this->setQueryInfo($model);
 
         // set order by
+        // @phpstan-ignore-next-line
         $this->setOrderByQuery($model, $orderby_list);
 
         $paginator = $model->paginate($count);
@@ -131,6 +137,7 @@ class ApiDataController extends AdminControllerTableBase
     public function dataQueryColumn(Request $request, $tableKey)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -165,6 +172,7 @@ class ApiDataController extends AdminControllerTableBase
         if (($orderby_list = $this->getOrderBy($request)) instanceof Response) {
             return $orderby_list;
         }
+        // @phpstan-ignore-next-line
         $this->setOrderByQuery($model, $orderby_list);
 
         $paginator = $model->paginate($count);
@@ -184,6 +192,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param array $params
      * @return Response|boolean
      */
+    // @phpstan-ignore-next-line
     protected function setParamsQueryColumn(Request $request, $query, $params)
     {
         if (empty($params)) {
@@ -193,9 +202,11 @@ class ApiDataController extends AdminControllerTableBase
         $paramInfos = [];
         foreach ($params as $param) {
             $values = preg_split("/\s+/", trim($param), 3);
+            // @phpstan-ignore-next-line
             $column_name = $values[0];
 
-            if (count($values) < 3 || !preg_match('/^eq|ne|gt|gte|lt|lte|like$/i', $values[1])) {
+            // @phpstan-ignore-next-line
+            if (count($values) < 3 || !preg_match('/^(eq|ne|gt|gte|lt|lte|like)$/i', $values[1])) {
                 return abortJson(400, ErrorCode::INVALID_PARAMS());
             }
             if (SystemColumn::isSqlValid($column_name)) {
@@ -249,9 +260,125 @@ class ApiDataController extends AdminControllerTableBase
      * @param mixed $id
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function dataFind(Request $request, $tableKey, $id)
     {
         return $this->_dataFind($request, $id);
+    }
+
+    /**
+     * The cell style preset a view picked for one column, if any.
+     *
+     * @param mixed $view_suuid
+     * @param CustomColumn $custom_column
+     * @return mixed
+     */
+    protected static function findViewPreset($view_suuid, $custom_column)
+    {
+        if (!is_string($view_suuid) || is_nullorempty($view_suuid)) {
+            return null;
+        }
+
+        $custom_view = CustomView::findBySuuid($view_suuid);
+        if (!isset($custom_view)) {
+            return null;
+        }
+
+        // The suuid arrives in the url, so it can name any view in the system.
+        // Only a view of the table being drawn has anything to say about this
+        // column: a name that belongs elsewhere is read as no view at all,
+        // rather than as an invitation to go and look at one.
+        if ($custom_view->custom_table_id != $custom_column->custom_table_id) {
+            return null;
+        }
+
+        foreach ($custom_view->custom_view_columns_cache as $custom_view_column) {
+            if ($custom_view_column->view_column_target_id == $custom_column->id
+                && $custom_view_column->view_column_type == ConditionType::COLUMN) {
+                return $custom_view_column->getOption('grid_preset');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Render one cell of one record the way the data grid would render it.
+     *
+     * Used by the inline editor: after PUT succeeds the client does not
+     * know how a Select column paints its badge or how a Yesno column
+     * spells its two values, and it must not - the styling is a table
+     * owner setting. The rendered HTML is therefore delegated to the same
+     * ColumnItems pipeline the grid runs, so the returned markup is byte
+     * for byte what the grid would have produced on a full reload,
+     * including whatever badge or bar GridCellStyle::wrap adds.
+     *
+     * Permissions match the row-level access the grid already enforces.
+     *
+     * @return mixed
+     */
+    // @phpstan-ignore-next-line
+    public function dataCellHtml(Request $request, $tableKey, $id, $columnName)
+    {
+        if (!$this->custom_table->hasPermission(Permission::AVAILABLE_ACCESS_CUSTOM_VALUE)) {
+            return abortJson(403, ErrorCode::PERMISSION_DENY());
+        }
+
+        if (($custom_value = $this->getCustomValue($this->custom_table, $id)) instanceof Response) {
+            return $custom_value;
+        }
+
+        if (($code = $custom_value->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
+            return abortJson(403, $code);
+        }
+
+        $custom_column = CustomColumn::getEloquent($columnName, $this->custom_table);
+        // getEloquent() reads a numeric name as a column id of ANY table, and
+        // the record of this table would then be drawn through a column
+        // definition of another one - its option labels included.
+        if (!isset($custom_column) || $custom_column->custom_table_id != $this->custom_table->id) {
+            return abortJson(404, ErrorCode::DATA_NOT_FOUND());
+        }
+
+        $item = $custom_column->column_item;
+        if (!isset($item)) {
+            return abortJson(404, ErrorCode::DATA_NOT_FOUND());
+        }
+
+        // Same options the grid loop passes so the wrap / min-width / align
+        // decisions read the same setting the grid did. Without this the
+        // badge would silently drop off for any column with grid_column set
+        // to false.
+        //
+        // The view travels with the request because a preset chosen on the
+        // view beats the column's own appearance: without it an edited cell
+        // would come back wearing the column style while every other row
+        // kept the view style, until the next reload.
+        $item->options([
+            'grid_column' => true,
+            'grid_preset' => static::findViewPreset($request->get('view'), $custom_column),
+        ]);
+
+        $html = (string)$item->setCustomValue($custom_value)->html();
+
+        // The grid hands an editable cell its true value in a hidden marker
+        // whenever the display is lossy (shortened text, rounded number);
+        // the cell rendered here replaces that markup after a save, so it
+        // has to carry it too. Without this, editing such a value a second
+        // time would start from the display again. A record whose form does
+        // not let the user change the column gets the lock marker instead,
+        // the same as DefaultGrid writes - the save may have moved the
+        // record onto another form.
+        if (GridInlineEditor::isEditable($custom_column)) {
+            $html .= GridInlineEditor::isFormEditableColumn($this->custom_table, $custom_value, $custom_column)
+                ? GridInlineEditor::rawValueTag($item, $html)
+                : GridInlineEditor::LOCKED_MARKER;
+        }
+
+        return [
+            'html' => $html,
+        ];
     }
 
     /**
@@ -260,8 +387,22 @@ class ApiDataController extends AdminControllerTableBase
      */
     public function dataCreate(Request $request)
     {
-        if (($code = $this->custom_table->enableCreate()) !== true) {
-            return abortJson(403, trans('admin.deny'), $code);
+        // A record typed into a kanban column (quick add) stands in for the
+        // create page, so it obeys the "cannot create from display" form
+        // action and the form's own columns - see dataUpdate. A plain API
+        // call does not send the key and is unchanged.
+        $screenWrite = boolval($request->get(GridInlineEditor::SCREEN_WRITE_KEY));
+
+        if (($code = $this->custom_table->enableCreate($screenWrite)) !== true) {
+            // use the ErrorCode's own message so a one-record table that already
+            // holds a record reports "このテーブルは1レコードのみ登録可能です。"
+            // (code 402) instead of the misleading generic "Permission denied".
+            // A real permission failure still yields admin.deny via getMessage().
+            return abortJson(403, $code);
+        }
+
+        if ($screenWrite && ($response = $this->validateScreenWrite($request, null)) instanceof Response) {
+            return $response;
         }
 
         return $this->saveData($request);
@@ -271,6 +412,7 @@ class ApiDataController extends AdminControllerTableBase
      * update data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function dataUpdate(Request $request, $tableKey, $id)
     {
         if (!$this->custom_table->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -281,11 +423,58 @@ class ApiDataController extends AdminControllerTableBase
             return $custom_value;
         }
 
-        if (($code = $custom_value->enableEdit()) !== true) {
+        // A write from a list screen - inline edit, bulk edit, "Set me as",
+        // a kanban move - stands in for the record's edit page, so it obeys
+        // what that page obeys: the "cannot change from display" form action
+        // and the form's own column settings. A plain API call does not send
+        // the key and keeps writing columns as documented.
+        $screenWrite = boolval($request->get(GridInlineEditor::SCREEN_WRITE_KEY));
+
+        if (($code = $custom_value->enableEdit($screenWrite)) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
+        if ($screenWrite && ($response = $this->validateScreenWrite($request, $custom_value)) instanceof Response) {
+            return $response;
+        }
+
         return $this->saveData($request, $custom_value);
+    }
+
+    /**
+     * The form rules for a write sent by a list screen (see dataUpdate).
+     *
+     * Such a write is always one record and a few of its own columns, so
+     * anything else in the body - several records, `data`, a new parent -
+     * did not come from a screen and is refused rather than checked. The
+     * one exception is a record being created (null): a board embedded in
+     * a parent's page names that parent for the new record, at the top
+     * level of the body only.
+     *
+     * @param Request $request
+     * @param \Exceedone\Exment\Model\CustomValue|null $custom_value null for a record about to be created
+     * @return Response|null
+     */
+    protected function validateScreenWrite(Request $request, $custom_value)
+    {
+        $values = $request->get('value');
+        if (!is_array($values) || empty($values) || is_vector($values) || $request->has('data')
+            || (isset($custom_value) && ($request->has('parent_id') || $request->has('parent_type')))
+            || array_key_exists('parent_id', $values) || array_key_exists('parent_type', $values)) {
+            return abortJson(400, ErrorCode::VALIDATION_ERROR());
+        }
+
+        // updated_at is the edit lock, not a column - saveData checks it.
+        $errors = GridInlineEditor::validateScreenWrite($this->custom_table, $custom_value, array_except($values, ['updated_at']));
+        if (!empty($errors)) {
+            // Same shape as a failed validation of a single record.
+            return abortJson(400, [
+                'errors' => [$errors],
+            ], ErrorCode::VALIDATION_ERROR());
+        }
+
+        return null;
     }
 
 
@@ -293,6 +482,7 @@ class ApiDataController extends AdminControllerTableBase
      * delete data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function dataDelete(Request $request, $tableKey, $id)
     {
         if (!$this->custom_table->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -306,17 +496,37 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         $forceDelete = boolval($request->get('force'));
+        // The row menu's Delete is a screen, so the "cannot delete from
+        // display" form action applies to it - see dataUpdate.
+        $screenWrite = boolval($request->get(GridInlineEditor::SCREEN_WRITE_KEY));
 
         $custom_values = [];
-        foreach ((array)$ids as $i) {
+        $validates = [];
+        foreach ((array)$ids as $index => $i) {
             if (($custom_value = $this->getCustomValue($this->custom_table, $i, $forceDelete)) instanceof Response) {
                 return $custom_value;
             }
-            if (($code = $custom_value->enableDelete()) !== true) {
-                return abortJson(403, $code());
+            if (($code = $custom_value->enableDelete($screenWrite)) !== true) {
+                return abortJson(403, $code);
             }
-
+            if ($res = $this->custom_table->validateValueDestroy($i)) {
+                $message = array_get($res, 'message')?? exmtrans('error.delete_failed');
+                if (count($ids) == 1) {
+                    $validates[] = $message;
+                } else {
+                    $validates[] = [
+                        'line_no' => $index,
+                        'error' => $message
+                    ];
+                }
+            }
             $custom_values[] = $custom_value;
+        }
+
+        if (count($validates) > 0) {
+            return abortJson(400, [
+                'errors' => $validates
+            ], ErrorCode::VALIDATION_ERROR());
         }
 
         \ExmentDB::transaction(function () use ($custom_values, $forceDelete) {
@@ -345,6 +555,7 @@ class ApiDataController extends AdminControllerTableBase
      * list all data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function viewDataList(Request $request, $tableKey, $viewid)
     {
         $init = $this->viewDataInit($request, $viewid, true);
@@ -382,6 +593,7 @@ class ApiDataController extends AdminControllerTableBase
      * list view data
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function viewDataFind(Request $request, $tableKey, $viewid, $id)
     {
         $init = $this->viewDataInit($request, $viewid, false);
@@ -423,6 +635,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param boolean $isList
      * @return Response|array if error, return response. or not, return list($custom_view, $valuetype, $count)
      */
+    // @phpstan-ignore-next-line
     protected function viewDataInit(Request $request, $viewid, bool $isList)
     {
         // get view
@@ -443,6 +656,7 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -460,6 +674,7 @@ class ApiDataController extends AdminControllerTableBase
         return [$custom_view, $valuetype, $count];
     }
 
+    // @phpstan-ignore-next-line
     protected function viewDataAfter($custom_view, $valuetype, $target)
     {
         list($headers, $bodies, $columnStyles, $columnClasses, $columnItems) =
@@ -486,11 +701,15 @@ class ApiDataController extends AdminControllerTableBase
      * Get Attachment files
      *
      * @param Request $request
-     * @return void
+     * @param $tableKey
+     * @param $id
+     * @return \Exceedone\Exment\Model\CustomValue|\Illuminate\Config\Repository|\Illuminate\Contracts\Foundation\Application|\Illuminate\Database\Eloquent\Collection|\Illuminate\Pagination\AbstractPaginator|mixed|Response|null
      */
+    // @phpstan-ignore-next-line
     public function getDocuments(Request $request, $tableKey, $id)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -499,6 +718,7 @@ class ApiDataController extends AdminControllerTableBase
         }
 
         if (($code = $custom_value->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, trans('admin.deny'), $code);
         }
 
@@ -512,10 +732,12 @@ class ApiDataController extends AdminControllerTableBase
             'paginate' => true,
         ]);
 
+        // @phpstan-ignore-next-line
         $documents->appends([
             'count' => $count
         ]);
 
+        // @phpstan-ignore-next-line
         $documents->getCollection()->transform(function ($document) {
             return $this->getDocumentArray($document);
         });
@@ -527,8 +749,11 @@ class ApiDataController extends AdminControllerTableBase
      * create Attachment files
      *
      * @param Request $request
-     * @return void
+     * @param $tableKey
+     * @param $id
+     * @return \Exceedone\Exment\Model\CustomValue|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response|Response
      */
+    // @phpstan-ignore-next-line
     public function createDocument(Request $request, $tableKey, $id)
     {
         if (!$this->custom_table->hasPermission(Permission::AVAILABLE_EDIT_CUSTOM_VALUE)) {
@@ -539,7 +764,8 @@ class ApiDataController extends AdminControllerTableBase
             return $custom_value;
         }
 
-        if (($code = $custom_value->enableEdit()) !== true) {
+        if (($code = $custom_value->enableEdit(false, false)) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -565,6 +791,125 @@ class ApiDataController extends AdminControllerTableBase
     }
 
     /**
+     * Get the comments of a data
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @param mixed $id
+     * @return mixed
+     */
+    public function getComments(Request $request, $tableKey, $id)
+    {
+        if (($custom_value = $this->getCommentTargetValue($id)) instanceof Response) {
+            return $custom_value;
+        }
+
+        // get and check query parameter
+        if (($count = $this->getCount($request)) instanceof Response) {
+            return $count;
+        }
+
+        $comments = $custom_value->getComments([
+            'count' => $count,
+            'paginate' => true,
+        ]);
+
+        // @phpstan-ignore-next-line
+        $comments->appends([
+            'count' => $count
+        ]);
+
+        // @phpstan-ignore-next-line
+        $comments->getCollection()->transform(function ($comment) {
+            return $this->getCommentArray($comment);
+        });
+
+        return $comments;
+    }
+
+    /**
+     * Add a comment to a data
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @param mixed $id
+     * @return mixed
+     */
+    public function createComment(Request $request, $tableKey, $id)
+    {
+        if (($custom_value = $this->getCommentTargetValue($id)) instanceof Response) {
+            return $custom_value;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'comment' => ['required', 'string', 'max:' . config('exment.char_length_limit', 63999)],
+        ]);
+        if ($validator->fails()) {
+            return abortJson(400, [
+                'errors' => $this->getErrorMessages($validator)
+            ], ErrorCode::VALIDATION_ERROR());
+        }
+
+        // saves and notifies the same way as the comment box of the data screen
+        $comment = $custom_value->addComment($request->get('comment'));
+
+        return response($this->getCommentArray($comment), 201);
+    }
+
+    /**
+     * Delete a comment of a data. Only the user who wrote it, or a system administrator, can.
+     *
+     * @param Request $request
+     * @param mixed $tableKey
+     * @param mixed $id
+     * @param mixed $suuid
+     * @return mixed
+     */
+    public function deleteComment(Request $request, $tableKey, $id, $suuid)
+    {
+        if (($custom_value = $this->getCommentTargetValue($id)) instanceof Response) {
+            return $custom_value;
+        }
+
+        $result = $custom_value->deleteComment($suuid);
+        if ($result instanceof ErrorCode) {
+            return abortJson($result == ErrorCode::PERMISSION_DENY ? 403 : 404, $result);
+        }
+
+        return response(null, 204);
+    }
+
+    /**
+     * Get the data whose comments are read or written. Checks, in this order: the user can
+     * access the table, the user can view the data, and the table is set to use comments.
+     *
+     * @param mixed $id
+     * @return \Exceedone\Exment\Model\CustomValue|Response
+     */
+    protected function getCommentTargetValue($id)
+    {
+        if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
+            return abortJson(403, trans('admin.deny'), $code);
+        }
+
+        if (($custom_value = $this->getCustomValue($this->custom_table, $id)) instanceof Response) {
+            return $custom_value;
+        }
+
+        if (($code = $custom_value->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
+            return abortJson(403, trans('admin.deny'), $code);
+        }
+
+        if (!$custom_value->isCommentEnabled()) {
+            return abortJson(403, ErrorCode::FORM_ACTION_DISABLED());
+        }
+
+        return $custom_value;
+    }
+
+    /**
      * get selected id's children values
      * *parent_select_table_id(required) : The select_table of the parent column(Changed by user) that executed Linkage. .
      * *child_select_table_id(required) : The select_table of the child column(Linkage target column) that executed Linkage.
@@ -572,6 +917,7 @@ class ApiDataController extends AdminControllerTableBase
      * *search_type(required) : 1:n, n:n or select_table.
      * *q(required) : id that user selected.
      */
+    // @phpstan-ignore-next-line
     public function relatedLinkage(Request $request)
     {
         return $this->_relatedLinkage($request);
@@ -587,13 +933,16 @@ class ApiDataController extends AdminControllerTableBase
      */
     public function columnData(Request $request, $tableKey, $column_name)
     {
+        // @phpstan-ignore-next-line
         return $this->_columnData($request, $column_name);
     }
 
+    // @phpstan-ignore-next-line
     protected function saveData($request, $custom_value = null)
     {
         $validator = Validator::make($request->all(), [
-            'value' => 'required_without:data',
+            'value' => 'required_without:data|array',
+            'data'  => 'nullable|array',
         ]);
         if ($validator->fails()) {
             return abortJson(400, [
@@ -607,6 +956,21 @@ class ApiDataController extends AdminControllerTableBase
         $max_create_count = config('exment.api_max_create_count', 100);
         if (count($rootValues) > $max_create_count) {
             return abortJson(400, exmtrans('api.errors.over_createlength', $max_create_count), ErrorCode::OVER_LENGTH());
+        }
+
+        // one-record limitation: a one-record table may hold at most one record.
+        // enableCreate() is only checked once before saveData(), so a vector body
+        // that creates several new rows in a single request would otherwise bypass
+        // it. Enforce the total (existing + new) here for the create case.
+        // The existing-row count MUST bypass CustomValueModelScope: that global scope
+        // filters rows to the ones the current user is row-level authorised on, so a
+        // non-admin user with custom_value_edit (but not edit_all) would count an
+        // existing record created by someone else as 0 and slip a 2nd record past the
+        // limit. one_record_flg is a table-wide constraint (mirrors the import path).
+        if (!isset($custom_value) && $this->custom_table->isOneRecord()
+            && (count($rootValues) + $this->custom_table->getValueModel()->query()
+                ->withoutGlobalScope(CustomValueModelScope::class)->count()) > 1) {
+            return abortJson(403, ErrorCode::ONE_RECORD_ALREADY());
         }
 
         $findResult = $this->convertFindKeys($rootValues, $request);
@@ -707,6 +1071,7 @@ class ApiDataController extends AdminControllerTableBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getRootValuesFromPost(Request $request, &$is_single)
     {
         $rootValues = [];
@@ -755,6 +1120,7 @@ class ApiDataController extends AdminControllerTableBase
         return $rootValues;
     }
 
+    // @phpstan-ignore-next-line
     protected function convertFindKeys(&$rootValues, $request)
     {
         if (is_null($findKeys = $request->get('findKeys'))) {
@@ -789,6 +1155,7 @@ class ApiDataController extends AdminControllerTableBase
     public function calendarList(Request $request)
     {
         if (($code = $this->custom_table->enableAccess()) !== true) {
+            // @phpstan-ignore-next-line
             return abortJson(403, $code);
         }
 
@@ -815,6 +1182,7 @@ class ApiDataController extends AdminControllerTableBase
         $custom_view->filterSortModel($model);
 
         $tasks = [];
+        /** @var CustomViewColumn $custom_view_column */
         foreach ($custom_view->custom_view_columns as $custom_view_column) {
             if ($custom_view_column->view_column_type == ConditionType::COLUMN) {
                 $target_start_column = $custom_view_column->custom_column->getIndexColumnName();
@@ -865,9 +1233,15 @@ class ApiDataController extends AdminControllerTableBase
      * Get calendar query
      * ex. display: 4/1 - 4/30
      *
-     * @param mixed $query
-     * @return \Illuminate\Database\Query\Builder
+     * @param $model
+     * @param $start
+     * @param $end
+     * @param $target_start_column
+     * @param $target_end_column
+     * @return mixed
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     protected function getCalendarQuery($model, $start, $end, $target_start_column, $target_end_column)
     {
         $db_table_name = getDBTableName($this->custom_table);
@@ -925,6 +1299,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param mixed $row
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setCalendarDate(&$task, $row, $target_start_column, $target_end_column)
     {
         $dt = $row->{$target_start_column};
@@ -962,6 +1337,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param array $value input value
      * @return array Value after converting base64 encode file, and files value
      */
+    // @phpstan-ignore-next-line
     protected function convertFileData($value)
     {
         // get file columns
@@ -989,6 +1365,7 @@ class ApiDataController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getFileValue(CustomColumn $file_column, $file_value): ?array
     {
         // whether is_vector, set as array
@@ -999,7 +1376,7 @@ class ApiDataController extends AdminControllerTableBase
         $names = [];
         $result = [];
         foreach ($file_value as $file_v) {
-            if (!array_has($file_v, 'name') && !array_has($file_v, 'base64')) {
+            if (!array_has($file_v, 'name') || !array_has($file_v, 'base64')) {
                 continue;
             }
 
@@ -1022,16 +1399,16 @@ class ApiDataController extends AdminControllerTableBase
         return [$names, $result];
     }
 
-
     /**
      * Save fileinfo after custom_value save
      *
      * @param CustomTable $custom_table
      * @param array $files
      * @param array $value
-     * @param array $oroginalValue
+     * @param array $originalValue
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function saveFile($custom_table, $files, &$value, $originalValue)
     {
         foreach ($files as $column_name => $fileInfos) {
@@ -1067,6 +1444,7 @@ class ApiDataController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getDocumentArray($document)
     {
         return [
@@ -1079,11 +1457,29 @@ class ApiDataController extends AdminControllerTableBase
     }
 
     /**
+     * @param \Exceedone\Exment\Model\CustomValue $comment
+     * @return array<string, mixed>
+     */
+    protected function getCommentArray($comment)
+    {
+        return [
+            'id' => $comment->id,
+            'suuid' => $comment->suuid,
+            'comment' => $comment->getValue('comment_detail'),
+            'created_at' => $comment->created_at->__toString(),
+            // a model just saved holds the id as the string it was given: answer the number the list answers
+            'created_user_id' => is_numeric($comment->created_user_id) ? intval($comment->created_user_id) : $comment->created_user_id,
+            'created_user' => $comment->created_user,
+        ];
+    }
+
+    /**
      * Get order by array from request
      *
      * @param Request $request
-     * @return array offset 0 : target column name, 1 : 'asc' or 'desc'
+     * @return array|Response offset 0 : target column name, 1 : 'asc' or 'desc'
      */
+    // @phpstan-ignore-next-line
     protected function getOrderBy(Request $request)
     {
         if (!$request->has('orderby')) {
@@ -1096,8 +1492,10 @@ class ApiDataController extends AdminControllerTableBase
 
         foreach ($params as $param) {
             $values = preg_split("/\s+/", trim($param));
+            // @phpstan-ignore-next-line
             $column_name = $values[0];
-            if (count($values) > 1 && !preg_match('/^asc|desc$/i', $values[1])) {
+            // @phpstan-ignore-next-line
+            if (count($values) > 1 && !preg_match('/^(asc|desc)$/i', $values[1])) {
                 return abortJson(400, ErrorCode::INVALID_PARAMS());
             }
             if (SystemColumn::isSqlValid($column_name)) {
@@ -1110,6 +1508,7 @@ class ApiDataController extends AdminControllerTableBase
                 }
                 $column_name = $column->getIndexColumnName();
             }
+            // @phpstan-ignore-next-line
             $orderby_list[] = [$column_name, count($values) > 1 ? $values[1] : 'asc'];
         }
 
@@ -1123,6 +1522,7 @@ class ApiDataController extends AdminControllerTableBase
      * @param array $orderby_list
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setOrderByQuery($query, $orderby_list)
     {
         if (empty($orderby_list)) {
@@ -1135,10 +1535,12 @@ class ApiDataController extends AdminControllerTableBase
             if ($item[0] == 'id') {
                 $hasId = true;
             }
+            // @phpstan-ignore-next-line
             $query->orderBy($item[0], $item[1]);
         }
 
         if (!$hasId) {
+            // @phpstan-ignore-next-line
             $query->orderBy('id');
         }
     }

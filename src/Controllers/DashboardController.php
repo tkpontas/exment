@@ -2,9 +2,9 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Facades\Admin;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Auth\Permission as Checker;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Model\System;
@@ -14,6 +14,13 @@ use Exceedone\Exment\Model\DataShareAuthoritable;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Form\Tools\DashboardMenu;
 use Exceedone\Exment\Form\Tools\ShareButton;
+use Exceedone\Exment\Model\CustomTable;
+use Exceedone\Exment\Services\Dashboard\ColumnOptions;
+use Exceedone\Exment\Services\Dashboard\DashboardFilter;
+use Exceedone\Exment\Services\Dashboard\FilterBarConfig;
+use Exceedone\Exment\Services\Dashboard\FilterBarForm;
+use Exceedone\Exment\Services\Dashboard\FilterBarView;
+use Exceedone\Exment\Services\Dashboard\FilterValue;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Enums\DashboardType;
 use Exceedone\Exment\Enums\DashboardBoxType;
@@ -24,24 +31,44 @@ use Exceedone\Exment\Enums\ShareTargetType;
 
 class DashboardController extends AdminControllerBase
 {
-    use HasResourceActions;
+    use HasResourceActions {
+        destroy as resourceDestroy;
+    }
+    // @phpstan-ignore-next-line
     protected $dashboard;
+
+    /**
+     * The max height (px) of a dashboard item in the stylesheet (.box-body-inner-body), shown as
+     * the default of the max height of a row.
+     */
+    protected const ROW_HEIGHT_DEFAULT = 400;
+
+    /**
+     * The range (px) of the max height of a row. The lowest is the min-height of the stylesheet.
+     */
+    protected const ROW_HEIGHT_MIN = 150;
+    protected const ROW_HEIGHT_MAX = 3000;
 
     public function __construct()
     {
         $this->setPageInfo(exmtrans("dashboard.header"), exmtrans("dashboard.header"), null, 'fa-home');
     }
 
+    // @phpstan-ignore-next-line
     protected function setDashboardInfo(Request $request)
     {
         $this->dashboard = Dashboard::getDefault();
     }
 
+    /**
+     * @param Request $request
+     * @param Content $content
+     * @return Content|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     */
     public function index(Request $request, Content $content)
     {
         return redirect(admin_url(''));
     }
-
 
     /**
      * Edit interface.
@@ -49,7 +76,7 @@ class DashboardController extends AdminControllerBase
      * @param Request $request
      * @param Content $content
      * @param string|int|null $id
-     * @return Content
+     * @return Content|false
      */
     public function edit(Request $request, Content $content, $id)
     {
@@ -68,7 +95,9 @@ class DashboardController extends AdminControllerBase
     /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|false
      */
     public function create(Request $request, Content $content)
     {
@@ -81,6 +110,57 @@ class DashboardController extends AdminControllerBase
         return parent::create($request, $content);
     }
 
+    /**
+     * Saves an edited dashboard: only one this user may edit (edit() checks the screen, the
+     * request itself was open to anyone who may view the dashboard).
+     *
+     * @param int $id
+     * @return mixed
+     */
+    public function update($id)
+    {
+        $dashboard = Dashboard::find($id);
+        if (!$dashboard || !$dashboard->hasEditPermission()) {
+            abort(403, exmtrans('common.message.notfound_or_deny'));
+        }
+        return $this->form($id)->update($id);
+    }
+
+    /**
+     * Saves a new dashboard: only for a user create() lets in.
+     *
+     * @return mixed
+     */
+    public function store()
+    {
+        if (!Dashboard::hasPermission()) {
+            abort(403, trans('admin.deny'));
+        }
+        return $this->form()->store();
+    }
+
+    /**
+     * Deletes dashboards (DELETE admin/dashboard/{id}, ids comma separated): only ones this
+     * user may edit, the request was open to anyone who may view them.
+     *
+     * @param mixed $id
+     * @return mixed
+     */
+    public function destroy($id)
+    {
+        foreach (collect(explode(',', (string) $id))->filter() as $key) {
+            $dashboard = Dashboard::find($key);
+            if (!$dashboard || !$dashboard->hasEditPermission()) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => trans('admin.deny'),
+                ], 403);
+            }
+        }
+        return $this->resourceDestroy($id);
+    }
+
+    // @phpstan-ignore-next-line
     public function home(Request $request, Content $content)
     {
         // check permission. if not permission, show message
@@ -89,11 +169,39 @@ class DashboardController extends AdminControllerBase
         }
         // if system admin, check version
         $this->showVersionUpdate();
+        // the system administrators only: the fixes for the safety of the bundled plugins, the new features
+        $this->showAdminNotices();
 
         $this->setDashboardInfo($request);
+
+        // keep this user's current filter selection (also reached by the ?_df_bar=1
+        // partial of every selective bar change), so it survives logout / another browser
+        $this->rememberFilterSelection($request);
+
+        // entry with no filter state: restore the user's remembered selection, or apply
+        // the filter bar's configured defaults, by redirecting to the URL that carries
+        // them — the whole filter mechanism is URL-driven, so everything downstream works
+        $redirect = $this->filterDefaultRedirect($request);
+        if ($redirect !== null) {
+            return redirect($redirect);
+        }
+
         $this->AdminContent($content);
         // add dashboard header
         $content->row((new DashboardMenu($this->dashboard))->render());
+
+        // dashboard filter bar (options.filter_bar); nothing when not configured
+        $bar = FilterBarView::build($this->dashboard, DashboardFilter::fromRequest($this->dashboard));
+
+        // bar-only render for a selective (pushState) filter change: the boxes that keep
+        // their content still need the bar's fresh option lists (dashboard.js refreshFilterBar)
+        if ($request->boolean('_df_bar')) {
+            return response($bar === null ? '' : view('exment::dashboard.filter_bar', $bar)->render());
+        }
+
+        if ($bar !== null) {
+            $content->row(view('exment::dashboard.filter_bar', $bar)->render());
+        }
 
         //set row
         for ($i = 1; $i <= intval(config('exment.dashboard_rows', 4)); $i++) {
@@ -104,127 +212,40 @@ class DashboardController extends AdminControllerBase
             }
         }
 
-        // set dashboard box --------------------------------------------------
-        $delete_confirm = trans('admin.delete_confirm');
-        $confirm = trans('admin.confirm');
-        $cancel = trans('admin.cancel');
-        $error = exmtrans('error.header');
-
-        $script = <<<EOT
-        $(function () {
-            // get suuid inputs
-            var suuids = $('[data-suuid]');
-            // add 'row-eq-height' class
-            suuids.parents('.row').addClass('row-eq-height row-dashboard');
-            suuids.each(function(index, element){
-                var suuid = $(element).data('suuid');
-                loadDashboardBox(suuid);
-            });
-
-            ///// delete click event
-            $('[data-exment-widget="delete"]').off('click').on('click', function(ev){
-                // get suuid
-                var suuid = $(ev.target).closest('[data-suuid]').data('suuid');
-                var url = admin_url('dashboardbox/delete/' + suuid);
-                Exment.CommonEvent.ShowSwal(url, {
-                    title: "$delete_confirm",
-                    confirm:"$confirm",
-                    method: 'delete',
-                    cancel:"$cancel",
-                });
-            });
-            
-            ///// reload click event
-            $('[data-exment-widget="reload"]').off('click').on('click', function(ev){
-                // get suuid
-                var target = $(ev.target).closest('[data-suuid]');
-                var suuid = target.data('suuid');
-                loadDashboardBox(suuid);
-            });
-
-            ///// click dashboard link event
-            $(document).off('click.exment_dashboard', '[data-ajax-link]').on('click.exment_dashboard', '[data-ajax-link]', [], function(ev){
-                // get link
-                var url = $(ev.target).closest('[data-ajax-link]').data('ajax-link');
-                var suuid = $(ev.target).closest('[data-suuid]').data('suuid');
-                loadDashboardBox(suuid, url);
-            });
-        });
-
-        function loadDashboardBox(suuid, url){
-            if(!hasValue(suuid)){
-                return true;
-            }
-            if(!hasValue(url)){
-                url = admin_url('dashboardbox/html/' + suuid);
-            }
-            var target = $('[data-suuid="' + suuid + '"]');
-            if(target.hasClass('loading')){
-                return true;
-            }
-            target.addClass('loading');
-            
-            // set height
-            var inner_body = target.find('.box-body-inner-body');
-            var height = inner_body.height();
-            inner_body.css('height', height);
-
-            target.find('.box-body-inneritem').html('');
-            target.find('.overlay').show();
-
-            $.ajax({
-                url: url,
-                type: "GET",
-                context: {
-                    'inner_body': inner_body,
-                    'suuid': suuid,
-                },
-                success: function (data) {
-                    var suuid = this.suuid;
-
-                    // get target object
-                    var target = $('[data-suuid="' + suuid + '"]');
-
-                    // if set header
-                    if(data.header){
-                        target.find('.box-body .box-body-inner-header').html(data.header);
-                    }
-                    // if set body
-                    if(data.body){
-                        target.find('.box-body .box-body-inner-body').html(data.body);
-                    }
-                    // if set footer
-                    if(data.footer){
-                        target.find('.box-body .box-body-inner-footer').html(data.footer);
-                    }
-                    
-                    // remove height
-                    this.inner_body.css('height', '');
-
-                    target.find('.overlay').hide();
-
-                    // fire plugin event
-                    target.trigger('exment:dashboard_loaded');
-
-                    target.removeClass('loading');
-                    
-                    Exment.CommonEvent.tableHoverLink();
-                },
-                error: function () {
-                    var suuid = this.suuid;
-                    // get target object
-                    var target = $('[data-suuid="' + suuid + '"]');
-
-                    target.find('.overlay').hide();
-                    target.removeClass('loading');
-                   
-                    // show error
-                    target.find('.box-body .box-body-inner-body').html('$error');
-                },
-            });
-        }
-EOT;
-        Admin::script($script);
+        // dashboard runtime (public/vendor/exment/js/dashboard.js): box loading, filter bar,
+        // chart toolbar — only the texts are passed from here
+        $lang = [
+            'delete_confirm' => trans('admin.delete_confirm'),
+            'confirm' => trans('admin.confirm'),
+            'cancel' => trans('admin.cancel'),
+            'error' => exmtrans('error.header'),
+            'filter_not_affected' => exmtrans('dashboard.filter_bar.not_affected'),
+            'filter_partially_affected' => exmtrans('dashboard.filter_bar.partially_affected'),
+            'color_theme' => exmtrans('dashboard.chart_color.theme'),
+            'color_standard' => exmtrans('dashboard.chart_color.standard'),
+            'color_auto' => exmtrans('dashboard.chart_color.auto'),
+            'color_more' => exmtrans('dashboard.chart_color.more'),
+            'color_ok' => exmtrans('dashboard.chart_color.ok'),
+            'chart_load_error' => exmtrans('dashboard.message.chart_load_error'),
+        ];
+        // each chart box starts with the toolbar choices this user left on it
+        // (DashboardBoxController::chartState): box suuid => {ct, cs, cd}
+        $charts = Admin::user() ? Admin::user()->getSettingValue('dashboard_chart.' . $this->dashboard->suuid) : null;
+        // the bundle is cached by the browser (dashboard.js fetches it with cache: true), so its
+        // URL carries the version the way Bootstrap's script list does, and an upgrade is fetched
+        $ver = \Exment::getExmentCurrentVersion() ?? date('YmdHis');
+        $init = [
+            'lang' => $lang,
+            'charts' => is_array($charts) ? $charts : new \stdClass(),
+            // fetched by dashboard.js on first use, so no other admin page carries them: the ECharts
+            // bundle (the ECharts chart types) and the admin layer's own Ion.RangeSlider (its Slider
+            // form field), the two-handle slider under a number range item of the bar
+            'assets' => [
+                'echarts' => asset('vendor/exment/echarts/echarts.min.js?ver=' . $ver),
+                'ionslider' => asset('vendor/open-admin/AdminLTE/plugins/ionslider'),
+            ],
+        ];
+        Admin::script('ExmentDashboard.init(' . json_encode($init, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) . ');');
         return $content;
     }
 
@@ -233,6 +254,7 @@ EOT;
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new Dashboard());
@@ -266,13 +288,13 @@ EOT;
                 ->disableClear()
                 ->default(DashboardType::SYSTEM);
         } else {
-            $form->internal('dashboard_type')->default(DashboardType::USER);
+            $form->internal('dashboard_type')->default($dashboard_type?? DashboardType::USER);
         }
 
         $form->switchbool('default_flg', exmtrans("common.default"))->default(false);
 
         // create row select options
-        $form->embeds('options', exmtrans("dashboard.row"), function ($form) {
+        $form->embeds('row_setting', exmtrans("dashboard.row"), function ($form) {
             for ($row_count = 1; $row_count <= intval(config('exment.dashboard_rows', 4)); $row_count++) {
                 $row = [];
                 for ($i = 1; $i <= 4; $i++) {
@@ -300,8 +322,22 @@ EOT;
                     ->help(sprintf(exmtrans("dashboard.description_row"), $row_count))
                     ->required()
                     ->default($default);
+
+                // the max height of the items of the row. Empty: the height of the stylesheet
+                $form->text('row'.$row_count.'_height', sprintf(exmtrans("dashboard.row_height"), $row_count))
+                    ->rules(['nullable', 'integer', 'min:'.static::ROW_HEIGHT_MIN, 'max:'.static::ROW_HEIGHT_MAX])
+                    ->attribute(['placeholder' => static::ROW_HEIGHT_DEFAULT])
+                    ->help(sprintf(exmtrans("dashboard.description_row_height"), $row_count, static::ROW_HEIGHT_DEFAULT, static::ROW_HEIGHT_MIN, static::ROW_HEIGHT_MAX));
             }
         })->disableHeader();
+
+        FilterBarForm::build($form, $model ?? null);
+
+        // the form binds virtual attributes (each merges into options on save, so keys no
+        // field manages survive); expose them on the model the form reads from
+        $form->editing(function ($form) {
+            $form->model()->append(['row_setting', 'filter_bar_table', 'filter_bar_dims']);
+        });
 
         $form->tools(function (Form\Tools $tools) use ($id, $dashboard_type) {
             $tools->disableList();
@@ -331,6 +367,158 @@ EOT;
     }
 
     /**
+     * Per-user store of the last filter selection of this dashboard (user setting
+     * `dashboard_filter.{suuid}`), written by every render that carries filter state:
+     * - the configured defaults (the entry redirect, リセット) → forgotten (null): the user
+     *   follows the defaults, so a later change of them reaches this user too
+     * - any other selection → stored (df_ params of the bar's items)
+     * - a bar the user emptied (dfr) → stored as empty ([]): no defaults on the next entry
+     * A request without df_ params or dfr carries no new state and writes nothing.
+     *
+     * @param Request $request
+     * @return void
+     */
+    protected function rememberFilterSelection(Request $request)
+    {
+        $user = Admin::user();
+        $config = FilterBarConfig::forViewer($this->dashboard);
+        if ($user === null || $config === null) {
+            return;
+        }
+        $params = $config->selection($request->query());
+        if (empty($params) && !$request->has('dfr')) {
+            return;
+        }
+        $atDefaults = DashboardFilter::of($this->dashboard, $params)
+            ->sameAs(DashboardFilter::of($this->dashboard, $this->filterDefaults($config)));
+        $key = 'dashboard_filter.' . $this->dashboard->suuid;
+        $value = $atDefaults ? null : $params;
+        if ($user->getSettingValue($key) !== $value) {
+            $user->setSettingValue($key, $value);
+        }
+    }
+
+    /**
+     * URL carrying the filter selection an entry with no filter state should start from:
+     * the user's remembered last selection (minus items no longer on the bar), else the
+     * configured defaults (filter_bar.dims[].default). null = no redirect: a selection or
+     * dfr present, the bar partial, a bar the user left empty, or nothing to restore.
+     *
+     * @param Request $request
+     * @return string|null
+     */
+    protected function filterDefaultRedirect(Request $request)
+    {
+        $config = FilterBarConfig::forViewer($this->dashboard);
+        if ($config === null || $request->boolean('_df_bar') || $request->has('dfr') || !empty($config->selection($request->query()))) {
+            return null;
+        }
+        $saved = Admin::user() ? Admin::user()->getSettingValue('dashboard_filter.' . $this->dashboard->suuid) : null;
+        if ($saved === []) {
+            return null;
+        }
+        $params = $config->selection(is_array($saved) ? $saved : []);
+        if (empty($params)) {
+            $params = $this->filterDefaults($config);
+        }
+        if (empty($params)) {
+            return null;
+        }
+        return admin_url('') . '?' . FilterBarConfig::queryString(['dashboard' => (string) $this->dashboard->suuid] + $params);
+    }
+
+    /**
+     * The df_ params of the filter bar's configured defaults ([] when none).
+     *
+     * @return array<string, string|array<string|int, string>>
+     */
+    protected function filterDefaults(FilterBarConfig $config)
+    {
+        return $config->defaultQuery(CustomTable::getEloquent($config->sourceTable()));
+    }
+
+    /**
+     * The table a request parameter names (id or table name), or null: getEloquent() would
+     * answer an array (?q[id][]=1) with that array.
+     *
+     * @param mixed $value
+     */
+    private static function requestedTable($value): ?CustomTable
+    {
+        return is_scalar($value) ? CustomTable::getEloquent($value) : null;
+    }
+
+    /**
+     * Linkage endpoint of the filter bar setting section: filter columns of the table
+     * picked in `filter_bar_table` (sent as `q`). A table this user may not read answers
+     * with an empty list.
+     *
+     * @param Request $request
+     * @return array<int, array{id:string, text:string}>
+     */
+    public function filterBarColumns(Request $request)
+    {
+        $results = [];
+        foreach (FilterBarForm::columnOptions(self::requestedTable($request->get('q'))) as $id => $text) {
+            $results[] = ['id' => $id, 'text' => $text];
+        }
+        return $results;
+    }
+
+    /**
+     * Linkage endpoint of the filter bar setting section: what the デフォルト値 cell renders
+     * for one filter column (`table` + `column`) — the same control the bar shows for the
+     * item at runtime (dashboard.js ExmentDashboardForm):
+     * - `select`: the stored values to pick from (`options`; `capped` when too many to list)
+     * - `range`: from / to inputs (`input` number | date | text), with the data's ends
+     *   `min` / `max` as placeholders — a date, an item configured `style: range`, or a
+     *   number whose list outgrows the option cap and so shows from / to on the bar
+     * `dashboard` (id) applies that dashboard's fixed option scope (filter_bar.scope) and its
+     * items' configured style. A table this user may not read answers with an empty list.
+     *
+     * @param Request $request
+     * @return array{kind: string, options: array<int, array{id:string, text:string}>, capped: bool, input?: string, min?: string, max?: string}
+     */
+    public function filterBarValues(Request $request)
+    {
+        $table = self::requestedTable($request->get('table'));
+        if ($table !== null && !$table->hasPermission(Permission::AVAILABLE_VIEW_CUSTOM_VALUE)) {
+            $table = null;
+        }
+        $column = $table ? $table->custom_columns->firstWhere('column_name', $request->get('column')) : null;
+        if ($column === null) {
+            return ['kind' => 'select', 'options' => [], 'capped' => false];
+        }
+        // an id: find() would answer a list to an array
+        $dashboard_id = $request->get('dashboard');
+        $dashboard = is_numeric($dashboard_id) ? Dashboard::find($dashboard_id) : null;
+        $config = FilterBarConfig::fromDashboard($dashboard);
+        $dim = $config ? $config->dim($column->column_name) : null;
+        $kind = FilterValue::kind($column);
+        $filter = DashboardFilter::of($dashboard, []);
+        // the whole catalogue — no selection cross-filters a picker; the fixed scope only bounds
+        // a list that falls back to the values in use
+        $scope = empty($filter->fixedScopeColumnsFor($table)) ? null : function ($query) use ($filter, $table) {
+            $filter->applyFixedScope($query, $table);
+        };
+        if (FilterValue::style($column, $dim['style'] ?? null) === 'select') {
+            $result = ColumnOptions::choices($table, $column, $scope, false, $filter->maxOptions());
+            // a number list too long to pick from shows from / to on the bar: so does its default
+            if (!$result['capped'] || $kind === 'text') {
+                return [
+                    'kind' => 'select',
+                    'options' => array_map(function ($option) {
+                        return ['id' => (string) $option['id'], 'text' => (string) $option['name']];
+                    }, $result['options']),
+                    'capped' => $result['capped'],
+                ];
+            }
+        }
+        return ['kind' => 'range', 'input' => $kind === 'number' ? 'number' : ($kind === 'text' ? 'text' : 'date'), 'options' => [], 'capped' => false]
+            + ColumnOptions::bounds($table, $column, $scope);
+    }
+
+    /**
      * Set daashboard box.
      *
      * @param Content $content
@@ -341,8 +529,10 @@ EOT;
     protected function setDashboardBox($content, $row_column_count, $row_no)
     {
         $content->row(function ($row) use ($row_column_count, $row_no) {
+            $box_height = $this->getRowHeight($row_no);
             // check role.
             $has_role = $this->dashboard->hasEditPermission();
+            $filter_bar = FilterBarConfig::forViewer($this->dashboard);
             for ($i = 1; $i <= $row_column_count; $i++) {
                 // get $boxes as $row_no
                 $boxes = $this->dashboard->dashboard_row_boxes($row_no);
@@ -388,8 +578,25 @@ EOT;
                 // set column. use grid system
                 $grids = [
                     'xs' => 12,
-                    'md' => ($row_column_count == 0 ? 12 : 12 / $row_column_count)
+                    'md' => 12 / $row_column_count
                 ];
+
+                $attributes = isset($dashboard_box) ? $dashboard_box->getBoxHtmlAttr() : [];
+                // data-df-dims: the filter bar items that narrow this box — dashboard.js only
+                // reloads the boxes whose items changed on a bar change (empty = never narrowed)
+                if (isset($dashboard_box) && $filter_bar !== null) {
+                    $dims = [];
+                    $table = CustomTable::getEloquent(array_get($dashboard_box->options ?? [], 'target_table_id'));
+                    if ($dashboard_box->dashboard_box_type == DashboardBoxType::CHART) {
+                        $dims = $filter_bar->dimsFor($table, $dashboard_box);
+                    }
+                    $attributes['data-df-dims'] = implode(',', $dims);
+                    // a box without a table (system, html) shows no data a filter could
+                    // narrow: no "not affected" badge, as DashboardBoxController::filterBadge
+                    if (!isset($table)) {
+                        $attributes['data-df-badge'] = 'none';
+                    }
+                }
 
                 $row->column($grids, view('exment::dashboard.box', [
                     'title' => $dashboard_box->dashboard_box_view_name ?? null,
@@ -398,12 +605,63 @@ EOT;
                     'dashboard_suuid' => $this->dashboard->suuid,
                     'dashboardboxes_newbuttons' => $dashboardboxes_newbuttons,
                     'icons' => $icons,
-                    'attributes' => isset($dashboard_box) ? \Exment::formatAttributes($dashboard_box->getBoxHtmlAttr()) : '',
+                    'attributes' => \Exment::formatAttributes($attributes),
+                    'box_height' => $box_height,
                 ]));
             }
         });
     }
 
+    /**
+     * Get the max height (px) of the items of a row, set on the dashboard setting page.
+     *
+     * @param int $row_no
+     * @return int|null null if not set: the items keep the height of the stylesheet
+     */
+    protected function getRowHeight($row_no): ?int
+    {
+        $height = $this->dashboard->getOption('row'.$row_no.'_height');
+        if (!is_numeric($height)) {
+            return null;
+        }
+
+        $height = intval($height);
+        if ($height < static::ROW_HEIGHT_MIN || $height > static::ROW_HEIGHT_MAX) {
+            return null;
+        }
+
+        return $height;
+    }
+
+    /**
+     * For the system administrators only (the others see nothing of it).
+     */
+    protected function showAdminNotices(): void
+    {
+        if (!\Exment::user()->hasPermission(Permission::SYSTEM)) {
+            return;
+        }
+        try {
+            $link = '<a href="' . e(admin_url('feature')) . '">' . e(exmtrans('plugin_distribution.open_feature')) . '</a>';
+            $only = static::adminOnlyNote();
+            foreach (\Exceedone\Exment\Services\PluginDistribution\AdminNotices::security() as $item) {
+                // a notice (a warning), not an error: nothing is broken, an update is waiting
+                admin_warning(
+                    exmtrans('plugin_distribution.notice_security_subject', ['name' => $item['label']]),
+                    e(exmtrans('plugin_distribution.notice_security', ['name' => $item['label'], 'version' => $item['version']]))
+                        . ($item['note'] !== '' ? '<br>' . e($item['note']) : '') . '<br>' . $link . $only
+                );
+            }
+            $features = \Exceedone\Exment\Services\PluginDistribution\AdminNotices::newFeatures();
+            if (count($features) > 0) {
+                admin_info(exmtrans('plugin_distribution.notice_features_subject'), e(exmtrans('plugin_distribution.notice_features', ['names' => implode(', ', $features)])) . '<br>' . $link . $only);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('[Exment] the notices to the administrators: ' . $e->getMessage());
+        }
+    }
+
+    // @phpstan-ignore-next-line
     protected function showVersionUpdate()
     {
         // if system admin, check version
@@ -416,18 +674,33 @@ EOT;
         }
 
         $versionCheck = \Exment::checkLatestVersion();
-        if ($versionCheck == SystemVersion::HAS_NEXT) {
+        if ($versionCheck === SystemVersion::HAS_NEXT) {
             list($latest, $current) = \Exment::getExmentVersion();
-            admin_info(exmtrans("system.version_old") . '(' . $latest . ')', '<a href="'. admin_url('system').'">'.exmtrans("system.update_guide").'</a>');
+            admin_info(exmtrans("system.version_old") . '(' . $latest . ')', '<a href="'. admin_url('system').'">'.exmtrans("system.update_guide").'</a>' . static::adminOnlyNote());
         }
+    }
+
+    /**
+     * The line under a notice for the system administrators: the others never see
+     * it, and could not act on it (they cannot update or turn features on).
+     */
+    protected static function adminOnlyNote(): string
+    {
+        return '<br><small>' . e(exmtrans('common.notice_admin_only')) . '</small>';
     }
 
     /**
      * create share form
      */
+    // @phpstan-ignore-next-line
     public function shareClick(Request $request, $id)
     {
         $model = Dashboard::getEloquent($id);
+        // the dialog, like its save (sendShares), is for whoever may edit the dashboard: the
+        // button is shown to them alone, the request itself is open to anyone who may view it
+        if (!isset($model) || !$model->hasEditPermission()) {
+            return getAjaxResponse(['result' => false, 'toastr' => trans('admin.deny')]);
+        }
 
         $form = DataShareAuthoritable::getShareDialogForm($model);
 
@@ -441,6 +714,7 @@ EOT;
     /**
      * set share users organizations
      */
+    // @phpstan-ignore-next-line
     public function sendShares(Request $request, $id)
     {
         // get custom view

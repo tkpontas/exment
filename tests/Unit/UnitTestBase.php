@@ -7,7 +7,7 @@ use Exceedone\Exment\Tests\TestTrait;
 use Exceedone\Exment\Tests\DatabaseTransactions;
 
 /**
- * @method \Exceedone\Exment\Tests\DatabaseTransactions beginDatabaseTransaction()
+ * @method void beginDatabaseTransaction()
  */
 abstract class UnitTestBase extends TestCase
 {
@@ -16,7 +16,7 @@ abstract class UnitTestBase extends TestCase
     /**
      * Boot the testing helper traits.
      *
-     * @return array
+     * @return array<mixed>
      */
     protected function setUpTraits()
     {

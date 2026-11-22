@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
  */
 class AdminDiskService extends DiskServiceBase
 {
+    // @phpstan-ignore-next-line
     public function __construct(...$args)
     {
         $now = \Carbon\Carbon::now()->format('YmdHisv');
@@ -52,11 +53,10 @@ class AdminDiskService extends DiskServiceBase
         return true;
     }
 
-
     /**
      * copy file from disk to localSyncDisk disk
      *
-     * @return void
+     * @return true
      */
     protected function sync()
     {

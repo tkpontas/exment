@@ -17,6 +17,7 @@ class PublicShow extends \Exceedone\Exment\Form\Show
     }
 
 
+    // @phpstan-ignore-next-line
     public function setAction(string $action)
     {
         $this->panel->setAction($action);
@@ -24,6 +25,7 @@ class PublicShow extends \Exceedone\Exment\Form\Show
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function setBackAction(string $back_action)
     {
         $this->panel->setBackAction($back_action);
@@ -36,6 +38,7 @@ class PublicShow extends \Exceedone\Exment\Form\Show
      *
      * @return  self
      */
+    // @phpstan-ignore-next-line
     public function setConfirmTitle($confirm_title)
     {
         $this->panel->setConfirmTitle($confirm_title);
@@ -48,6 +51,7 @@ class PublicShow extends \Exceedone\Exment\Form\Show
      *
      * @return  self
      */
+    // @phpstan-ignore-next-line
     public function setConfirmText($confirm_text)
     {
         $this->panel->setConfirmText($confirm_text);
@@ -60,6 +64,7 @@ class PublicShow extends \Exceedone\Exment\Form\Show
      *
      * @return self
      */
+    // @phpstan-ignore-next-line
     public function setChildRelationShows($childRelationShows)
     {
         $this->panel->setChildRelationShows($childRelationShows);

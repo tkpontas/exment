@@ -21,6 +21,7 @@ class RoleGroupType extends EnumBase
     public const PLUGIN = "plugin";
     public const ROLE_GROUP = "role_group";
 
+    // @phpstan-ignore-next-line
     public function getRoleGroupOptions()
     {
         $permissions = $this->getRoleGroupPermissions();
@@ -29,6 +30,7 @@ class RoleGroupType extends EnumBase
         });
     }
 
+    // @phpstan-ignore-next-line
     public function getRoleGroupHelps()
     {
         $permissions = $this->getRoleGroupPermissions();
@@ -37,7 +39,8 @@ class RoleGroupType extends EnumBase
         });
     }
 
-    protected function getRoleGroupPermissions()
+    // @phpstan-ignore-next-line
+    public function getRoleGroupPermissions()
     {
         switch ($this->lowerKey()) {
             case self::SYSTEM()->lowerKey():

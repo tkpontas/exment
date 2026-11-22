@@ -35,7 +35,42 @@ class PasswordGrant extends PasswordGrantBase
      *
      * @return UserEntityInterface
      */
-    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client)
+    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client): UserEntityInterface
+    {
+        // The token is a login: the wrong passwords are limited as on the login
+        // page (exment.throttle, max_attempts, decay_minutes), for the user name
+        // and the address that try.
+        $throttle = boolval(config('exment.throttle', true));
+        $key = 'oauth-password|' . mb_strtolower(trim((string)$this->getRequestParameter('username', $request))) . '|' . (string)request()->ip();
+        $limiter = app(\Illuminate\Cache\RateLimiter::class);
+        $maxAttempts = (int)config('exment.max_attempts', 5);
+        if ($throttle && $limiter->tooManyAttempts($key, $maxAttempts)) {
+            throw new OAuthServerException(exmtrans('login.throttle', ceil($limiter->availableIn($key) / 60)), 6, 'too_many_attempts', 429);
+        }
+
+        try {
+            $user = $this->validateUserOnce($request, $client);
+        } catch (OAuthServerException $ex) {
+            if ($throttle && $ex->getErrorType() == 'invalid_grant') {
+                $limiter->hit($key, (int)config('exment.decay_minutes', 60) * 60);
+            }
+            throw $ex;
+        }
+        if ($throttle) {
+            $limiter->clear($key);
+        }
+        return $user;
+    }
+
+    /**
+     * @param ServerRequestInterface $request
+     * @param ClientEntityInterface  $client
+     *
+     * @throws OAuthServerException
+     *
+     * @return UserEntityInterface
+     */
+    protected function validateUserOnce(ServerRequestInterface $request, ClientEntityInterface $client): UserEntityInterface
     {
         $login_type = $this->getRequestParameter('login_type', $request);
         if (is_null($login_type)) {
@@ -94,6 +129,7 @@ class PasswordGrant extends PasswordGrantBase
     /**
      * {@inheritdoc}
      */
+    // @phpstan-ignore-next-line
     public function getUserEntityByUserCredentials($username, $password, $login_type, $login_setting, $grantType, ClientEntityInterface $clientEntity)
     {
         $provider = config('auth.guards.api.provider');
@@ -110,14 +146,17 @@ class PasswordGrant extends PasswordGrantBase
         ];
 
         if (method_exists($model, 'findForPassport')) {
+            // @phpstan-ignore-next-line
             $user = (new $model())->findForPassport($username, $credentials);
         } else {
+            // @phpstan-ignore-next-line
             $user = (new $model())->where('email', $username)->first();
         }
 
         if (! $user) {
             return;
         } elseif (method_exists($user, 'validateForPassportPasswordGrant')) {
+            // @phpstan-ignore-next-line
             if (! $user->validateForPassportPasswordGrant($password, $credentials)) {
                 return;
             }

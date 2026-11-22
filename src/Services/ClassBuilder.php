@@ -6,55 +6,93 @@ use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\Define;
 
+/**
+ * @uses \Exceedone\Exment\Model\Traits\MailTemplateTrait
+ * @uses \Exceedone\Exment\Model\Traits\UserTrait
+ * @uses \Exceedone\Exment\Model\Traits\DocumentTrait
+ * @uses \Exceedone\Exment\Model\Traits\OrganizationTrait
+ */
 class ClassBuilder
 {
+    /** @var bool */
     private $isTrait;
 
+    /** @var string|null */
     private $namespace;
 
+    /** @var string */
     private $className;
 
+    /** @var string|null */
     private $superClass;
 
+    /** @var array<int, string> */
     private $interfaces = array();
 
+    /** @var array<int, string> */
     private $uses = array();
 
+    /** @var array<int, string> */
     private $inUses = array();
 
+    /** @var array<int, array<string, mixed>> */
     private $properties = array();
 
+    /** @var array<int, array<string, mixed>> */
     private $methods = array();
 
+    /**
+     * @param string $className
+     * @return static
+     */
     public static function startBuild($className)
     {
+        // @phpstan-ignore-next-line
         return new self($className);
     }
 
+    /**
+     * @param string $className
+     */
     private function __construct($className)
     {
         $this->className = $className;
         $this->isTrait = false;
     }
 
+    /**
+     * @return $this
+     */
     public function addTrait()
     {
         $this->isTrait = true;
         return $this;
     }
 
+    /**
+     * @param string $superClass
+     * @return $this
+     */
     public function extend($superClass)
     {
         $this->superClass = $superClass;
         return $this;
     }
 
+    /**
+     * @param string $interface
+     * @return $this
+     */
     public function implement($interface)
     {
         $this->interfaces[] = $interface;
         return $this;
     }
 
+    /**
+     * @param string $namespace
+     * @return $this
+     */
     public function addNamespace($namespace)
     {
         $this->namespace = $namespace;
@@ -62,18 +100,32 @@ class ClassBuilder
         return $this;
     }
 
+    /**
+     * @param string $use
+     * @return $this
+     */
     public function addUse($use)
     {
         $this->uses[] = $use;
         return $this;
     }
 
+    /**
+     * @param string $inUse
+     * @return $this
+     */
     public function addInUse($inUse)
     {
         $this->inUses[] = $inUse;
         return $this;
     }
 
+    /**
+     * @param string $scope
+     * @param string $name
+     * @param mixed $default
+     * @return $this
+     */
     public function addProperty($scope, $name, $default = null)
     {
         $this->properties[] = array(
@@ -85,6 +137,12 @@ class ClassBuilder
         return $this;
     }
 
+    /**
+     * @param string $scope
+     * @param string $signature
+     * @param string $contents
+     * @return $this
+     */
     public function addMethod($scope, $signature, $contents)
     {
         $this->methods[] = array(
@@ -96,6 +154,9 @@ class ClassBuilder
         return $this;
     }
 
+    /**
+     * @return string
+     */
     public function toString()
     {
         $namespace = empty($this->namespace) ? "" : "namespace {$this->namespace};";
@@ -165,6 +226,7 @@ class ClassBuilder
         return $class;
     }
 
+    // @phpstan-ignore-next-line
     public function build()
     {
         eval($this->toString());
@@ -173,9 +235,63 @@ class ClassBuilder
 
     // static method --------------------------------------------------
 
+    /** @var bool */
+    protected static $autoloaderRegistered = false;
+
+    /**
+     * Build the class of a custom table (Exceedone\Exment\Model\Class_{suuid}) when PHP first
+     * needs it, instead of building every table's class on every request (Morph middleware).
+     * Each class is eval'd, so OPcache cannot keep it: building them all costs about 0.4 ms
+     * per table on each request (ISS00413).
+     *
+     * @return void
+     */
+    public static function registerAutoloader()
+    {
+        if (static::$autoloaderRegistered) {
+            return;
+        }
+        static::$autoloaderRegistered = true;
+
+        spl_autoload_register(function ($class) {
+            static $building = [];
+            $prefix = 'Exceedone\Exment\Model\Class_';
+            if (strpos($class, $prefix) !== 0 || isset($building[$class])) {
+                return;
+            }
+            $suuid = substr($class, strlen($prefix));
+            if (!preg_match('/^[a-z0-9]+$/i', $suuid)) {
+                return;
+            }
+            $building[$class] = true;
+            try {
+                if (!canConnection() || !hasTable(\Exceedone\Exment\Enums\SystemTableName::CUSTOM_TABLE)) {
+                    return;
+                }
+                $table = CustomTable::findBySuuid($suuid);
+                if (is_null($table)) {
+                    return;
+                }
+                $table->createTable();
+                static::createCustomValue('Exceedone\Exment\Model', 'Class_' . $suuid, $class, $table, null);
+            } finally {
+                unset($building[$class]);
+            }
+        });
+    }
+
+    /**
+     * @return bool
+     */
+    public static function autoloaderRegistered(): bool
+    {
+        return static::$autoloaderRegistered;
+    }
+
     /**
      * Create Custom Value Class Definition
      */
+    // @phpstan-ignore-next-line
     public static function createCustomValue($namespace, $className, $fillpath, $table, $obj)
     {
         $table = CustomTable::getEloquent($table);
@@ -185,7 +301,7 @@ class ClassBuilder
                 ->addUse("\Exceedone\Exment\Model\CustomValue")
                 ->extend("CustomValue")
                 ->addProperty("protected", 'table', "'".getDBTableName($table)."'")
-                ->addMethod("public", "getCustomTableNameAttribute()", "return '".$table->table_name."';")
+                ->addMethod("public", "getCustomTableNameAttribute()", "return ".var_export($table->table_name, true).";")
                 //->addProperty("public", 'custom_table_name', "'".$table->table_name."'")
         ;
 

@@ -10,12 +10,16 @@ trait DefaultFlgTrait
     /**
      * set default flg. default flg is only 1 record in 1 table
      */
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlgInTable($filterCallback = null, $setCallback = null)
     {
         // get custom table_id
         $this->setDefaultFlg('custom_table_id', $filterCallback);
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setDefaultFlg($key = null, $filterCallback = null, $setCallback = null)
     {
         // create query
@@ -52,7 +56,8 @@ trait DefaultFlgTrait
         }
         // and if this model default flg is 1, set other id's default_flg is 1
         elseif (boolval($this->default_flg)) {
-            static::whereIn('id', $idlist)->update([
+            // by id alone: the filter callback may have lifted a global scope to find them
+            static::withoutGlobalScopes()->whereIn('id', $idlist)->update([
                 'default_flg' => false
             ]);
         }

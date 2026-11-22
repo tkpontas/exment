@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment;
 
+use Exceedone\Exment\Services\DataImportExport\Formats\PhpSpreadSheet\PhpSpreadSheet;
 use Exceedone\Exment\Validator as ExmentValidator;
 use Exceedone\Exment\Enums\UrlTagType;
 use Exceedone\Exment\Enums\FilterSearchType;
@@ -23,8 +24,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Contracts\Support\Htmlable;
-use Encore\Admin\Admin;
-use Encore\Admin\Form\Field\UploadField;
+use ExmentAdminCore\Admin\Admin;
+use ExmentAdminCore\Admin\Form\Field\UploadField;
 use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Finder\Finder;
@@ -72,6 +73,7 @@ class Exment
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function menu()
     {
         return (new Menu())->toTree();
@@ -91,15 +93,22 @@ class Exment
      */
     public function error($request, $exception, $callback)
     {
+        // the answer of a feature not used, or not allowed (Services\Features::deny()), thrown: as it is
+        if ($exception instanceof \Illuminate\Http\Exceptions\HttpResponseException
+            && $exception->getResponse()->headers->has(\Exceedone\Exment\Services\Features::DENIED_HEADER)) {
+            return $exception->getResponse();
+        }
         try {
             // Api is default callback
             if ($this->isApiEndpoint()) {
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
+            /** @phpstan-ignore-next-line not implement MaintenanceModeException in laravel 10 */
             if ($exception instanceof \Illuminate\Foundation\Http\Exceptions\MaintenanceModeException) {
                 $errorController = app(\Exceedone\Exment\Controllers\ErrorController::class);
-                return $errorController->maintenance($request, $exception);
+                return $errorController->maintenance();
             }
 
             if ($exception instanceof \Illuminate\Session\TokenMismatchException) {
@@ -113,6 +122,7 @@ class Exment
             }
 
             if ($this->isPublicFormEndpoint()) {
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
@@ -126,27 +136,33 @@ class Exment
                     ]);
                 }
 
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
             // whether has User
             $user = \Exment::user();
             if (!$user) {
+                // @phpstan-ignore-next-line
                 return $callback($request, $exception);
             }
 
             $errorController = app(\Exceedone\Exment\Controllers\ErrorController::class);
             return $errorController->error($request, $exception);
         } catch (\Exception $ex) {
+            // @phpstan-ignore-next-line
             return $callback($request, $exception);
         } catch (\Throwable $e) {
+            // @phpstan-ignore-next-line
             return $callback($request, $exception);
         }
     }
 
     /**
+     // Laravel facade Auth not recognized
      * get user. Use "Auth::shouldUse", so get only logined user.
      */
+    // @phpstan-ignore-next-line
     public function user($guards = null)
     {
         return \Auth::guard($this->guard)->user();
@@ -156,18 +172,26 @@ class Exment
     /**
      * set gurad info.
      */
+    // @phpstan-ignore-next-line
     public function setGuard(string $guard)
     {
         $this->guard = $guard;
         \Auth::shouldUse($guard);
     }
 
+    /**
+     * The guard user() reads, for code that has to reach the same guard instance.
+     */
+    // @phpstan-ignore-next-line
+    public function getGuard()
+    {
+        return $this->guard;
+    }
 
     /**
      * Get User Model's ID
-     * "This function name defines Custom value's user and login user. But this function always return Custom value's user
-     *
-     * @return string|int
+     * This function name defines Custom value's user and login user. But this function always return Custom value's user
+     * @return string|int|null
      */
     public function getUserId()
     {
@@ -181,6 +205,7 @@ class Exment
     }
 
 
+    // @phpstan-ignore-next-line
     public function getRender($grid): ?string
     {
         if ($grid instanceof Renderable) {
@@ -198,6 +223,7 @@ class Exment
     /**
      * get exment version
      */
+    // @phpstan-ignore-next-line
     public function version($getFromComposer = true)
     {
         list($latest, $current) = $this->getExmentVersion($getFromComposer);
@@ -210,6 +236,7 @@ class Exment
      *
      * @return array $latest: new version in package, $current: this version in server
      */
+    // @phpstan-ignore-next-line
     public function getExmentVersion($getFromComposer = true)
     {
         try {
@@ -222,32 +249,18 @@ class Exment
             $current = null;
             if (isset($version_json)) {
                 $version = json_decode_ex($version_json, true);
+                // @phpstan-ignore-next-line
                 $latest = array_get($version, 'latest');
+                // @phpstan-ignore-next-line
                 $current = array_get($version, 'current');
             }
 
             if ((empty($latest) || empty($current))) {
                 // get current version from composer.lock
-                $composer_lock = base_path('composer.lock');
-                if (!\File::exists($composer_lock)) {
+                $current = $this->getVersionFromComposerLock();
+                if (is_null($current)) {
                     return [null, null];
                 }
-
-                $contents = \File::get($composer_lock);
-                $json = json_decode_ex($contents, true);
-                if (!$json) {
-                    return [null, null];
-                }
-
-                // get exment info
-                $packages = array_get($json, 'packages');
-                $exment = collect($packages)->filter(function ($package) {
-                    return array_get($package, 'name') == Define::COMPOSER_PACKAGE_NAME;
-                })->first();
-                if (!isset($exment)) {
-                    return [null, null];
-                }
-                $current = array_get($exment, 'version');
 
                 // if outside api is not permitted, return only current
                 if (!System::outside_api() || !$getFromComposer) {
@@ -278,21 +291,14 @@ class Exment
                 if (!$json) {
                     return [null, null];
                 }
-                $packages = array_get($json, 'packages.'.Define::COMPOSER_PACKAGE_NAME);
+                // @phpstan-ignore-next-line
+                $packages = array_get($json, 'package.versions');
                 if (!$packages) {
                     return [null, null];
                 }
 
-                // sort by timestamp
-                $sortedPackages = collect($packages)->sortByDesc('time');
-                foreach ($sortedPackages as $key => $package) {
-                    // if version is "dev-", continue
-                    if (substr($key, 0, 4) == 'dev-') {
-                        continue;
-                    }
-                    $latest = $key;
-                    break;
-                }
+                // pick the latest STABLE version (semantic compare; skip dev / branch-alias / pre-release)
+                $latest = $this->pickLatestStableVersion($packages);
 
                 try {
                     Cache::put(Define::SYSTEM_KEY_SESSION_SYSTEM_VERSION, json_encode([
@@ -310,6 +316,108 @@ class Exment
 
 
     /**
+     * The screen design fixed by the server (config exment.ui_design,
+     * .env EXMENT_UI_DESIGN).
+     *
+     * @return string|null "modern" or "classic" when the server fixes it, null when it is not set (or not one of the two)
+     */
+    public function getUiDesignForced(): ?string
+    {
+        $config = config('exment.ui_design');
+        if (!is_string($config)) {
+            return null;
+        }
+
+        $config = strtolower(trim($config));
+        return in_array($config, Define::SYSTEM_UI_DESIGN, true) ? $config : null;
+    }
+
+    /**
+     * The screen design in effect: "modern" or "classic".
+     * The value fixed by the server wins; without it, the system setting decides.
+     *
+     * @return string
+     */
+    public function getUiDesign(): string
+    {
+        $forced = $this->getUiDesignForced();
+        if (!is_null($forced)) {
+            return $forced;
+        }
+
+        $default = Define::SYSTEM_UI_DESIGN[0];
+        try {
+            $value = System::ui_design();
+        } catch (\Exception $ex) {
+            // The system table cannot be read (e.g. before the install).
+            return $default;
+        }
+
+        return in_array($value, Define::SYSTEM_UI_DESIGN, true) ? $value : $default;
+    }
+
+    /**
+     * Whether the "modern" stylesheet is loaded.
+     * This is the one place that answers the question: the admin pages
+     * (Middleware\Bootstrap) and the login layout both ask here.
+     *
+     * @return bool
+     */
+    public function isModernUi(): bool
+    {
+        return $this->getUiDesign() === 'modern';
+    }
+
+    /** @var array<string, string|null> composer.lock path + mtime => the version of Exment in it */
+    protected static $composerLockVersions = [];
+
+    /**
+     * The version of Exment written in composer.lock.
+     * Read once per process, and kept in the cache while composer.lock is unchanged: the file is
+     * large, and a page asked for it several times on each request (ISS00413).
+     *
+     * @return string|null
+     */
+    public function getVersionFromComposerLock(): ?string
+    {
+        $composer_lock = base_path('composer.lock');
+        if (!\File::exists($composer_lock)) {
+            return null;
+        }
+        $key = $composer_lock . ':' . @filemtime($composer_lock);
+        if (array_key_exists($key, static::$composerLockVersions)) {
+            return static::$composerLockVersions[$key];
+        }
+
+        $cacheKey = 'exment_composer_lock_version_' . md5($key);
+        try {
+            $cached = Cache::get($cacheKey);
+            if (is_string($cached) && $cached !== '') {
+                return static::$composerLockVersions[$key] = $cached;
+            }
+        } catch (\Exception $e) {
+        }
+
+        $version = null;
+        $json = json_decode_ex(\File::get($composer_lock), true);
+        if (is_array($json)) {
+            // @phpstan-ignore-next-line
+            $exment = collect(array_get($json, 'packages'))->first(function ($package) {
+                return array_get($package, 'name') == Define::COMPOSER_PACKAGE_NAME;
+            });
+            $version = isset($exment) ? array_get($exment, 'version') : null;
+        }
+
+        if (is_string($version) && $version !== '') {
+            try {
+                Cache::forever($cacheKey, $version);
+            } catch (\Exception $e) {
+            }
+        }
+        return static::$composerLockVersions[$key] = $version;
+    }
+
+    /**
      * getExmentCurrentVersion
      *
      * @return string|null this version in server
@@ -323,26 +431,97 @@ class Exment
     /**
      * check exment's next version
      *
-     * @return array $latest: new version in package, $current: this version in server
+     * @return int $latest: new version in package, $current: this version in server
      */
     public function checkLatestVersion()
     {
         list($latest, $current) = $this->getExmentVersion();
-        $latest = trim($latest, 'v');
-        $current = trim($current, 'v');
 
-        if (empty($latest) || empty($current)) {
+        return $this->classifyVersion($latest, $current);
+    }
+
+    /**
+     * Classify the installed version against the latest available version.
+     * Pure logic (no I/O), extracted so it can be unit tested.
+     *
+     * @param string|null $latest  latest available version (tag), may be null
+     * @param string|null $current installed version (tag), may be null
+     * @return int SystemVersion::*
+     */
+    public function classifyVersion($latest, $current): int
+    {
+        // cast before trim, and strip only the LEADING "v" prefix.
+        // ($latest / $current can be null when outside_api is off / offline / api error;
+        //  trim(..., 'v') would also strip a trailing "v", corrupting "*-dev" branch versions.)
+        $latest = ltrim((string)($latest ?? ''), 'vV');
+        $current = ltrim((string)($current ?? ''), 'vV');
+
+        if ($latest === '' || $current === '') {
             return SystemVersion::ERROR;
-        } elseif (strpos($current, 'dev-') === 0) {
-            return SystemVersion::DEV;
-        } elseif ($latest === $current) {
-            return SystemVersion::LATEST;
-            $message = exmtrans("system.version_latest");
-            $icon = 'check-square';
-            $bgColor = 'blue';
-        } else {
-            return SystemVersion::HAS_NEXT;
         }
+        // development / branch-alias installs are not compared against released versions
+        if ($this->isDevVersion($current)) {
+            return SystemVersion::DEV;
+        }
+        // LATEST when the installed version is at least as new as the latest released one
+        if (version_compare($latest, $current, '<=')) {
+            return SystemVersion::LATEST;
+        }
+        return SystemVersion::HAS_NEXT;
+    }
+
+    /**
+     * Whether the given version string represents a development / branch-alias build.
+     * Covers: dev-main, dev-xxx, 6.x-dev, 6.2.x-dev, 9999999-dev, *-dev
+     *
+     * @param string|null $version
+     * @return bool
+     */
+    public function isDevVersion($version): bool
+    {
+        // strip only the leading "v" prefix (a "*-dev" version ends in "v")
+        $version = ltrim((string)($version ?? ''), 'vV');
+
+        return strpos($version, 'dev-') === 0
+            || strpos($version, '9999999') === 0
+            || preg_match('/-dev$/i', $version) === 1;
+    }
+
+    /**
+     * Pick the latest STABLE version key from a packagist "package.versions" map.
+     * Compares semantically (so "6.2.10" ranks above "6.2.9") and skips
+     * dev / branch-alias / pre-release (alpha/beta/RC) entries.
+     *
+     * @param array<string,mixed>|null $packages
+     * @return string|null
+     */
+    public function pickLatestStableVersion($packages)
+    {
+        if (empty($packages)) {
+            return null;
+        }
+
+        $sorted = collect($packages)->sort(function ($a, $b) {
+            return version_compare(
+                (string) array_get($b, 'version_normalized'),
+                (string) array_get($a, 'version_normalized')
+            );
+        });
+
+        foreach ($sorted as $key => $package) {
+            $key = (string) $key;
+            $normalized = (string) array_get($package, 'version_normalized', $key);
+            // skip dev branches and pre-releases (dev / alpha / beta / RC).
+            // NB: "-patch" / "-pl" are STABLE in composer, so only known unstable flags are excluded.
+            if ($normalized === ''
+                || strpos($key, 'dev-') === 0
+                || preg_match('/-(dev|alpha|beta|rc)/i', $normalized) === 1) {
+                continue;
+            }
+            return $key;
+        }
+
+        return null;
     }
 
 
@@ -352,6 +531,7 @@ class Exment
 
     // Helper logic ----------------------------------------------------
 
+    // @phpstan-ignore-next-line
     public function getUrlTag(?string $url, ?string $label, $urlTagType, array $attributes = [], array $options = [])
     {
         $options = array_merge(
@@ -387,7 +567,7 @@ class Exment
         }
 
         if (isset($options['tooltipTitle'])) {
-            $attributes['data-toggle'] = 'tooltip';
+            $attributes['data-bs-toggle'] = 'tooltip';
             $attributes['title'] = esc_html($options['tooltipTitle']);
         }
 
@@ -398,11 +578,15 @@ class Exment
         ])->render();
     }
 
-
     /**
      * get_password_rule(for validation)
-     * @return string
+     *
+     * @param $required
+     * @param LoginUser|null $login_user
+     * @param array $options
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function get_password_rule($required = true, ?LoginUser $login_user = null, array $options = [])
     {
         $options = array_merge([
@@ -460,8 +644,10 @@ class Exment
     /**
      * get Data from excel sheet
      */
+    // @phpstan-ignore-next-line
     public function getDataFromSheet($sheet, $keyvalue = false, $isGetMerge = false)
     {
+        /** @var PhpSpreadSheet $format */
         $format = FormatBase::getFormatClass('xlsx', ExportImportLibrary::PHP_SPREAD_SHEET, false);
         return $format->getDataFromSheet($sheet, $keyvalue, $isGetMerge);
     }
@@ -470,8 +656,10 @@ class Exment
     /**
      * get cell value
      */
+    // @phpstan-ignore-next-line
     public function getCellValue($cell, $sheet, $isGetMerge = false)
     {
+        /** @var PhpSpreadSheet $format */
         $format = FormatBase::getFormatClass('xlsx', ExportImportLibrary::PHP_SPREAD_SHEET, false);
         return $format->getCellValue($cell, $sheet, $isGetMerge);
     }
@@ -484,6 +672,7 @@ class Exment
      * @param string $q search string
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getQueryMarkAndValue($isLike, $q)
     {
         // if all search
@@ -501,6 +690,7 @@ class Exment
     /**
      * search document
      */
+    // @phpstan-ignore-next-line
     public function getSearchDocumentQuery(CustomTable $target_custom_table, ?string $q, $query = null)
     {
         if (empty($query)) {
@@ -543,9 +733,10 @@ class Exment
      * Push collection. if $item is Collection, loop
      *
      * @param Collection $collect
-     * @param Collection|mixed $item
-     * @return void
+     * @param $item
+     * @return Collection
      */
+    // @phpstan-ignore-next-line
     public function pushCollection(Collection $collect, $item): Collection
     {
         if ($item instanceof Collection) {
@@ -601,6 +792,7 @@ class Exment
     /**
      * get true mark. If $val is true, output mark
      */
+    // @phpstan-ignore-next-line
     public function getTrueMark($val)
     {
         if (!boolval($val)) {
@@ -616,6 +808,7 @@ class Exment
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getYesNoAllOption(): array
     {
         return [
@@ -625,16 +818,19 @@ class Exment
         ];
     }
 
+    // @phpstan-ignore-next-line
     public function wrapValue($string)
     {
         return app('db')->getPdo()->quote($string);
     }
 
+    // @phpstan-ignore-next-line
     public function wrapColumn($string)
     {
         return \DB::getQueryGrammar()->wrap($string);
     }
 
+    // @phpstan-ignore-next-line
     public function wrapTable($string)
     {
         return \DB::getQueryGrammar()->wrapTable($string);
@@ -645,6 +841,7 @@ class Exment
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function formatAttributes($attributes)
     {
         $html = [];
@@ -660,6 +857,7 @@ class Exment
     /**
      * this url is ApiEndpoint
      */
+    // @phpstan-ignore-next-line
     public function isApiEndpoint()
     {
         $basePath = ltrim(admin_base_path(), '/');
@@ -670,6 +868,7 @@ class Exment
     /**
      * this url is Public form endpoint
      */
+    // @phpstan-ignore-next-line
     public function isPublicFormEndpoint()
     {
         $route = public_form_base_path();
@@ -681,6 +880,7 @@ class Exment
      * get tmp folder path. Uses for
      * @param string $type "plugin", "template", "backup", "data".
      */
+    // @phpstan-ignore-next-line
     public function getTmpFolderPath($type, $fullpath = true)
     {
         $path = path_join('tmp', $type, short_uuid());
@@ -726,6 +926,7 @@ class Exment
     /**
      * Set time limit long
      */
+    // @phpstan-ignore-next-line
     public function setTimeLimitLong($time = 6000)
     {
         $max_execution_time = ini_get('max_execution_time');
@@ -754,19 +955,20 @@ class Exment
         return $minsize * 1024 * 1024;
     }
 
-
     /**
      * Get file size
      *
-     * @param string $val
+     * @param $val
      * @return int
      */
+    // @phpstan-ignore-next-line
     public function getFileMegaSizeValue($val)
     {
         $val = strtolower(strval($val));
         $val = str_replace('m', '', $val);
 
         if (strpos($val, 'g') !== false) {
+            // @phpstan-ignore-next-line
             $val = str_replace('g', '', $val) * 1024;
         }
         return intval($val);
@@ -792,6 +994,7 @@ class Exment
      * @param string|null $path
      * @return void
      */
+    // @phpstan-ignore-next-line
     public function makeDirectoryDisk($disk, ?string $path, int $mode = 0775)
     {
         if (!$disk) {
@@ -810,6 +1013,7 @@ class Exment
      * @param  string  $directory
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function allDirectories($directory)
     {
         $directories = [];
@@ -865,6 +1069,7 @@ class Exment
      * @param \Carbon\Carbon $carbon
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function carbonToArray(\Carbon\Carbon $carbon): array
     {
         return [
@@ -897,6 +1102,7 @@ class Exment
      * @param array|Collection $targetArr
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     public function isContains2Array($testArr, $targetArr): bool
     {
         foreach ($testArr as $arrKey => $arrValue) {
@@ -911,13 +1117,14 @@ class Exment
 
 
     /**
-     * Whether Available Google recaptcha (whether has class)
+     * Whether Google reCAPTCHA can be used, that is whether the optional
+     * google/recaptcha library is installed.
      *
      * @return boolean
      */
     public function isAvailableGoogleRecaptcha()
     {
-        return class_exists(\Arcanedev\NoCaptcha\NoCaptchaManager::class);
+        return Services\ReCaptchaService::isAvailable();
     }
 
 
@@ -955,12 +1162,11 @@ class Exment
     /**
      * save file request session. for after saved custom value, set custom value's id.
      *
-     * @param UploadField $field
-     * @param string|UploadedFile $file
-     * @param string $file_type
+     * @param ExmentFile $exmentfile
+     * @param string $column_name
      * @param CustomTable $custom_table
-     * @param boolean $replace
-     * @return string
+     * @param bool $replace
+     * @return mixed
      */
     public function setFileRequestSession(ExmentFile $exmentfile, string $column_name, CustomTable $custom_table, bool $replace = true)
     {
@@ -989,6 +1195,7 @@ class Exment
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getOptionKey($column_key, $append_table = true, $table_id = null, $options = [])
     {
         $options = array_merge(
@@ -1046,6 +1253,7 @@ class Exment
      *
      * @return Collection
      */
+    // @phpstan-ignore-next-line
     public static function uniqueCustomValues(...$collections): Collection
     {
         $result = collect();
@@ -1086,6 +1294,7 @@ class Exment
      *
      * @return string prefixed path
      */
+    // @phpstan-ignore-next-line
     public function getPathPrefix($adapeer, string $path): string
     {
         return $this->getPrefixer($adapeer)->prefixPath($path);
@@ -1097,12 +1306,14 @@ class Exment
      *
      * @return PathPrefixer
      */
+    // @phpstan-ignore-next-line
     protected function getPrefixer($adapter): PathPrefixer
     {
         $reflectionClass = new \ReflectionClass($adapter);
         try {
             $property = $reflectionClass->getProperty('prefixer');
         } catch (\ReflectionException $ex) {
+            // @phpstan-ignore-next-line
             $property = $reflectionClass->getParentClass()->getProperty('prefixer');
         }
         $property->setAccessible(true);

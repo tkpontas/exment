@@ -19,8 +19,10 @@ class FileColumnAction implements ActionInterface
     /**
      * target custom table
      */
+    // @phpstan-ignore-next-line
     protected $custom_table;
 
+    // @phpstan-ignore-next-line
     public function __construct($args = [])
     {
         $this->custom_table = array_get($args, 'custom_table');
@@ -28,6 +30,7 @@ class FileColumnAction implements ActionInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public function importChunk($datalist, $options = [])
     {
         $messages = [];
@@ -42,7 +45,7 @@ class FileColumnAction implements ActionInterface
 
             $import_loop_count = 0;
             $take = $options['take'] ?? 1000;
-            $data_import_cnt = 0;
+            $table_import_cnt = 0;
             while (true) {
                 $options['row_start'] = ($import_loop_count * $take) + 1;
                 $options['row_end'] = (($import_loop_count + 1) * $take);
@@ -71,8 +74,8 @@ class FileColumnAction implements ActionInterface
                 // if has error data, return error data
                 if (is_array($error_data) && count($error_data) > 0) {
                     $error_msg = [];
-                    if ($data_import_cnt > 0) {
-                        $messages[] = $table_name.':'.$data_import_cnt;
+                    if ($table_import_cnt > 0) {
+                        $messages[] = $table_name.':'.$table_import_cnt;
                     }
                     if (count($messages) > 0) {
                         $error_msg[] = exmtrans('command.import.error_info_ex', implode(',', $messages));
@@ -100,6 +103,7 @@ class FileColumnAction implements ActionInterface
                 foreach ($data_import as $index => &$row) {
                     // call dataProcessing if method exists
                     if (method_exists($provider, 'dataProcessing')) {
+                        // @phpstan-ignore-next-line
                         $row['data'] = $provider->dataProcessing(array_get($row, 'data'));
                     }
 
@@ -108,6 +112,7 @@ class FileColumnAction implements ActionInterface
 
                 // $get_index++;
                 $data_import_cnt += count($data_import);
+                $table_import_cnt += count($data_import);
                 $import_loop_count++;
             }
         }
@@ -119,6 +124,7 @@ class FileColumnAction implements ActionInterface
     }
 
 
+    // @phpstan-ignore-next-line
     public function import($datalist, $options = [])
     {
     }
@@ -126,6 +132,7 @@ class FileColumnAction implements ActionInterface
     /**
      * filter only custom_table or relations datalist.
      */
+    // @phpstan-ignore-next-line
     public function filterDatalist($datalist)
     {
         return $datalist;
@@ -134,6 +141,7 @@ class FileColumnAction implements ActionInterface
     /**
      * get provider
      */
+    // @phpstan-ignore-next-line
     public function getProvider($table_name)
     {
         return new Import\FileColumnProvider([

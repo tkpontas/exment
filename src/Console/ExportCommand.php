@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Console;
 
-use Encore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid;
 use Illuminate\Console\Command;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomView;
@@ -19,7 +19,7 @@ class ExportCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'exment:export {table_name} {--action=default} {--type=all} {--page=1} {--count=} {--format=csv} {--view=} {--dirpath=} {--add_setting=0} {--add_relation=0}';
+    protected $signature = 'exment:export {table_name} {--action=default} {--type=all} {--page=1} {--count=} {--format=csv} {--view=} {--dirpath=} {--add_setting=0} {--add_relation=0} {--add_comment=0}';
 
     /**
      * The console command description.
@@ -31,7 +31,7 @@ class ExportCommand extends Command
     /**
      * full path stored export files.
      *
-     * @var string
+     * @var string|null
      */
     protected $dirpath;
 
@@ -47,11 +47,17 @@ class ExportCommand extends Command
         $this->initExmentCommand();
     }
 
+    /**
+     * Get command parameters
+     *
+     * @return array{0: \Exceedone\Exment\Model\CustomTable, 1: array<string, mixed>}
+     */
     protected function getParameters()
     {
+        /** @var null|string $table_name */
         $table_name = $this->argument("table_name");
 
-        if (!isset($table_name)) {
+        if ($table_name === null) {
             throw new \Exception('parameter table name is empty');
         }
 
@@ -69,6 +75,7 @@ class ExportCommand extends Command
         $options['count'] = $this->option("count");
         $options['add_setting'] = $this->option("add_setting");
         $options['add_relation'] = $this->option("add_relation");
+        $options['add_comment'] = $this->option("add_comment");
 
         if (!\in_array($options['type'], ['all', 'page'])) {
             throw new \Exception('optional parameter type error : ' . $options['type']);

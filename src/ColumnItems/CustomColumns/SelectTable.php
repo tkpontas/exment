@@ -17,18 +17,24 @@ use Exceedone\Exment\Enums\ViewKindType;
 use Exceedone\Exment\Enums\ColumnType;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\FilterOption;
-use Encore\Admin\Form;
-use Encore\Admin\Form\Field;
-use Encore\Admin\Grid\Filter;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Grid\Filter;
 use Illuminate\Support\Collection;
 
+/**
+ *
+ */
 class SelectTable extends CustomItem
 {
     use SelectTrait;
 
+    // @phpstan-ignore-next-line
     protected $target_table;
+    // @phpstan-ignore-next-line
     protected $target_view;
 
+    // @phpstan-ignore-next-line
     public function __construct($custom_column, $custom_value, $view_column_target = null)
     {
         parent::__construct($custom_column, $custom_value, $view_column_target);
@@ -37,6 +43,7 @@ class SelectTable extends CustomItem
         $this->target_view = CustomView::getEloquent(array_get($custom_column, 'options.select_target_view'));
     }
 
+    // @phpstan-ignore-next-line
     public function saving()
     {
         if (is_nullorempty($this->value)) {
@@ -57,12 +64,14 @@ class SelectTable extends CustomItem
     /**
      * get cast Options
      */
+    // @phpstan-ignore-next-line
     protected function getCastOptions()
     {
         $type = $this->isMultipleEnabled() ? DatabaseDataType::TYPE_STRING_MULTIPLE : DatabaseDataType::TYPE_INTEGER;
         return [$type, false, []];
     }
 
+    // @phpstan-ignore-next-line
     public function getSelectTable()
     {
         return $this->target_table;
@@ -73,16 +82,41 @@ class SelectTable extends CustomItem
         return $this->getValue($v, false, false);
     }
 
+    // @phpstan-ignore-next-line
     protected function _text($v)
     {
         return $this->getValue($v, true, false);
     }
 
+    // @phpstan-ignore-next-line
     protected function _html($v)
     {
         return $this->getValue($v, true, true);
     }
 
+    /**
+     * A reference the viewer may not open is printed as "no permission"
+     * (see getValue()), and its per-value color is keyed on the id of the
+     * record it points at. Painting it would tell, color by color, which
+     * record that is - so only a reference the viewer can open is painted.
+     *
+     * The lookup is the one getValue() just made for the label, answered
+     * from the request cache. Anything but an id is not a reference the
+     * viewer could open, so it is left plain without asking.
+     *
+     * @param mixed $v
+     * @return bool
+     */
+    protected function isStyledValue($v): bool
+    {
+        if (!isset($this->target_table) || !is_numeric($v)) {
+            return false;
+        }
+
+        return !is_null($this->target_table->getValueModel($v));
+    }
+
+    // @phpstan-ignore-next-line
     protected function getValue($v, $text, $html)
     {
         if (!isset($this->target_table)) {
@@ -94,7 +128,7 @@ class SelectTable extends CustomItem
             return null;
         }
 
-        if (!is_array($v) && preg_match('/\[.+\]/i', $v)) {
+        if (!is_array($v) && preg_match('/\[.*\]/i', $v)) {
             $v = json_decode_ex($v);
         }
 
@@ -141,6 +175,7 @@ class SelectTable extends CustomItem
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function getResult($model, $text, $html)
     {
         if ($text === false) {
@@ -148,11 +183,15 @@ class SelectTable extends CustomItem
         // get text column
         } elseif ($html && !$this->isPublicForm()) {
             return $model->getUrl(true);
+        } elseif ($html) {
+            // a public form shows the label without a link; it is still text
+            return esc_html($model->getLabel());
         } else {
             return $model->getLabel();
         }
     }
 
+    // @phpstan-ignore-next-line
     protected function getAdminFieldClass()
     {
         if ($this->isMultipleEnabled()) {
@@ -165,13 +204,14 @@ class SelectTable extends CustomItem
     /**
      * Get grid filter option. Use grid filter, Ex. LIKE search.
      *
-     * @return string
+     * @return string|null
      */
     protected function getGridFilterOption(): ?string
     {
-        return FilterOption::SELECT_EXISTS;
+        return (string)FilterOption::SELECT_EXISTS;
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminOptions(&$field)
     {
         if (!isset($this->target_table)) {
@@ -214,9 +254,52 @@ class SelectTable extends CustomItem
                         'target_view_id' => $this->custom_column->getOption('select_target_view'),
                         'display_table_id' => $this->custom_table->id,
                         'linkage' => $linkage_expand,
-                        'target_column_multiple' => $field instanceof \Encore\Admin\Form\Field\MultipleSelect ? 1 : 0,
+                        'target_column_multiple' => $field instanceof \ExmentAdminCore\Admin\Form\Field\MultipleSelect ? 1 : 0,
                     ]),
                     'data-widgetmodal_getdata_fieldsgroup' => json_encode(['selected_items' => 'class_' . $this->uniqueName()]),
+                ],
+            ];
+        }
+
+        // "assign to me", Backlog's 私が担当. Rides the same button strip the search
+        // button uses, so it lands next to the field with no new markup. The user
+        // id travels in the attribute rather than a JS global, because nothing
+        // exposes the logged-in user to scripts today.
+        if (isMatchString($this->custom_column->column_type, ColumnType::USER)
+            && boolval($this->custom_column->getOption('assign_me_enabled'))
+        ) {
+            $assign_me_id = \Exment::getUserId();
+            if (!is_nullorempty($assign_me_id)) {
+                $login_user = \Exment::user();
+                $buttons[] = [
+                    'label' => exmtrans('custom_column.assign_me'),
+                    'btn_class' => 'btn-default',
+                    'icon' => 'fa-user',
+                    'attributes' => [
+                        'data-assign-me' => $assign_me_id,
+                        'data-assign-me-label' => $login_user ? $login_user->user_name : $assign_me_id,
+                    ],
+                ];
+            }
+        }
+
+        // Quick add, Backlog's + beside カテゴリー. Hidden unless this user could
+        // create the record anyway, so the button never offers something the save
+        // would then refuse.
+        if (boolval($this->custom_column->getOption('quickadd_enabled'))
+            && isMatchString($this->custom_column->column_type, ColumnType::SELECT_TABLE)
+            && $this->target_table->enableCreate(true) === true
+        ) {
+            $buttons[] = [
+                'label' => exmtrans('custom_column.quickadd'),
+                'btn_class' => 'btn-default',
+                'icon' => 'fa-plus',
+                'attributes' => [
+                    'data-quickadd-url' => admin_urls('webapi', $this->target_table->table_name, 'quickadd'),
+                    'data-quickadd-title' => $this->label(),
+                    'data-quickadd-ok' => trans('admin.submit'),
+                    'data-quickadd-cancel' => trans('admin.cancel'),
+                    'data-quickadd-error' => exmtrans('common.message.error_execute'),
                 ],
             ];
         }
@@ -236,6 +319,7 @@ class SelectTable extends CustomItem
         ]);
     }
 
+    // @phpstan-ignore-next-line
     public function getSelectOptions($value, $field, array $selectOption = [])
     {
         $selectOption = array_merge(
@@ -254,6 +338,7 @@ class SelectTable extends CustomItem
      * @param \Closure|null $callback
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getSelectFieldOptions($callback = null)
     {
         return [
@@ -269,18 +354,18 @@ class SelectTable extends CustomItem
     /**
      * Get relation filter object
      *
-     * @return Linkage|null
+     * @return Linkage|null|void
      */
     protected function getLinkage()
     {
         // if config "select_relation_linkage_disabled" is true, not callback
         if (boolval(config('exment.select_relation_linkage_disabled', false))) {
-            return;
+            return null;
         }
 
         $relation_filter_target_column_id = array_get($this->form_column_options, 'relation_filter_target_column_id');
         if (is_nullorempty($relation_filter_target_column_id)) {
-            return;
+            return null;
         }
 
         return Linkage::getLinkage($relation_filter_target_column_id, $this->custom_column);
@@ -290,7 +375,7 @@ class SelectTable extends CustomItem
      * Whether showing Search modal button
      *
      * @param mixed $form_column_options
-     * @return boolean
+     * @return bool
      */
     protected function isShowSearchButton($form_column_options): bool
     {
@@ -316,12 +401,13 @@ class SelectTable extends CustomItem
     /**
      * get relation filter callback
      *
-     * @return \Closure|null
+     * @return \Closure|null|void
      */
+    // @phpstan-ignore-next-line
     protected function getRelationFilterCallback($linkage)
     {
         if (!isset($linkage)) {
-            return;
+            return null;
         }
 
         // get callback
@@ -362,6 +448,7 @@ class SelectTable extends CustomItem
         return null;
     }
 
+    // @phpstan-ignore-next-line
     protected function setAdminFilterOptions(&$filter)
     {
         if (!isset($this->target_table)) {
@@ -379,15 +466,17 @@ class SelectTable extends CustomItem
         })->ajax($ajax);
     }
 
+    // @phpstan-ignore-next-line
     protected function setValidates(&$validates)
     {
         $validates[] = new Validator\SelectTableNumericRule();
         $validates[] = new Validator\CustomValueRule($this->target_table, $this->custom_column->getOption('select_target_view'));
     }
 
+    // @phpstan-ignore-next-line
     protected function getRemoveValidates()
     {
-        return [\Encore\Admin\Validator\HasOptionRule::class];
+        return [\ExmentAdminCore\Admin\Validator\HasOptionRule::class];
     }
 
     /**
@@ -395,8 +484,9 @@ class SelectTable extends CustomItem
      *
      * @param mixed $value
      * @param array $setting
-     * @return void
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function getImportValue($value, $setting = [])
     {
         $result = true;
@@ -424,6 +514,7 @@ class SelectTable extends CustomItem
                 // if get as id and not numeric, set error
                 if (!is_numeric($v)) {
                     $result = false;
+                    // @phpstan-ignore-next-line
                     $message = trans('validation.integer', ['attribute' => $this->label()]);
                 }
             } else {
@@ -457,8 +548,9 @@ class SelectTable extends CustomItem
      *
      * @param array $datalist
      * @param string $key
-     * @return void
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function getKeyAndIdList($datalist, $key)
     {
         if (is_nullorempty($datalist) || is_nullorempty($key)) {
@@ -470,15 +562,24 @@ class SelectTable extends CustomItem
         return System::requestSession($sessionkey, function () use ($datalist, $key) {
             // get key and value list
             $keyValueList = collect($datalist)->map(function ($d) {
-                return array_get($d, 'value.' . $this->custom_column->column_name);
+                $val = array_get($d, 'value.' . $this->custom_column->column_name);
+                if (ColumnType::isMultipleEnabled($this->custom_column->column_type)
+                    && $this->custom_column->getOption('multiple_enabled')) {
+                    return explode(",", $val);
+                } else {
+                    return $val;
+                }
             })->flatten()->filter()->toArray();
 
             $target_custom_column = CustomColumn::getEloquent($key, $this->target_table);
-            $indexName = $target_custom_column ?? $target_custom_column->index_enabled ? $target_custom_column->getIndexColumnName() : "value->$key";
-            $values = $this->target_table->getValueModel()->whereIn($indexName, $keyValueList)->select(['value', 'id'])
-                ->get()->mapWithKeys(function ($v) use ($key) {
-                    return [array_get($v, "value.$key") => $v->id];
-                });
+            $values = [];
+            if ($target_custom_column) {
+                $indexName = $target_custom_column->index_enabled ? $target_custom_column->getIndexColumnName() : "value->$key";
+                $values = $this->target_table->getValueModel()->whereIn($indexName, $keyValueList)->select(['value', 'id'])
+                    ->get()->mapWithKeys(function ($v) use ($key) {
+                        return [array_get($v, "value.$key") => $v->id];
+                    });
+            }
 
             return $values;
         });
@@ -543,7 +644,7 @@ class SelectTable extends CustomItem
         }
         // only single search column, search
         elseif (!$use_table_label_id && count($labelColumns) == 1) {
-            if ($this->setSelectTableQuery($query, array_get($labelColumns[0], 'table_label_id'), $label)) {
+            if ($this->setSelectTableQuery($query, array_get($labelColumns->first(), 'table_label_id'), $label)) {
                 $executeSearch = true;
             }
         } else {
@@ -552,6 +653,7 @@ class SelectTable extends CustomItem
             $label = preg_replace('/\s+/', ' ', $label);
             $items = preg_split('/[\s|\x{3000}]+/u', $label);
 
+            // @phpstan-ignore-next-line
             $searchAsId = $use_table_label_id && substr($items[0], 0, 1) == '#';
 
             if ($searchAsId) {
@@ -562,6 +664,7 @@ class SelectTable extends CustomItem
             }
 
             $labelColumnIndex = 0;
+            // @phpstan-ignore-next-line
             for ($i = ($searchAsId ? 1 : 0); $i < count($items); $i++) {
                 if (count($labelColumns) <= $labelColumnIndex) {
                     return null;
@@ -582,6 +685,7 @@ class SelectTable extends CustomItem
         return is_nullorempty($ids) ? null : ($this->isMultipleEnabled() ? $ids->toArray() : $ids->first());
     }
 
+    // @phpstan-ignore-next-line
     protected function setSelectTableQuery($query, $custom_column_id, $value)
     {
         $custom_column = CustomColumn::getEloquent($custom_column_id);
@@ -619,8 +723,9 @@ class SelectTable extends CustomItem
      * @param int $takeCount
      * @param string $q
      * @param array $options
-     * @return void
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function getSearchQueries($mark, $value, $takeCount, $q, $options = [])
     {
         if (!$this->isMultipleEnabled()) {
@@ -640,6 +745,7 @@ class SelectTable extends CustomItem
     {
         return $this->isMultipleEnabledTrait();
     }
+    // @phpstan-ignore-next-line
     protected function getFilterFieldClass()
     {
         if ($this->isMultipleEnabled()) {
@@ -660,9 +766,14 @@ class SelectTable extends CustomItem
     public function setCustomColumnOptionForm(&$form)
     {
         $this->setCustomColumnOptionFormSelectTable($form);
+
+        $form->switchbool('quickadd_enabled', exmtrans("custom_column.options.quickadd_enabled"))
+            ->help(exmtrans("custom_column.help.quickadd_enabled"))
+            ->default('0');
     }
 
 
+    // @phpstan-ignore-next-line
     protected function setCustomColumnOptionFormSelectTable(&$form, string $user_org = null)
     {
         $id = request()->route('id');
@@ -773,6 +884,7 @@ class SelectTable extends CustomItem
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected static function getImportExportColumnSelect($custom_table, $value, $field, $id, $column_type, $isImport = true)
     {
         if (is_nullorempty($field)) {
@@ -782,6 +894,7 @@ class SelectTable extends CustomItem
         // whether column_type is user or org
         if (!is_null(old('column_type'))) {
             $model = CustomColumn::getEloquent(old('column_type'), $custom_table);
+        // @phpstan-ignore-next-line
         } elseif (isset($id) || old('column_type')) {
             $model = CustomColumn::getEloquent($id);
         }

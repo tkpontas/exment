@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\Display;
+use ExmentAdminCore\Admin\Form\Field\Display;
 
 /**
  * Display for view only. Cannot save and update.
@@ -12,8 +12,10 @@ class InitOnly extends Display
 {
     protected $view = 'exment::form.field.init_only';
 
+    // @phpstan-ignore-next-line
     protected $prepareDefault = false;
 
+    // @phpstan-ignore-next-line
     public function prepareDefault()
     {
         $this->prepareDefault = true;
@@ -31,6 +33,7 @@ class InitOnly extends Display
      */
     public function render()
     {
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'prepareDefault'   => $this->prepareDefault,
             'default'          => $this->default,

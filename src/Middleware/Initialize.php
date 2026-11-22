@@ -4,7 +4,7 @@ namespace Exceedone\Exment\Middleware;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
-use Encore\Admin\Grid\Filter;
+use ExmentAdminCore\Admin\Grid\Filter;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Model;
 use Exceedone\Exment\Model\System;
@@ -16,10 +16,10 @@ use Exceedone\Exment\ColumnItems\CustomItem;
 use Exceedone\Exment\ColumnItems\CustomColumns;
 use Exceedone\Exment\Services\Auth2factor\Auth2factorService;
 use Exceedone\Exment\Services\PartialCrudService;
-use Encore\Admin\Form;
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Grid;
-use Encore\Admin\Show;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Show;
 use Html;
 use PDO;
 
@@ -29,16 +29,20 @@ use PDO;
  */
 class Initialize
 {
+    /**
+     * @param \Closure(Request): mixed $next
+     * @return mixed
+     */
     public function handle(Request $request, \Closure $next)
     {
         if (!canConnection() || !hasTable(SystemTableName::SYSTEM)) {
             // Check install directory
             if (!$this->isInstallPath($request)) {
                 // check has 'EXMENT_INITIALIZE' on .env directly
-                // if true, already installed
+                // if true, already installed but DB is unreachable — return 503 instead of redirecting to install
                 if (boolval(env('EXMENT_INITIALIZE', false))) {
-                    // Throwing error connecting database purposely.
-                    hasTable(SystemTableName::SYSTEM);
+                    \Log::error('Database connection failed during initialization. EXMENT_INITIALIZE is set to true, but DB is unreachable.');
+                    abort(503, 'Database connection failed. Please check your database settings in .env');
                 }
 
                 // If not initialized, return to install path
@@ -83,6 +87,39 @@ class Initialize
     }
 
 
+    /**
+     * The sidebar folded or open the way this browser last left it.
+     *
+     * The toggle in the header saves "collapsed" or "expanded" in a cookie
+     * (Define::COOKIE_SIDEBAR_STATE); the page is then drawn that way from
+     * the start, rather than in the site layout's state and switched over
+     * by script after it is on screen. No cookie: the site layout decides.
+     *
+     * Read from $_COOKIE, not the request: the cookie is written by script
+     * and is not encrypted, so Laravel's cookie decryption would drop it.
+     * Only the two known words are used; anything else is ignored.
+     */
+    protected static function applySidebarState(): void
+    {
+        if (app()->runningInConsole()) {
+            return;
+        }
+        $state = $_COOKIE[Define::COOKIE_SIDEBAR_STATE] ?? null;
+        if ($state !== 'collapsed' && $state !== 'expanded') {
+            return;
+        }
+
+        $layout = array_values(array_diff((array) config('admin.layout', []), ['sidebar-collapse']));
+        if ($state === 'collapsed') {
+            $layout[] = 'sidebar-collapse';
+        }
+        Config::set('admin.layout', $layout);
+    }
+
+    /**
+     * @param bool $setDatabase
+     * @return void
+     */
     public static function initializeConfig($setDatabase = true)
     {
         //// set from env
@@ -106,13 +143,14 @@ class Initialize
         if (!Config::has('auth.passwords.exment_admins')) {
             Config::set('auth.passwords.exment_admins', [
                 'provider' => 'exment-auth',
-                'table' => 'password_resets',
+                'table' => 'password_reset_tokens',
                 'expire' => 720,
+                'throttle' => 60,
             ]);
         }
         if (!Config::has('auth.providers.exment-auth')) {
             Config::set('auth.providers.exment-auth', [
-                'driver' => 'eloquent',
+                'driver' => 'exment-auth',
                 'model' => \Exceedone\Exment\Model\LoginUser::class,
             ]);
         }
@@ -301,6 +339,7 @@ class Initialize
             'url'        => CustomColumns\Url::class,
             'user'        => CustomColumns\User::class,
             'yesno'        => CustomColumns\Yesno::class,
+            'custom_text'        => CustomColumns\CustomText::class,
         ];
         foreach ($map as $abstract => $class) {
             CustomItem::extend($abstract, $class);
@@ -331,7 +370,7 @@ class Initialize
             // Logo
             $val = System::site_logo();
             if (!is_nullorempty($val)) {
-                Config::set('admin.logo', Html::image($val, 'header logo'));
+                Config::set('admin.logo', html_image($val, 'header logo'));
             } else {
                 $val = System::site_name();
                 if (!is_nullorempty($val)) {
@@ -342,7 +381,7 @@ class Initialize
             // Logo(Short)
             $val = System::site_logo_mini();
             if (!is_nullorempty($val)) {
-                Config::set('admin.logo-mini', Html::image($val, 'header logo mini'));
+                Config::set('admin.logo-mini', html_image($val, 'header logo mini'));
             } else {
                 $val = System::site_name_short();
                 if (!is_nullorempty($val)) {
@@ -361,6 +400,7 @@ class Initialize
             if (!is_nullorempty($val)) {
                 Config::set('admin.layout', array_get(Define::SYSTEM_LAYOUT, $val));
             }
+            static::applySidebarState();
 
             // Date format
             $list = null;
@@ -423,6 +463,14 @@ class Initialize
                         Config::set("mail.{$c}", $val);
                     }
                 }
+
+                // The settings above only fill the "smtp" mailer. Laravel 11+ has "log" as the default
+                // mailer (config/mail.php and MAIL_MAILER of .env.example), so a mail was only written
+                // to the log although the SMTP host is set on the system setting page.
+                // Another mailer chosen in .env (sendmail, ses...) is kept.
+                if (!is_nullorempty(System::system_mail_host()) && Config::get('mail.default') === 'log') {
+                    Config::set('mail.default', 'smtp');
+                }
             }
 
             // Google reCAPTCHA ----------------------------------------------------
@@ -436,8 +484,14 @@ class Initialize
                 Config::set('no-captcha.version', $val);
             }
         }
+
+        // demo mode: every mail goes to the log, whatever the mail settings above say
+        \Exceedone\Exment\Services\DemoMode::applyRuntimeConfig();
     }
 
+    /**
+     * @return void
+     */
     public static function requireBootstrap()
     {
         $file = config('exment.bootstrap', exment_app_path('bootstrap.php'));
@@ -449,12 +503,14 @@ class Initialize
 
     /**
      * set laravel-admin
+     * @return void
      */
     public static function registeredLaravelAdmin()
     {
         Grid::init(function (Grid $grid) {
             $grid->disableColumnSelector();
 
+            // @phpstan-ignore-next-line
             if ($grid->model() && ($grid->model()->eloquent() instanceof Model\CustomValue)) {
                 if (!is_null($value = System::grid_pager_count())) {
                     $grid->paginate($value);
@@ -532,6 +588,7 @@ class Initialize
             'valueModal'          => Field\ValueModal::class,
             'changeField'          => Field\ChangeField::class,
             'progressTracker'          => Field\ProgressTracker::class,
+            'sectionNav'          => Field\SectionNav::class,
             'systemValues'          => Field\SystemValues::class,
 
             ///// workflow

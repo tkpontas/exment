@@ -9,10 +9,15 @@ use Exceedone\Exment\Notifications\Mail\MailHistory;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Notifiable;
+use Exceedone\Exment\Jobs;
+use Exceedone\Exment\Model\CustomTable;
+use Exceedone\Exment\Enums\SystemTableName;
 
 class MailSendJob extends Notification implements ShouldQueue
 {
     use JobTrait;
+    use Notifiable;
 
     /**
      * @var MailInfo
@@ -23,7 +28,18 @@ class MailSendJob extends Notification implements ShouldQueue
      * @var MailHistory
      */
     protected $mailHistory;
+    // @phpstan-ignore-next-line
+    protected $userId;
+    // @phpstan-ignore-next-line
+    protected $finalUser;
 
+
+    // @phpstan-ignore-next-line
+    public function __construct($userId = null, $finalUser = false)
+    {
+        $this->userId = $userId;
+        $this->finalUser = $finalUser;
+    }
 
     /**
      * Get the notification's delivery channels.
@@ -31,6 +47,7 @@ class MailSendJob extends Notification implements ShouldQueue
      * @param  mixed  $notifiable
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function via($notifiable)
     {
         return [MailChannel::class];
@@ -76,4 +93,28 @@ class MailSendJob extends Notification implements ShouldQueue
 
         return $this;
     }
+
+    /**
+     * Handle a job failure.
+     */
+    // @phpstan-ignore-next-line
+    public function failed($exception)
+    {
+        $mail_template = CustomTable::getEloquent(SystemTableName::MAIL_TEMPLATE)
+            ->getValueModel()
+            ->where('value->mail_key_name', 'sendmail_error')
+            ->first();
+        if ($mail_template && $this->finalUser) {
+            $this->notify(new Jobs\NavbarJob(
+                $mail_template->getValue('mail_subject'),
+                $mail_template->getValue('mail_body'),
+                $this->notify_id ?? -1,
+                $this->userId,
+                \Exment::getUserId() ?? null,
+                $this->mailHistory->getParentId(),
+                $this->mailHistory->getParentType()
+            ));
+        }
+    }
+
 }

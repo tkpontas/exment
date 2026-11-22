@@ -17,6 +17,7 @@ use Exceedone\Exment\Enums\SsoLoginErrorType;
 use Exceedone\Exment\Enums\FileType;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Form\Widgets\ModalForm;
+use Exceedone\Exment\Services\Login\OAuth\OAuthUser;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -31,8 +32,10 @@ class LoginService
      *
      * @param LoginUser|CustomValue $user CustomValue(user) or login user
      * @param array $options
-     * @return void
+     * @return \Illuminate\Http\RedirectResponse|void
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public static function resetPassword($user, array $options = [])
     {
         $options = array_merge([
@@ -71,7 +74,7 @@ class LoginService
                 catch (TransportExceptionInterface $ex) {
                     \Log::error($ex);
                     admin_error(exmtrans('error.header'), exmtrans('error.mailsend_failed'));
-                    return back()->withInput();
+                    return back()->withInput(get_flash_input());
                 }
             }
             $login_user->save();
@@ -81,6 +84,7 @@ class LoginService
     }
 
 
+    // @phpstan-ignore-next-line
     public static function setToken()
     {
         // get custom login user
@@ -103,6 +107,7 @@ class LoginService
      *
      * @return array access_token, refresh_token, provider
      */
+    // @phpstan-ignore-next-line
     public static function getToken()
     {
         $session = session(Define::SYSTEM_KEY_SESSION_PROVIDER_TOKEN);
@@ -174,6 +179,7 @@ class LoginService
      * @param CustomLoginUserBase $custom_login_user
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function validateUniques(CustomLoginUserBase $custom_login_user)
     {
         // get target user
@@ -207,6 +213,7 @@ class LoginService
      * @param array $rules
      * @return array updated rules
      */
+    // @phpstan-ignore-next-line
     protected static function removeInitRule(CustomLoginUserBase $custom_login_user, ?CustomValue $exment_user, array $rules)
     {
         if (static::needCheck($custom_login_user, $exment_user)) {
@@ -249,6 +256,7 @@ class LoginService
      * @param CustomLoginUserBase $custom_login_user
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function getLoginResult($result, $messages, $adminMessages = null, ?CustomLoginUserBase $custom_login_user = null)
     {
         if (is_nullorempty($adminMessages)) {
@@ -261,6 +269,7 @@ class LoginService
         return [$result, $message, $adminMessage, $custom_login_user];
     }
 
+    // @phpstan-ignore-next-line
     protected static function convertErrorMessage($result, $messages, ?CustomLoginUserBase $custom_login_user = null)
     {
         $message = [];
@@ -332,6 +341,7 @@ class LoginService
         return $form;
     }
 
+    // @phpstan-ignore-next-line
     public static function appendActivateSwalButtonSso($tools, LoginSetting $login_setting)
     {
         if (!$login_setting->active_flg) {
@@ -339,7 +349,7 @@ class LoginService
                 'url' => route('exment.login_activate', ['id' => $login_setting->id]),
                 'label' => exmtrans('common.activate'),
                 'icon' => 'fa-check-circle',
-                'btn_class' => 'btn-success',
+                'btn_class' => 'btn-success p-2',
                 'title' => exmtrans('common.activate'),
                 'text' => exmtrans('login.help.activate'),
                 'method' => 'post',
@@ -349,7 +359,7 @@ class LoginService
             $tools->append(new Tools\SwalInputButton([
                 'url' => route('exment.login_deactivate', ['id' => $login_setting->id]),
                 'label' => exmtrans('common.deactivate'),
-                'icon' => 'fa-check-circle',
+                'icon' => 'fa-check-circle p-2',
                 'btn_class' => 'btn-default',
                 'title' => exmtrans('common.deactivate'),
                 'text' => exmtrans('login.help.deactivate'),
@@ -461,7 +471,8 @@ class LoginService
         }
 
         $exment_user = null;
-        \ExmentDB::transaction(function () use ($custom_login_user, &$exment_user) {
+        $assignedJitRoles = false;
+        \ExmentDB::transaction(function () use ($custom_login_user, &$exment_user, &$assignedJitRoles) {
             $exment_user = CustomTable::getEloquent(SystemTableName::USER)->getValueModel();
 
             $update_user_columns = static::getUserColumns();
@@ -483,8 +494,13 @@ class LoginService
                 })->toArray();
 
                 \DB::table(SystemTableName::ROLE_GROUP_USER_ORGANIZATION)->insert($jit_rolegroups);
+                $assignedJitRoles = true;
             }
         });
+
+        if ($assignedJitRoles) {
+            System::clearCache();
+        }
 
         return $exment_user;
     }
@@ -500,7 +516,6 @@ class LoginService
      */
     public static function getLoginUser(CustomLoginUserBase $custom_login_user, $exment_user, $socialiteProvider = null): LoginUser
     {
-        $hasLoginUser = false;
         // get login_user
         $login_user = LoginUserProvider::findByCredential(
             [
@@ -510,6 +525,7 @@ class LoginService
                 'login_type' => $custom_login_user->login_type,
             ]
         );
+        $hasLoginUser = !is_null($login_user);
 
         // if don't has, create loginuser or match email
         if (!$hasLoginUser) {
@@ -535,20 +551,31 @@ class LoginService
         return $login_user;
     }
 
+    // @phpstan-ignore-next-line
     public static function getAvatar(CustomLoginUserBase $custom_login_user, $socialiteProvider = null)
     {
         try {
             // if socialiteProvider implements ProviderAvatar, call getAvatar
             if (isset($socialiteProvider) && is_subclass_of($socialiteProvider, \Exceedone\Exment\Auth\ProviderAvatar::class)) {
+                /** @var OAuthUser $custom_login_user */
+                // @phpstan-ignore-next-line
                 $stream = $socialiteProvider->getAvatar($custom_login_user->token);
             }
             // if user obj has avatar, download avatar.
-            elseif (isset($custom_login_user->avatar)) {
+            // The URL comes from the provider's profile: not the server itself nor
+            // the link-local range, a short time, and an image of a few MB at most.
+            elseif (isset($custom_login_user->avatar) && \Exceedone\Exment\Services\WebhookUrlGuard::isAllowed($custom_login_user->avatar)) {
                 $client = new \GuzzleHttp\Client();
                 $response = $client->request('GET', $custom_login_user->avatar, [
                     'http_errors' => false,
+                    'timeout' => 10,
+                    'allow_redirects' => false,
+                    'stream' => true,
                 ]);
-                $stream = $response->getBody()->getContents();
+                $contents = $response->getStatusCode() == 200 ? $response->getBody()->read(5 * 1024 * 1024 + 1) : '';
+                if ($contents !== '' && strlen($contents) <= 5 * 1024 * 1024 && @getimagesizefromstring($contents) !== false) {
+                    $stream = $contents;
+                }
             }
             // file upload.
             if (isset($stream) && isset($custom_login_user->id)) {
@@ -562,6 +589,7 @@ class LoginService
         return null;
     }
 
+    // @phpstan-ignore-next-line
     protected static function getUserColumns()
     {
         return CustomTable::getEloquent(SystemTableName::USER)->custom_columns_cache;
@@ -570,7 +598,7 @@ class LoginService
     /**
      * Get the guard to be used during authentication.
      *
-     * @return \Illuminate\Contracts\Auth\StatefulGuard
+     * @return mixed
      */
     protected static function guard()
     {

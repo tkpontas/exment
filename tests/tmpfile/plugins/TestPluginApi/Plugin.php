@@ -32,6 +32,7 @@ class Plugin extends PluginApiBase
         $column_name = request()->get('column');
 
         // カスタムテーブル情報を取得します
+        /** @var CustomTable|null $custom_table */
         $custom_table = CustomTable::where('table_name', $table_name)->first();
         if (!isset($custom_table)) {
             return abort(400);
@@ -54,11 +55,15 @@ class Plugin extends PluginApiBase
     /**
      * カラム名からカスタム列情報を取得するサンプルです
      * ※URLでテーブル名とカラム名を指定しています
+     *
+     * @param string $table
+     * @param string $column
      * @return mixed
      */
     public function tablecolumn($table, $column)
     {
         // カスタムテーブル情報を取得します
+        /** @var CustomTable|null $custom_table */
         $custom_table = CustomTable::where('table_name', $table)->first();
         if (!isset($custom_table)) {
             return abort(400);

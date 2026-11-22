@@ -7,65 +7,70 @@ namespace Exceedone\Exment\Services;
  */
 class EnvService
 {
+    // @phpstan-ignore-next-line
     public static function setEnv($data = [], $matchRemove = false)
     {
         if (empty($data)) {
             return false;
         }
 
-        // Read .env-file
-        $env = file(path_join(base_path(), '.env'), FILE_IGNORE_NEW_LINES);
+        $path = path_join(base_path(), '.env');
+        $env  = file($path, FILE_IGNORE_NEW_LINES);
 
-        $newEnvs = [];
+        $newEnvs    = [];
+        $writtenKeys = []; // tracks which keys have already been written to output
 
+        foreach ($env as $line) {
+            $parts   = explode('=', $line, 2);
+            $lineKey = $parts[0];
 
-        // Loop through .env-data
-        foreach ($env as $env_value) {
-
-            // Turn the value into an array and stop after the first split
-            // So it's not possible to split e.g. the App-Key by accident
-            $entry = explode("=", $env_value, 2);
-
-            if (count($entry) == 0) {
-                $newEnvs[] = $entry;
+            if (!array_key_exists($lineKey, $data)) {
+                // Key not in our update set — keep as-is.
+                $newEnvs[] = $line;
                 continue;
             }
 
-            $env_key = $entry[0];
+            if ($matchRemove || isset($writtenKeys[$lineKey])) {
+                // Removing this key, or already wrote it once — drop this line.
+                continue;
+            }
 
-            // find same key
-            $hasKey = false;
+            // First occurrence: replace with the new value.
+            $newEnvs[] = $lineKey . '=' . static::convertEnvValue($data[$lineKey]);
+            $writtenKeys[$lineKey] = true;
+        }
+
+        // Append keys not found anywhere in the existing .env.
+        if (!$matchRemove) {
             foreach ($data as $key => $value) {
-                if ($env_key != $key) {
-                    continue;
+                if (!isset($writtenKeys[$key])) {
+                    $newEnvs[] = $key . '=' . static::convertEnvValue($value);
                 }
-
-                array_forget($data, $key);
-                $hasKey = true;
-
-                if (!$matchRemove) {
-                    $newEnvs[] = $key . "=" . static::convertEnvValue($value);
-                }
-            }
-            if (!$hasKey) {
-                $newEnvs[] = $env_value;
             }
         }
 
+        // Use exclusive lock to avoid concurrent write corruption.
+        file_put_contents($path, implode("\n", $newEnvs), LOCK_EX);
 
-        // Loop through given data
-        foreach ((array)$data as $key => $value) {
-            if (array_has($newEnvs, $key)) {
-                continue;
+        static::forgetCachedConfig();
+    }
+
+    /**
+     * After .env changes, a config cache (php artisan config:cache) would keep the old values:
+     * remove it, so the next request reads .env again (ISS00414).
+     *
+     * @return void
+     */
+    public static function forgetCachedConfig()
+    {
+        try {
+            // not configurationIsCached(): it keeps the answer of the start of the request
+            $path = app()->getCachedConfigPath();
+            if (is_file($path)) {
+                @unlink($path);
             }
-            $newEnvs[] = $key . "=" . static::convertEnvValue($value);
+        } catch (\Throwable $e) {
         }
-
-        // Turn the array back to an String
-        $env = implode("\n", $newEnvs);
-
-        // And overwrite the .env with the new data
-        file_put_contents(base_path() . '/.env', $env);
     }
 
 
@@ -85,14 +90,20 @@ class EnvService
         return $value;
     }
 
+    // @phpstan-ignore-next-line
     public static function removeEnv($data = [])
     {
         if (empty($data)) {
             return false;
         }
-        static::setEnv($data, true);
+
+        // Accept a numeric list of key names or an associative array.
+        // setEnv() expects an associative array, so normalise here.
+        $keys = array_is_list($data) ? array_fill_keys($data, '') : (array) $data;
+        static::setEnv($keys, true);
     }
 
+    // @phpstan-ignore-next-line
     public static function getEnv($key, $path = null, $matchPrefix = false)
     {
         if (empty($key)) {
@@ -122,6 +133,7 @@ class EnvService
             // So it's not possible to split e.g. the App-Key by accident
             $entry = array_map('trim', explode("=", $env_value, 2));
 
+            // @phpstan-ignore-next-line
             if (count($entry) == 0) {
                 continue;
             }
@@ -139,6 +151,6 @@ class EnvService
             $lists[] = $entry;
         }
 
-        return $lists;
+        return empty($lists) ? null : $lists;
     }
 }

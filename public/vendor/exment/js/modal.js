@@ -14,6 +14,17 @@ var Exment;
             $(document).off('click', '#modal-showmodal .selectitembox-item .button-delete').on('click', '#modal-showmodal .selectitembox-item .button-delete', {}, Exment.ModalEvent.deleteSelectItemEvent);
             $(document).off('click', '#modal-showmodal .modal-selectitem .modal-submit').on('click', '#modal-showmodal .modal-selectitem .modal-submit', {}, Exment.ModalEvent.setCalledSelectItemEvent);
             Exment.ModalEvent.autoloadModalEvent();
+            // An open select2 list is put on the body, not in the modal, so it stays on the
+            // screen when the modal is closed with the list open (Esc key etc.). Close it first.
+            $('#modal-showmodal').on('hide.bs.modal', function (e) {
+                $('#modal-showmodal select.select2-hidden-accessible').each(function () {
+                    try {
+                        $(this).select2('close');
+                    }
+                    catch (ex) {
+                    }
+                });
+            });
             $('#modal-showmodal').on('hidden.bs.modal', function (e) {
                 $('#modal-showmodal .modal-body').html('');
             });
@@ -224,7 +235,7 @@ var Exment;
                 modalSize = res.modalSize;
             }
             let modalClass = hasValue(res.modalClass) ? ' ' + res.modalClass : '';
-            $('.exment-modal-dialog').removeClass().addClass('exment-modal-dialog modal-dialog ' + modalSize + modalClass);
+            $('.exment-modal-dialog').removeClass().addClass('exment-modal-dialog modal-dialog d-flex justify-content-center ' + modalSize + modalClass);
             Exment.ModalEvent.enableSubmit(button);
         }
         static enableSubmit(button) {
@@ -367,7 +378,7 @@ var Exment;
         if (a.data('modalclose') === false) {
             return;
         }
-        if (a.data('toggle') === 'tooltip') {
+        if (a.data('toggle') === 'tooltip' || a.attr('data-bs-toggle') === 'tooltip') {
             return;
         }
         $('#modal-showmodal .modal-body').html('');

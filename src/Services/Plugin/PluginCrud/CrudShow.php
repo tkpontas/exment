@@ -2,10 +2,10 @@
 
 namespace Exceedone\Exment\Services\Plugin\PluginCrud;
 
-use Encore\Admin\Widgets\Form;
+use ExmentAdminCore\Admin\Widgets\Form;
 use Illuminate\Http\Request;
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Exceedone\Exment\Form\Tools;
 
 /**
@@ -14,11 +14,12 @@ use Exceedone\Exment\Form\Tools;
 class CrudShow extends CrudBase
 {
     /**
-     * Show. for detil.
+     * Show. for detail.
      *
-     * @param Request $request
-     * @return void
+     * @param $id
+     * @return mixed
      */
+    // @phpstan-ignore-next-line
     public function show($id)
     {
         $content = $this->pluginClass->getContent();
@@ -28,12 +29,13 @@ class CrudShow extends CrudBase
         return $content;
     }
 
-
     /**
      * Make a show builder.
      *
-     * @return Form
+     * @param $id
+     * @return Box
      */
+    // @phpstan-ignore-next-line
     protected function detail($id)
     {
         $data = $this->pluginClass->getData($id);
@@ -43,7 +45,6 @@ class CrudShow extends CrudBase
         $form->disableSubmit();
 
         $this->setShowColumn($form);
-
         $box = new Box(trans('admin.detail'), $form);
         $box->style('info');
         $this->setShowTools($id, $box);
@@ -75,9 +76,11 @@ class CrudShow extends CrudBase
     /**
      * Set form tools.
      *
-     * @param Box $Box
+     * @param $id
+     * @param Box $box
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setShowTools($id, Box $box)
     {
         // get oauth logout view

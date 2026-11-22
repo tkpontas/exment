@@ -2,16 +2,18 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Model\CustomValue;
 use Illuminate\Http\Request;
-use Encore\Admin\Show;
+use ExmentAdminCore\Admin\Show;
 use Exceedone\Exment\Form\Tools\SwalMenuButton;
 use Exceedone\Exment\Grid\Tools\BatchCheck;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\NotifyNavbar;
+use Exceedone\Exment\Services\RecordUrl;
+use ExmentAdminCore\Admin\Layout\Content;
 
 class NotifyNavbarController extends AdminControllerBase
 {
@@ -46,6 +48,7 @@ class NotifyNavbarController extends AdminControllerBase
         $grid->disableExport();
 
         $grid->tools(function (Grid\Tools $tools) {
+            /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\SwalMenuButton given */
             $tools->append(new SwalMenuButton($this->getMenuList()));
             $tools->batch(function (Grid\Tools\BatchActions $batch) {
                 $batch->add(exmtrans('notify_navbar.all_check'), new BatchCheck());
@@ -54,6 +57,14 @@ class NotifyNavbarController extends AdminControllerBase
 
         $grid->actions(function (Grid\Displayers\Actions $actions) {
             $actions->disableEdit();
+
+            // notify_navbar/{id} opens the record of a notification; the eye
+            // opens the notification itself
+            $actions->disableView();
+            $actions->prepend((new Linker())
+                ->url(admin_url("notify_navbar/{$actions->row->id}") . '?content=1')
+                ->icon('fa-eye')
+                ->tooltip(exmtrans('notify_navbar.show_content')));
 
             if (isset($actions->row->parent_id)) {
                 // reference target data
@@ -75,8 +86,10 @@ class NotifyNavbarController extends AdminControllerBase
             ];
             $filter->equal('read_flg', exmtrans("notify_navbar.read_flg"))->radio($options);
 
+            // Options are the tables of the login user's own notifications (value: table_name, as stored in parent_type),
+            // not the tables the login user has permission on.
             $filter->equal('parent_type', exmtrans("notify_navbar.parent_type"))->select(function ($val) {
-                return CustomTable::filterList()->pluck('table_view_name', 'table_view_name');
+                return NotifyNavbar::getTargetTableOptions();
             });
 
             $filter->like('notify_subject', exmtrans("notify_navbar.notify_subject"));
@@ -91,6 +104,7 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getMenuList(): array
     {
         $menulist = [];
@@ -129,9 +143,34 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         return new Form(new NotifyNavbar());
+    }
+
+    /**
+     * Open a notification.
+     *
+     * A notification of a record the user may see is marked read and opens
+     * that record - on the screen of the plugin that shows the table, when
+     * one does (RecordUrl). The notification itself is shown with ?content=1,
+     * and when there is no record, or the user may not see it.
+     *
+     * @param mixed $id
+     */
+    public function show(Request $request, Content $content, $id)
+    {
+        if (!boolval($request->query('content'))) {
+            $model = NotifyNavbar::find($id);
+            $custom_value = $model instanceof NotifyNavbar ? $this->accessibleRecord($model) : null;
+            if ($model instanceof NotifyNavbar && isset($custom_value)) {
+                $this->markRead($model);
+                return redirect(RecordUrl::url($custom_value));
+            }
+        }
+
+        return parent::show($request, $content, $id);
     }
 
     /**
@@ -148,7 +187,9 @@ class NotifyNavbarController extends AdminControllerBase
             abort(404);
         }
 
+        // @phpstan-ignore-next-line
         if ($model->read_flg == 0) {
+            // @phpstan-ignore-next-line
             $model->update(['read_flg' => true]);
         }
 
@@ -161,6 +202,7 @@ class NotifyNavbarController extends AdminControllerBase
             }
         }
 
+        // @phpstan-ignore-next-line
         return new Show($model, function (Show $show) use ($id, $parent_type, $custom_value, $custom_table) {
             if (isset($parent_type)) {
                 $show->field('parent_type', exmtrans('notify_navbar.parent_type'))->as(function ($parent_type) use ($custom_table) {
@@ -173,8 +215,9 @@ class NotifyNavbarController extends AdminControllerBase
 
             if (isset($custom_value)) {
                 $show->field('target_custom_value', exmtrans('notify_navbar.target_custom_value'))->as(function ($v) use ($custom_value) {
+                    // getLabel() is plain text built from record values; let the Show field HTML-escape it to prevent stored XSS
                     return $custom_value->getLabel();
-                })->setEscape(false);
+                });
             }
             $show->field('notify_subject', exmtrans('notify_navbar.notify_subject'));
             $show->field('notify_body', exmtrans('notify_navbar.notify_body'))
@@ -245,33 +288,58 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @param mixed   $id
      */
+    // @phpstan-ignore-next-line
     public function redirectTargetData(Request $request, $id = null)
     {
         $model = NotifyNavbar::find($id);
 
-        if (!isset($model)) {
+        if (!$model instanceof NotifyNavbar) {
             abort(404);
         }
 
-        // update read_flg
+        $this->markRead($model);
+
+        // no record, or one the user may not see: the notification itself
+        $custom_value = $this->accessibleRecord($model);
+        if (!isset($custom_value)) {
+            return redirect(admin_url("notify_navbar/{$model->id}") . '?content=1');
+        }
+
+        // the screen of the plugin that shows the table, else the data page
+        return redirect(RecordUrl::url($custom_value));
+    }
+
+    /**
+     * The record of a notification, when it still exists and the login user
+     * may see it.
+     *
+     * The record is read without the permission scope and then asked, so a
+     * record the user may not see answers the same as one that is gone.
+     */
+    protected function accessibleRecord(NotifyNavbar $model): ?CustomValue
+    {
+        $parent_type = $model->parent_type;
+        if (is_nullorempty($parent_type) || is_nullorempty($model->parent_id)) {
+            return null;
+        }
+        $custom_table = CustomTable::getEloquent($parent_type);
+        if (!isset($custom_table)) {
+            return null;
+        }
+        $custom_value = $custom_table->getValueModel()->newQueryWithoutScopes()
+            ->whereNull('deleted_at')->find($model->parent_id);
+        if (!$custom_value instanceof CustomValue) {
+            return null;
+        }
+
+        return $custom_value->enableAccess() === true ? $custom_value : null;
+    }
+
+    protected function markRead(NotifyNavbar $model): void
+    {
         if ($model->read_flg == 0) {
             $model->update(['read_flg' => true]);
         }
-
-        $custom_table = getModelName($model->parent_type);
-
-        if (is_nullorempty($custom_table)) {
-            return back();
-        }
-
-        $custom_value = $custom_table::find($model->parent_id);
-
-        if (!isset($custom_value)) {
-            return back();
-        }
-
-        // redirect custom value page
-        return redirect($custom_value->getUrl());
     }
 
     /**
@@ -279,6 +347,7 @@ class NotifyNavbarController extends AdminControllerBase
      *
      * @param mixed   $id
      */
+    // @phpstan-ignore-next-line
     public function rowCheck(Request $request, $id = null)
     {
         if (!isset($id)) {

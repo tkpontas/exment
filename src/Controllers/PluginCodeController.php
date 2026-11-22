@@ -2,10 +2,10 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Auth\Permission as Checker;
-use Encore\Admin\Layout\Row;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Auth\Permission as Checker;
+use ExmentAdminCore\Admin\Layout\Row;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Enums\Permission;
@@ -18,6 +18,7 @@ class PluginCodeController extends AdminControllerBase
 {
     use CodeTreeTrait;
 
+    // @phpstan-ignore-next-line
     protected $plugin;
 
     protected const node_key = Define::SYSTEM_KEY_SESSION_FILE_NODELIST;
@@ -36,8 +37,8 @@ class PluginCodeController extends AdminControllerBase
      *
      * @param Request $request
      * @param Content $content
-     * @param int $id
-     * @return Content
+     * @param $id
+     * @return Content|false
      */
     public function edit(Request $request, Content $content, $id)
     {
@@ -46,7 +47,7 @@ class PluginCodeController extends AdminControllerBase
 
         $this->plugin = Plugin::getEloquent($id);
 
-        if (!$this->plugin->hasPermission(Permission::PLUGIN_SETTING)) {
+        if (!static::canEditCode()) {
             Checker::error();
             return false;
         }
@@ -70,6 +71,7 @@ class PluginCodeController extends AdminControllerBase
         return $content;
     }
 
+    // @phpstan-ignore-next-line
     protected function getJsTreeBox($id)
     {
         $view = view('exment::widgets.jstree', [
@@ -88,13 +90,14 @@ class PluginCodeController extends AdminControllerBase
      * Get file tree data
      *
      * @param Request $request
-     * @param int $id
-     * @return Response
+     * @param $id
+     * @return false|\Illuminate\Http\JsonResponse
      */
+    // @phpstan-ignore-next-line
     public function getTreeData(Request $request, $id)
     {
         $this->plugin = Plugin::getEloquent($id);
-        if (!$this->plugin->hasPermission(Permission::PLUGIN_SETTING)) {
+        if (!static::canEditCode()) {
             Checker::error();
             return false;
         }
@@ -106,8 +109,7 @@ class PluginCodeController extends AdminControllerBase
      * Get file tree data
      *
      * @param Request $request
-     * @param int $id
-     * @return Response
+     * @return array|\Illuminate\Contracts\Foundation\Application|\Illuminate\Session\SessionManager|\Illuminate\Session\Store|mixed
      */
     protected function getTreeDataJson(Request $request)
     {
@@ -127,14 +129,16 @@ class PluginCodeController extends AdminControllerBase
      * Upload file to target folder
      *
      * @param Request $request
-     * @param int $id
-     * @return Response
+     * @param $id
+     * @return false|\Illuminate\Http\RedirectResponse
+     * @throws FileNotFoundException
      */
+    // @phpstan-ignore-next-line
     public function fileupload(Request $request, $id)
     {
         $this->plugin = Plugin::getEloquent($id);
 
-        if (!$this->plugin->hasPermission(Permission::PLUGIN_SETTING)) {
+        if (!static::canEditCode()) {
             Checker::error();
             return false;
         }
@@ -149,6 +153,9 @@ class PluginCodeController extends AdminControllerBase
         if ($request->hasfile('fileUpload')) {
             $nodeid = $request->get('nodeid');
             $folder_path = $this->getNodePath($nodeid);
+            if (is_null($folder_path)) {
+                return back()->with('errorMess', exmtrans("plugincode.error.node_notfound"));
+            }
 
             $upload_files = $request->file('fileUpload');
 
@@ -170,9 +177,11 @@ class PluginCodeController extends AdminControllerBase
      * Get child form html for selected file
      *
      * @param Request $request
-     * @param int $id
+     * @param $id
      * @return array
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public function getFileEditForm(Request $request, $id)
     {
         $this->plugin = Plugin::getEloquent($id);
@@ -188,14 +197,15 @@ class PluginCodeController extends AdminControllerBase
         ];
     }
 
-
     /**
      * Get child form html for selected file
      *
      * @param Request $request
-     * @param int $id
+     * @param $id
      * @return array|void
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     protected function getFileEditFormView(Request $request, $id)
     {
         $validator = \Validator::make($request->all(), [
@@ -207,6 +217,11 @@ class PluginCodeController extends AdminControllerBase
 
         $nodeid = $request->get('nodeid');
         $nodepath = $this->getNodePath($nodeid);
+        if (is_null($nodepath)) {
+            return [view('exment::plugin.editor.info', [
+                'message' => exmtrans('plugincode.error.node_notfound'),
+            ]), false];
+        }
 
         try {
             if ($this->plugin->isPathDir($nodepath)) {
@@ -256,7 +271,7 @@ class PluginCodeController extends AdminControllerBase
                 'message' => $message
             ]), false];
         } catch (FileNotFoundException $ex) {
-            //Todo:FileNotFoundException
+            return [view('exment::plugin.editor.info'), false];
         }
     }
 
@@ -266,6 +281,7 @@ class PluginCodeController extends AdminControllerBase
      * @param string $nodepath
      * @return array [CodeMirror mode, image extension, deletable flg]
      */
+    // @phpstan-ignore-next-line
     protected function getPluginFileType($nodepath)
     {
         // exclude config.json
@@ -310,13 +326,15 @@ class PluginCodeController extends AdminControllerBase
      * delete target file from plugin folder
      *
      * @param Request $request
-     * @param int $id
-     * @return Response
+     * @param $id
+     * @return false|Response
+     * @throws FileNotFoundException
      */
+    // @phpstan-ignore-next-line
     public function delete(Request $request, $id)
     {
         $this->plugin = Plugin::getEloquent($id);
-        if (!$this->plugin->hasPermission(Permission::PLUGIN_SETTING)) {
+        if (!static::canEditCode()) {
             Checker::error();
             return false;
         }
@@ -335,6 +353,13 @@ class PluginCodeController extends AdminControllerBase
 
         $nodeid = $request->get('nodeid');
         $nodepath = $this->getNodePath($nodeid);
+        if (is_null($nodepath)) {
+            return getAjaxResponse([
+                'result'  => false,
+                'toastr' => exmtrans('plugincode.error.node_notfound'),
+                'reload' => false,
+            ]);
+        }
 
         $this->plugin->deletePluginFile($nodepath);
 
@@ -351,13 +376,15 @@ class PluginCodeController extends AdminControllerBase
      * update file in plugin folder
      *
      * @param Request $request
-     * @param int $id
-     * @return Response
+     * @param $id
+     * @return false|Response
+     * @throws FileNotFoundException
      */
+    // @phpstan-ignore-next-line
     public function store(Request $request, $id)
     {
         $this->plugin = Plugin::getEloquent($id);
-        if (!$this->plugin->hasPermission(Permission::PLUGIN_SETTING)) {
+        if (!static::canEditCode()) {
             Checker::error();
             return false;
         }
@@ -377,6 +404,13 @@ class PluginCodeController extends AdminControllerBase
 
         $nodeid = $request->get('nodeid');
         $nodepath = $this->getNodePath($nodeid);
+        if (is_null($nodepath)) {
+            return getAjaxResponse([
+                'result'  => false,
+                'toastr' => exmtrans('plugincode.error.node_notfound'),
+                'reload' => false,
+            ]);
+        }
         $edit_file = $request->get('edit_file');
 
         $this->plugin->putPluginFile($nodepath, $edit_file);
@@ -404,14 +438,26 @@ class PluginCodeController extends AdminControllerBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getDirectoryPaths($folder)
     {
         return $this->plugin->getPluginDirPaths($folder, false);
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getFilePaths($folder)
     {
         return $this->plugin->getPluginFilePaths($folder, false);
+    }
+
+    /**
+     * The code editor reads and writes the PHP of a plugin, which the server
+     * runs: it needs the permission of all plugins (as uploading a plugin),
+     * not the setting permission of one plugin. Not in the demo mode.
+     */
+    protected static function canEditCode(): bool
+    {
+        return \Exment::user()->hasPermission(Permission::PLUGIN_ALL) && !\Exceedone\Exment\Services\DemoMode::enabled();
     }
 }

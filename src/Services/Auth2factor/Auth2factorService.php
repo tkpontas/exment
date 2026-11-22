@@ -17,6 +17,7 @@ class Auth2factorService
 {
     protected const VERIFY_TYPE_2FACTOR = '2factor_';
 
+    // @phpstan-ignore-next-line
     protected static $providers = [
     ];
 
@@ -33,6 +34,7 @@ class Auth2factorService
         static::$providers[$abstract] = $class;
     }
 
+    // @phpstan-ignore-next-line
     public static function getProvider()
     {
         $provider = \Exment::user()->getSettingValue(
@@ -53,7 +55,7 @@ class Auth2factorService
      * @param string $verify_type
      * @param string $verify_code
      * @param bool $matchDelete if true, remove match records
-     * @return bool
+     * @return mixed|bool
      */
     public static function verifyCode($verify_type, $verify_code, $matchDelete = false)
     {
@@ -88,14 +90,16 @@ class Auth2factorService
      * Add database and Send verify
      *
      * @param string $verify_type
-     * @param string $verify_code
+     * @param string|int $verify_code
      * @param \Carbon\Carbon $valid_period_datetime
      * @param string|CustomValue $mail_template
      * @param array $mail_prms
      * @return bool
      */
+    // @phpstan-ignore-next-line
     public static function addAndSendVerify($verify_type, $verify_code, $valid_period_datetime, $mail_template, $mail_prms = [])
     {
+        // @phpstan-ignore-next-line
         static::addVerify($verify_type, $verify_code, $valid_period_datetime);
 
         // send mail
@@ -123,6 +127,13 @@ class Auth2factorService
     {
         $loginuser = \Exment::user();
 
+        // only the newest code is good: a code sent before is taken back, so
+        // logging in again and again does not make many codes good at once
+        \DB::table(SystemTableName::EMAIL_CODE_VERIFY)
+            ->where('verify_type', static::VERIFY_TYPE_2FACTOR . $verify_type)
+            ->where('login_user_id', $loginuser->id)
+            ->delete();
+
         // set database
         \DB::table(SystemTableName::EMAIL_CODE_VERIFY)
             ->insert(
@@ -145,6 +156,7 @@ class Auth2factorService
      * @param array $mail_prms
      * @return MailSender
      */
+    // @phpstan-ignore-next-line
     protected static function sendVerify($mail_template, $mail_prms = []): MailSender
     {
         $loginuser = \Admin::user();
@@ -159,6 +171,7 @@ class Auth2factorService
     }
 
 
+    // @phpstan-ignore-next-line
     public static function deleteCode($verify_type, $verify_code)
     {
         $loginuser = \Admin::user();

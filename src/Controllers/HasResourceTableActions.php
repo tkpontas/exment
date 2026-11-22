@@ -2,11 +2,13 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Illuminate\Http\JsonResponse;
+
 /**
  * Admin(Exment) Controller
  *
-* @method \Encore\Admin\Grid grid()
-* @method \Encore\Admin\Form form($id = null)
+* @method \ExmentAdminCore\Admin\Grid grid()
+* @method \ExmentAdminCore\Admin\Form form($id = null)
  */
 trait HasResourceTableActions
 {
@@ -15,11 +17,46 @@ trait HasResourceTableActions
      *
      * @param int $id
      *
-     * @return \Illuminate\Http\Response
+     * A save answers with a redirect, an inline edit with json, and a plugin
+     * may answer with anything at all - the same union Form::update() returns.
+     *
+     * @return bool|\Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|mixed|null
      */
+    // @phpstan-ignore-next-line
     public function update($tableKey, $id)
     {
+        if (!$this->validateResourceRows($id)) {
+            return;
+        }
         return $this->form($id)->update($id);
+    }
+
+    /**
+     * A controller of a table's setting names the model of its rows and the
+     * permission they need (resourceRowRule()); the rows are then checked to be
+     * of this table before update() and destroy().
+     *
+     * @param mixed $id
+     * @return bool
+     */
+    protected function validateResourceRows($id): bool
+    {
+        $rule = $this->resourceRowRule();
+        if ($rule === null) {
+            return true;
+        }
+        return $this->validateRowsOfTable($rule[0], $id, $rule[1], $rule[2] ?? null);
+    }
+
+    /**
+     * [model class, permission on the table, optional check of each row], or
+     * null when the controller checks its rows itself (CustomValueController).
+     *
+     * @return array<mixed>|null
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return null;
     }
 
     /**
@@ -35,12 +72,21 @@ trait HasResourceTableActions
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
-     *
-     * @return \Illuminate\Http\Response
+     * @param $tableKey
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse
      */
+    // @phpstan-ignore-next-line
     public function destroy($tableKey, $id)
     {
+        if (!$this->validateResourceRows($id)) {
+            return response()->json([
+                'status'  => false,
+                'message' => trans('admin.deny'),
+                'reload' => false,
+            ]);
+        }
+
         if (method_exists($this, 'validateDestroy')) {
             $data = $this->validateDestroy($id);
             if (!empty($data)) {
@@ -56,6 +102,7 @@ trait HasResourceTableActions
             if (!$disabled_delete) {
                 $model = $this->form($id)->model()->find($id);
 
+                /** @phpstan-ignore-next-line */
                 if (boolval(array_get($model, 'disabled_delete'))) {
                     $disabled_delete = true;
                 }
@@ -65,14 +112,25 @@ trait HasResourceTableActions
         if ($disabled_delete) {
             return response()->json([
                 'status'  => false,
+                /** @phpstan-ignore-next-line */
                 'message' => exmtrans('error.disable_delete_row'),
                 'reload' => false,
             ]);
         }
 
         $result = true;
-        $rows->each(function ($id) use (&$result) {
-            if (!$this->form($id)->destroy($id)) {
+        $messages = [];
+        $rows->each(function ($id) use (&$result, &$messages) {
+            $res = $this->form($id)->destroy($id);
+            if ($res instanceof JsonResponse) {
+                $data = $res->getData();
+                if ($data->status === false) {
+                    $result = false;
+                    /** @phpstan-ignore-next-line */
+                    $messages[] = $data->message;
+                    return;
+                }
+            } elseif (!$res) {
                 $result = false;
                 return;
             }
@@ -81,13 +139,26 @@ trait HasResourceTableActions
         if ($result) {
             $data = [
                 'status'  => true,
+                /** @phpstan-ignore-next-line */
                 'message' => trans('admin.delete_succeeded'),
             ];
         } else {
-            $data = [
-                'status'  => false,
-                'message' => trans('admin.delete_failed'),
-            ];
+            if (count($messages) == 1) {
+                $data = [
+                    'status'  => false,
+                    'message' => $messages[0],
+                ];
+            } else {
+                $data = [
+                    'status'  => false,
+                    /** @phpstan-ignore-next-line */
+                    'message' => trans('admin.delete_failed'),
+                ];
+            }
+            /** @phpstan-ignore-next-line */
+            if ($rows->count() !== count($messages)) {
+                $data['forceRedirect'] = true;
+            }
         }
 
         return response()->json($data);

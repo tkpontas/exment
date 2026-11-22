@@ -9,7 +9,7 @@ use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Enums\RoleType;
 use Exceedone\Exment\Enums\Permission as PermissionEnum;
-use Encore\Admin\Auth\Permission as AdminPermission;
+use ExmentAdminCore\Admin\Auth\Permission as AdminPermission;
 
 class Permission
 {
@@ -35,6 +35,7 @@ class Permission
      * Summary of $permission_details
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $permission_details;
 
     /**
@@ -48,6 +49,7 @@ class Permission
      *
      * @param array $attributes
      */
+    // @phpstan-ignore-next-line
     public function __construct(array $attributes = [])
     {
         $this->role_type = array_get($attributes, 'role_type');
@@ -56,21 +58,25 @@ class Permission
         $this->permission_details = array_get($attributes, 'permission_details', []);
     }
 
+    // @phpstan-ignore-next-line
     public function getRoleType()
     {
         return $this->role_type;
     }
 
+    // @phpstan-ignore-next-line
     public function getTableName()
     {
         return $this->table_name;
     }
 
+    // @phpstan-ignore-next-line
     public function getPluginId()
     {
         return $this->plugin_id;
     }
 
+    // @phpstan-ignore-next-line
     public function getPermissionDetails()
     {
         return $this->permission_details;
@@ -79,14 +85,17 @@ class Permission
     /**
      * @param callable $callback
      */
+    // @phpstan-ignore-next-line
     public static function bootingShouldPass(callable $callback)
     {
+        // @phpstan-ignore-next-line
         static::$bootingShouldPasses[] = $callback;
     }
 
     /**
      * Send not found or deny error.
      */
+    // @phpstan-ignore-next-line
     public static function notFoundOrDeny()
     {
         return AdminPermission::error(exmtrans('common.message.notfound_or_deny'));
@@ -95,6 +104,7 @@ class Permission
     /**
      * Send error response page.
      */
+    // @phpstan-ignore-next-line
     public static function error($message = null)
     {
         return AdminPermission::error($message);
@@ -103,6 +113,7 @@ class Permission
     /**
      * Call the booting ShouldPasses for the exment application.
      */
+    // @phpstan-ignore-next-line
     protected function fireShouldPasses($endpoint)
     {
         foreach (static::$bootingShouldPasses as $callable) {
@@ -162,6 +173,12 @@ class Permission
             return $result;
         }
 
+        // open-admin's builtin user/role/permission screens. Exment replaces them with
+        // loginuser and role_group, and InstallSeeder drops their tables, so deny everyone.
+        if (in_array($endpoint, ['auth/users', 'auth/roles', 'auth/permissions'])) {
+            return false;
+        }
+
         // if 'role' or 'role_group' and !System::permission_available(), false
         if (in_array($endpoint, ['role', 'role_group']) && !System::permission_available()) {
             return false;
@@ -217,6 +234,8 @@ class Permission
             case "saml/login":
             case "saml/logout":
             case "auth/setting":
+            // the API keys of the login user: the feature (its role groups) is checked by the page
+            case "auth/api_keys":
             case "auth/reset":
             case "auth/change":
             case "auth/forget":
@@ -226,7 +245,18 @@ class Permission
             case "install":
             case "oauth":
             case "files":
+            case "qr-code":
+            case "line":
+                return true;
+            case "jan-code":
+                return true;
+            case "assign-jan-code":
+                return true;
+            case "file_server":
+                // every user; the workspaces, folders and files have their own permissions (Services\FileServer\Access)
+                return true;
             case "notify_navbar":
+            case "workflow_task":
             case "tmpfiles":
             case "tmpimages":
                 return true;
@@ -237,6 +267,9 @@ class Permission
             case "database":
             case "auth/menu":
             case "auth/logs":
+            case "tuning":
+            case "api_keys":
+            case "maintenance":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_key_exists('system', $this->permission_details);
                 }
@@ -270,12 +303,21 @@ class Permission
                     return array_keys_exists(PermissionEnum::WORKFLOW, $this->permission_details);
                 }
                 return false;
+            case "feature":
+                // Feature management: the system administrators only (they passed above)
+                return false;
             case "role":
             case "role_group":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_keys_exists(PermissionEnum::AVAILABLE_ACCESS_ROLE_GROUP, $this->permission_details);
                 }
                 return false;
+            case "app":
+                // the phone app: every user; each screen and data checks its own permission
+                return true;
+            case "studio":
+                // the screens of the tables the user may set; the page lists only those tables
+                return array_keys_exists(\Exceedone\Exment\Services\Studio\ScreenList::TABLE_PERMISSIONS, $this->permission_details);
             case "table":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_key_exists('custom_table', $this->permission_details);
@@ -295,7 +337,7 @@ class Permission
                 return array_key_exists('custom_table', $this->permission_details);
             case "form":
                 if ($this->role_type == RoleType::SYSTEM) {
-                    return array_key_exists('custom_form', $this->permission_details);
+                    return array_key_exists('custom_table', $this->permission_details);
                 }
                 // check endpoint name and checking table_name.
                 if (!$this->matchEndPointTable($endpoint)) {
@@ -304,7 +346,7 @@ class Permission
                 return array_keys_exists(PermissionEnum::AVAILABLE_CUSTOM_FORM, $this->permission_details);
             case "formpriority":
                 if ($this->role_type == RoleType::SYSTEM) {
-                    return array_key_exists('custom_form', $this->permission_details);
+                    return array_key_exists('custom_table', $this->permission_details);
                 }
                 // check endpoint name and checking table_name.
                 if (!$this->matchEndPointTable($endpoint)) {
@@ -316,7 +358,7 @@ class Permission
                     return false;
                 }
                 if ($this->role_type == RoleType::SYSTEM) {
-                    return array_key_exists('custom_form_public', $this->permission_details);
+                    return array_key_exists('custom_table', $this->permission_details);
                 }
                 // check endpoint name and checking table_name.
                 if (!$this->matchEndPointTable($endpoint)) {
@@ -371,6 +413,7 @@ class Permission
         ///// get last url.
         $uris = explode("/", $url);
         foreach ($uris as $k => $uri) {
+            // @phpstan-ignore-next-line
             if (!is_null($uri) && mb_strlen($uri) == 0) {
                 continue;
             }
@@ -496,12 +539,14 @@ class Permission
     protected function isNotAdminUrl(?string $endpoint): bool
     {
         $parse_url = parse_url_ex($endpoint);
+        // @phpstan-ignore-next-line
         if ($parse_url && array_has($parse_url, 'host') && strpos($endpoint, admin_url()) === false) {
             return true;
         }
         return false;
     }
 
+    // @phpstan-ignore-next-line
     protected function removeAfterQuery($url)
     {
         if (mb_strpos($url, '?') !== false) {

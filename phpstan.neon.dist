@@ -1,10 +1,101 @@
 includes:
-    - ./vendor/nunomaduro/larastan/extension.neon
+    - ./vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
 parameters:
     paths:
         - vendor/exceedone/exment
-    level: 1
+    excludePaths:
+        # Defines look-alike helper functions (exmtrans, session, admin_urls...) in the
+        # Exceedone\Exment\ColumnItems\CustomColumns namespace so one unit test can run
+        # without the application. PHPStan must not read them as the real helpers.
+        - vendor/exceedone/exment/tests/fixtures/EditorClipboardImageEnvironment.php
+    level: 7
+    stubFiles:
+        - exment/stubs/laravel/passport/Client.stub
+        - exment/stubs/mockery/LegacyMockInterface.stub
+    universalObjectCratesClasses:
+        - Exceedone\Exment\Model\WorkflowAuthority
+        - Exceedone\Exment\Model\Interfaces\WorkflowAuthorityInterface
+        - Exceedone\Exment\Services\Plugin\PluginTriggerBase
+        - Illuminate\Database\Eloquent\Model
+        - Illuminate\Contracts\Auth\Authenticatable
     ignoreErrors:
+        # google/recaptcha is an optional (suggested) package and is not installed in CI.
         -
-            message: '#^Method Exceedone\\Exment\\Facades\\ExmentFacade::getFacadeAccessor\(\) should return string but return statement is missing.#'
+            identifier: class.notFound
+            message: "#ReCaptcha#"
+            path: vendor/exceedone/exment/src/Services/ReCaptchaService.php
+
+        -
+            message: "#^Call to an undefined method ExmentAdminCore\\\\Admin.#"
             path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Method ExmentAdminCore\\\\Admin.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Access to an undefined property ExmentAdminCore\\\\Admin.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Call to an undefined method Illuminate\\\\Database\\\\Query\\\\Grammars\\\\Grammar.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Call to an undefined method Illuminate\\\\Database\\\\Schema\\\\Grammars\\\\Grammar.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Call to an undefined method Illuminate\\\\Database\\\\Query\\\\Processors\\\\Processor.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Access to an undefined property Illuminate\\\\Support\\\\Fluent::.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Return type \\(Illuminate\\\\Contracts\\\\View\\\\Factory|Illuminate\\\\View\\\\View\\) of method Exceedone\\\\Exment\\\\Form\\\\Field\\\\Text::render\\(\\) should be compatible with return type \\(string\\) of method Illuminate\\\\Contracts\\\\Support\\\\Renderable::render\\(\\)#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Return type \\(Illuminate\\\\View\\\\View\\) of method Exceedone\\\\Exment\\\\Form\\\\Field\\\\NestedEmbeds::render\\(\\) should be compatible with return type \\(string\\) of method Illuminate\\\\Contracts\\\\Support\\\\Renderable::render\\(\\)#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Call to an undefined method Illuminate\\\\Database\\\\Eloquent\\\\Model::setValueModel\\(\\)#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Access to an undefined property Exceedone\\\\Exment\\\\ColumnItems\\\\SystemItem::\\$custom_column.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Access to an undefined property Exceedone\\\\Exment\\\\ColumnItems\\\\ParentItem::\\$custom_column.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Access to an undefined property Exceedone\\\\Exment\\\\ColumnItems\\\\FormOtherItem::\\$custom_column.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Method Exceedone\\\\Exment\\\\Controllers\\\\CustomNotifyController::form\\(\\) invoked with 2 parameters, 0-1 required.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Method Exceedone\\\\Exment\\\\Controllers\\\\CustomViewController::form\\(\\) invoked with 2 parameters, 0-1 required.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Part .* of encapsed string cannot be cast to string\\.#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            message: "#^Anonymous function should return Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<int, Exceedone\\\\Exment\\\\Model\\\\[A-Za-z]+\\> but returns Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<int, Exceedone\\\\Exment\\\\Model\\\\[A-Za-z]+\\>\\.$#"
+            path: vendor/exceedone/exment/src/*
+
+        -
+            # env() belongs in a config file, but larastan only knows the application's own config
+            # directory, not the one of this package
+            identifier: larastan.noEnvCallsOutsideOfConfig
+            path: vendor/exceedone/exment/config/*

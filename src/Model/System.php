@@ -12,6 +12,7 @@ use Cache;
 /**
  * System definition.
  *
+ * @property mixed $system_value
  * @method static boolean|void initialized($arg = null)
  * @method static string|void site_name($arg = null)
  * @method static string|void site_name_short($arg = null)
@@ -20,10 +21,15 @@ use Cache;
  * @method static string|void site_favicon($arg = null)
  * @method static string|void site_skin($arg = null)
  * @method static string|void site_layout($arg = null)
+ * @method static string|void ui_design($arg = null)
  * @method static boolean|void api_available($arg = null)
  * @method static boolean|void outside_api($arg = null)
  * @method static boolean|void permission_available($arg = null)
  * @method static boolean|void organization_available($arg = null)
+ * @method static boolean|void logging_toggle_available($arg = null)
+ * @method static int|void logging_slow_request_seconds($arg = null)
+ * @method static int|void logging_slow_sql_seconds($arg = null)
+ * @method static int|void logging_max_per_hour($arg = null)
  * @method static string|void filter_search_type($arg = null)
  * @method static string|void system_mail_host($arg = null)
  * @method static string|void system_mail_port($arg = null)
@@ -61,6 +67,14 @@ use Cache;
  * @method static array|void backup_target($arg = null)
  * @method static Carbon|void backup_automatic_executed($arg = null)
  * @method static int|void backup_history_files($arg = null)
+ * @method static boolean|void operation_log_enable_automatic($arg = null)
+ * @method static int|void operation_log_keep_days($arg = null)
+ * @method static string|void operation_log_automatic_week($arg = null)
+ * @method static string|void operation_log_automatic_month($arg = null)
+ * @method static string|void operation_log_automatic_day($arg = null)
+ * @method static string|void operation_log_automatic_hour($arg = null)
+ * @method static string|void operation_log_automatic_minute($arg = null)
+ * @method static Carbon|void operation_log_automatic_executed($arg = null)
  * @method static boolean|void login_use_2factor($arg = null)
  * @method static string|void login_2factor_provider($arg = null)
  * @method static array|void system_admin_users($arg = null)
@@ -70,10 +84,37 @@ use Cache;
  * @method static string|void sso_accept_mail_domain($arg = null)
  * @method static array|void jit_rolegroups($arg = null)
  * @method static string|void system_slack_user_column($arg = null)
+ * @method static string|void system_line_channel_token($arg = null)
+ * @method static string|void system_line_channel_secret($arg = null)
+ * @method static string|void system_line_oa_basic_id($arg = null)
+ * @method static boolean|void safety_check_auto_enabled($arg = null)
+ * @method static int|void safety_check_min_scale($arg = null)
+ * @method static int|void safety_check_cooldown_minutes($arg = null)
+ * @method static int|void safety_check_comment_window_minutes($arg = null)
+ * @method static int|void safety_check_max_bulletin_age_minutes($arg = null)
+ * @method static int|void safety_check_resend_throttle_minutes($arg = null)
+ * @method static int|void safety_check_answer_url_expire_days($arg = null)
+ * @method static Carbon|void safety_check_last_feed_time($arg = null)
+ * @method static string|null|void comment_markdown_start($arg = null)
  * @method static bool|void publicform_available($arg = null)
+ * @method static mixed features($arg = null)
+ * @method static mixed maintenance($arg = null)
+ * @method static mixed maintenance_missed_schedule($arg = null)
+ * @method static string|null|void site_id($arg = null)
+ * @method static mixed admin_notices_sent($arg = null)
  * @method static string|void recaptcha_site_key($arg = null)
  * @method static string|void recaptcha_secret_key($arg = null)
  * @method static string|void recaptcha_type($arg = null)
+ * @method static string|void meili_host($arg = null)
+ * @method static string|void meili_key($arg = null)
+ * @method static string|void meili_index($arg = null)
+ * @method static boolean|void meili_global_search($arg = null)
+ * @method static boolean|void meili_realtime_sync($arg = null)
+ * @method static int|void meili_batch_size($arg = null)
+ * @method static boolean|void meili_repair_enabled($arg = null)
+ * @method static string|void meili_repair_at($arg = null)
+ * @method static string|void meili_filter_mode($arg = null)
+ * @method static array<string, mixed>|void meili_indexed_at($arg = null)
  * @phpstan-consistent-constructor
  */
 class System extends ModelBase
@@ -84,8 +125,12 @@ class System extends ModelBase
     protected $casts = ['role' => 'json'];
     protected $primaryKey = 'system_name';
     public $incrementing = false;
+
+    // @phpstan-ignore-next-line
     protected static $requestSession = [];
 
+
+    // @phpstan-ignore-next-line
     public static function __callStatic($name, $argments)
     {
         // Get system setting value
@@ -102,7 +147,7 @@ class System extends ModelBase
      *
      * @param string $key key name.
      * @param mixed $value setting value.
-     * @return mixed
+     * @return mixed|null
      */
     public static function requestSession($key, $value = null)
     {
@@ -124,10 +169,11 @@ class System extends ModelBase
             return $val;
         }
         static::setRequestSession($key, $value);
+        return null;
     }
 
     /**
-     * Set Request Settion.
+     * Set Request Session.
      *
      * @param string $key
      * @param mixed $value
@@ -152,6 +198,8 @@ class System extends ModelBase
     /**
      * clear all request settion
      */
+
+    // @phpstan-ignore-next-line
     public static function clearRequestSession($key = null)
     {
         if (!isset($key)) {
@@ -162,10 +210,31 @@ class System extends ModelBase
     }
 
     /**
+     * All request session entries, to put back after a block whose own cache
+     * entries must not outlive it.
+     *
+     * @return array<string,mixed>
+     */
+    public static function getRequestSessionAll(): array
+    {
+        return static::$requestSession;
+    }
+
+    /**
+     * @param array<string,mixed> $entries
+     */
+    public static function setRequestSessionAll(array $entries): void
+    {
+        static::$requestSession = $entries;
+    }
+
+    /**
      * Get Request Settion key already setted.
      *
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getRequestSessionKeys(): \Illuminate\Support\Collection
     {
         $result = collect();
@@ -233,6 +302,8 @@ class System extends ModelBase
     /**
      * reset Cache
      */
+
+    // @phpstan-ignore-next-line
     public static function clearCache($key = null)
     {
         static::clearRequestSession($key);
@@ -249,13 +320,40 @@ class System extends ModelBase
     }
 
     /**
+     * Clear the whole cache once the writes of the current transaction are committed.
+     * Outside a transaction it clears immediately. A rolled back transaction drops the callback.
+     *
+     * Use it when the cached data depends on rows written in the same transaction (e.g. the
+     * organization membership pivot): clearing before the commit lets a concurrent request
+     * rebuild the cache from the old rows.
+     *
+     * @param string|null $connection connection that performs the writes. null: default connection
+     * @return void
+     */
+    public static function clearCacheAfterCommit(?string $connection = null): void
+    {
+        try {
+            \DB::connection($connection)->afterCommit(function () {
+                static::clearCache();
+            });
+        } catch (\Throwable $ex) {
+            // a connection without a transactions manager (none is set outside the framework)
+            static::clearCache();
+        }
+    }
+
+    /**
      * whether System_function keyname
      */
+
+    // @phpstan-ignore-next-line
     public static function hasFunction($name)
     {
         return array_key_exists($name, Define::SYSTEM_SETTING_NAME_VALUE);
     }
 
+
+    // @phpstan-ignore-next-line
     public static function get_system_keys($group = null)
     {
         $keys = [];
@@ -277,6 +375,8 @@ class System extends ModelBase
     /**
      * get "systems" table key-value array
      */
+
+    // @phpstan-ignore-next-line
     public static function get_system_values($group = null)
     {
         $array = [];
@@ -287,6 +387,8 @@ class System extends ModelBase
         return $array;
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function getset_system_value($name, $setting, $argments)
     {
         if (count($argments) > 0) {
@@ -297,6 +399,8 @@ class System extends ModelBase
         }
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function get_system_value($name, $setting)
     {
         $key = static::getConfigKey($name);
@@ -348,6 +452,8 @@ class System extends ModelBase
         });
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function set_system_value($name, $setting, $value)
     {
         $system = System::firstOrNew(['system_name' => $name]);
@@ -391,12 +497,16 @@ class System extends ModelBase
     /**
      * destory value
      */
+
+    // @phpstan-ignore-next-line
     public static function deleteValue($name)
     {
         $system = System::find($name);
         if (!isset($system)) {
             return;
         }
+
+        // @phpstan-ignore-next-line
         $old_value = $system->system_value;
 
         // change set value by type
@@ -409,12 +519,18 @@ class System extends ModelBase
                 ExmentFile::deleteFileInfo($old_value);
             }
         }
+
+        // @phpstan-ignore-next-line
         $system->system_value = null;
+
+        // @phpstan-ignore-next-line
         $system->save();
 
         return $system;
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function getConfigKey($name)
     {
         return sprintf(Define::SYSTEM_KEY_SESSION_SYSTEM_CONFIG, $name);

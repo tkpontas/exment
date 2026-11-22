@@ -20,7 +20,7 @@ interface GrammarInterface
      * @param \Illuminate\Database\Query\Builder $builder
      * @param string $tableName database table name
      * @param string $column target table name
-     * @param array $values
+     * @param mixed $values one value, or a list of them (array or Collection)
      * @param bool $isOr
      * @return \Illuminate\Database\Query\Builder
      */
@@ -38,6 +38,7 @@ interface GrammarInterface
      */
     public function whereInArrayColumn($builder, string $tableName, string $baseColumn, string $column, bool $isOr = false, bool $isNot = false);
 
+    // @phpstan-ignore-next-line
     public function wrapWhereInMultiple(array $columns);
 
     /**
@@ -45,6 +46,7 @@ interface GrammarInterface
      *
      * @return array offset 0: bind string for wherein (?, ?, )
      */
+    // @phpstan-ignore-next-line
     public function bindValueWhereInMultiple(array $values);
 
     /**
@@ -52,6 +54,7 @@ interface GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getCastColumn($type, $column, $options = []);
 
     /**
@@ -59,6 +62,7 @@ interface GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getColumnTypeString($type);
 
     /**
@@ -66,6 +70,7 @@ interface GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getCastString($type, $addOption = false, $options = []);
 
     /**
@@ -75,8 +80,9 @@ interface GrammarInterface
      * @param string $column column name
      * @param bool $groupBy if group by query, return true
      *
-     * @return void
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     public function getDateFormatString($groupCondition, $column, $groupBy = false, $wrap = true);
 
     /**
@@ -97,4 +103,13 @@ interface GrammarInterface
      * @return string
      */
     public function wrapJsonUnquote($value, $prefixAlias = false);
+
+    /**
+     * Wrap and add json_extract if needs
+     *
+     * @param mixed $column
+     * @param string $path
+     * @return string
+     */
+    public function wrapJsonExtract($column, $path = '$');
 }

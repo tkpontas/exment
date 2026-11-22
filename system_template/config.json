@@ -1339,6 +1339,14 @@
         },
         {
             "order": "2",
+            "menu_type": "system",
+            "menu_name": "file_server",
+            "title": "File Server",
+            "parent_name": null,
+            "menu_target_name": "file_server"
+        },
+        {
+            "order": "3",
             "icon": "fa-database",
             "uri": null,
             "menu_type": "parent_node",
@@ -1397,7 +1405,23 @@
             "menu_target_name": "system"
         },
         {
-            "order": "2",
+            "order": "12",
+            "menu_type": "system",
+            "menu_name": "login_setting",
+            "title": "Login Setting",
+            "parent_name": "admin",
+            "menu_target_name": "login_setting"
+        },
+        {
+            "order": "13",
+            "menu_type": "system",
+            "menu_name": "api_setting",
+            "title": "API Setting",
+            "parent_name": "admin",
+            "menu_target_name": "api_setting"
+        },
+        {
+            "order": "3",
             "menu_type": "system",
             "menu_name": "custom_table",
             "title": "Custom Table",
@@ -1405,7 +1429,15 @@
             "menu_target_name": "custom_table"
         },
         {
-            "order": "3",
+            "order": "4",
+            "menu_type": "system",
+            "menu_name": "studio",
+            "title": "Studio",
+            "parent_name": "admin",
+            "menu_target_name": "studio"
+        },
+        {
+            "order": "5",
             "menu_type": "system",
             "menu_name": "menu",
             "title": "Menu",
@@ -1413,20 +1445,20 @@
             "menu_target_name": "menu"
         },
         {
-            "order": "4",
+            "order": "8",
             "menu_type": "system",
-            "menu_name": "template",
-            "title": "Template",
+            "menu_name": "workflow",
+            "title": "Workflow",
             "parent_name": "admin",
-            "menu_target_name": "template"
+            "menu_target_name": "workflow"
         },
         {
-            "order": "5",
-            "menu_type": "system",
-            "menu_name": "backup",
-            "title": "Backup",
+            "order": "9",
+            "menu_type": "table",
+            "menu_name": "mail_template",
+            "title": "Mail Template",
             "parent_name": "admin",
-            "menu_target_name": "backup"
+            "menu_target_name": "mail_template"
         },
         {
             "order": "6",
@@ -1445,15 +1477,15 @@
             "menu_target_name": "role_group"
         },
         {
-            "order": "8",
+            "order": "2",
             "menu_type": "system",
-            "menu_name": "workflow",
-            "title": "Workflow",
+            "menu_name": "feature",
+            "title": "Feature Management",
             "parent_name": "admin",
-            "menu_target_name": "workflow"
+            "menu_target_name": "feature"
         },
         {
-            "order": "9",
+            "order": "10",
             "menu_type": "system",
             "menu_name": "plugin",
             "title": "Plugin",
@@ -1462,11 +1494,35 @@
         },
         {
             "order": "11",
-            "menu_type": "table",
-            "menu_name": "mail_template",
-            "title": "Mail Template",
+            "menu_type": "system",
+            "menu_name": "template",
+            "title": "Template",
             "parent_name": "admin",
-            "menu_target_name": "mail_template"
+            "menu_target_name": "template"
+        },
+        {
+            "order": "15",
+            "menu_type": "system",
+            "menu_name": "backup",
+            "title": "Backup",
+            "parent_name": "admin",
+            "menu_target_name": "backup"
+        },
+        {
+            "order": "16",
+            "menu_type": "system",
+            "menu_name": "tuning",
+            "title": "Tuning",
+            "parent_name": "admin",
+            "menu_target_name": "tuning"
+        },
+        {
+            "order": "14",
+            "menu_type": "system",
+            "menu_name": "maintenance",
+            "title": "Maintenance Mode",
+            "parent_name": "admin",
+            "menu_target_name": "maintenance"
         }
     ],
     "thumbnail": "thumbnail.png"

@@ -28,9 +28,16 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
  * @phpstan-consistent-constructor
  * @property mixed $custom_view
  * @property mixed $suuid
+ * @property mixed $target_id
+ * @property mixed $mail_template_id
  * @property mixed $notify_trigger
+ * @property mixed $notify_view_name
  * @property mixed $custom_table
  * @property mixed $action_settings
+ * @property mixed $notify_name
+ * @property mixed $notify_action
+ * @property mixed $custom_table_id
+ * @property mixed $workflow_id
  * @method static \Illuminate\Database\Query\Builder whereIn($column, $values, $boolean = 'and', $not = false)
  * @method static \Illuminate\Database\Query\Builder whereNotIn($column, $values, $boolean = 'and')
  */
@@ -45,8 +52,12 @@ class Notify extends ModelBase
     protected $guarded = ['id'];
     protected $casts = ['trigger_settings' => 'json', 'action_settings' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     protected $_schedule_date_column_item;
 
+
+    // @phpstan-ignore-next-line
     public function custom_table(): ?BelongsTo
     {
         if (!in_array($this->notify_trigger, NotifyTrigger::CUSTOM_TABLES())) {
@@ -56,6 +67,8 @@ class Notify extends ModelBase
         ;
     }
 
+
+    // @phpstan-ignore-next-line
     public function custom_view(): BelongsTo
     {
         if (isset($this->custom_view_id)) {
@@ -64,11 +77,15 @@ class Notify extends ModelBase
         return $this->belongsTo(CustomView::class, 'custom_view_id')->whereNotMatch();
     }
 
+
+    // @phpstan-ignore-next-line
     public function getNotifyActionsAttribute()
     {
         return explode(",", array_get($this->attributes, 'notify_actions'));
     }
 
+
+    // @phpstan-ignore-next-line
     public function getTriggerSettingsAttribute()
     {
         $trigger_settings = $this->getAttributeFromArray('trigger_settings');
@@ -94,6 +111,8 @@ class Notify extends ModelBase
         return $trigger_settings;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setTriggerSettingsAttribute($value = null)
     {
         $notify_target_date = array_get($value, 'notify_target_date');
@@ -117,6 +136,8 @@ class Notify extends ModelBase
         $this->attributes['trigger_settings'] = $value;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getMailTemplate()
     {
         $mail_template_id = array_get($this, 'mail_template_id');
@@ -126,15 +147,21 @@ class Notify extends ModelBase
         }
     }
 
+
+    // @phpstan-ignore-next-line
     public function getTriggerSetting($key, $default = null)
     {
         return $this->getJson('trigger_settings', $key, $default);
     }
+
+    // @phpstan-ignore-next-line
     public function setTriggerSetting($key, $value = null)
     {
         return $this->setJson('trigger_settings', $key, $value);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getMentionHere($action_setting)
     {
         $mention_here = array_get($action_setting, 'mention_here', false);
@@ -142,6 +169,8 @@ class Notify extends ModelBase
         return boolval($mention_here);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getMentionUsers($users)
     {
         return collect($users)->map(function ($user) {
@@ -152,7 +181,7 @@ class Notify extends ModelBase
     /**
      * Get schedule date's column item.
      *
-     * @return void
+     * @return mixed|null
      */
     public function getScheduleDateColumnItemAttribute()
     {
@@ -162,6 +191,7 @@ class Notify extends ModelBase
 
         // Now only column.
         $custom_column = CustomColumn::getEloquent(array_get($this, 'trigger_settings.notify_target_column'));
+        // Exment helper class not recognized
         $query_key = \Exment::getOptionKey($custom_column->id, true, $custom_column->custom_table_id, array_get($this, 'trigger_settings'));
 
         $this->_schedule_date_column_item = ColumnItems\CustomItem::getItem($custom_column, null, $query_key);
@@ -175,6 +205,8 @@ class Notify extends ModelBase
     /**
      * notify user on schedule
      */
+
+    // @phpstan-ignore-next-line
     public function notifySchedule()
     {
         list($datalist, $table, $column) = $this->getNotifyTargetDatalist();
@@ -209,7 +241,8 @@ class Notify extends ModelBase
                     continue;
                 }
 
-                $users = $this->uniqueUsers($users);
+
+                $users = $this->uniqueUsers($users, $action_setting);
                 foreach ($users as $user) {
                     // send mail
                     try {
@@ -218,6 +251,7 @@ class Notify extends ModelBase
                             'user' => $user,
                             'custom_value' => $custom_value,
                             'action_setting' => $action_setting,
+                            'final_user' => $user->id() === $users->last()->id(),
                         ]);
                     }
                     // throw mailsend Exception
@@ -234,6 +268,8 @@ class Notify extends ModelBase
      * notify_create_update_user
      * *Contains Comment, share
      */
+
+    // @phpstan-ignore-next-line
     public function notifyCreateUpdateUser($custom_value, $notifySavedType, $options = [])
     {
         if (!$this->isNotifyTarget($custom_value, NotifyTrigger::CREATE_UPDATE_DATA, $notifySavedType)) {
@@ -261,6 +297,8 @@ class Notify extends ModelBase
      * notify target user.
      * *Contains Comment, share
      */
+
+    // @phpstan-ignore-next-line
     public function notifyUser($custom_value, $options = [])
     {
         $options = array_merge(
@@ -339,9 +377,9 @@ class Notify extends ModelBase
                 continue;
             }
 
-            $users = $this->uniqueUsers($users);
+            $users = $this->uniqueUsers($users, $action_setting);
             foreach ($users as $user) {
-                if (!$this->approvalSendUser($mail_template, $custom_table, $custom_value, $user)) {
+                if (!$this->approvalSendUser($mail_template, $custom_table, $custom_value, $user, true, $action_setting)) {
                     continue;
                 }
 
@@ -354,10 +392,12 @@ class Notify extends ModelBase
                         'custom_table' => $custom_table,
                         'custom_value' => $custom_value,
                         'action_setting' => $action_setting,
+                        'final_user' => $user->id() === $users->last()->id(),
                     ]);
                 }
                 // throw mailsend Exception
                 catch (TransportExceptionInterface $ex) {
+                    // Laravel facade Log not recognized
                     \Log::error($ex);
                     // show warning message
                     admin_warning(exmtrans('error.header'), exmtrans('error.mailsend_failed'));
@@ -371,6 +411,8 @@ class Notify extends ModelBase
      * notify workflow
      * *Contains Comment, share
      */
+
+    // @phpstan-ignore-next-line
     public function notifyWorkflow(CustomValue $custom_value, WorkflowAction $workflow_action, WorkflowValue $workflow_value, $statusTo)
     {
         $workflow = $workflow_action->workflow_cache;
@@ -412,7 +454,8 @@ class Notify extends ModelBase
                 continue;
             }
 
-            $users = $this->uniqueUsers($users);
+
+            $users = $this->uniqueUsers($users, $action_setting);
             foreach ($users as $user) {
                 // send mail
                 try {
@@ -426,10 +469,12 @@ class Notify extends ModelBase
                             'workflow_value' => $workflow_value,
                         ],
                         'action_setting' => $action_setting,
+                        'final_user' => $user->id() === $users->last()->id(),
                     ]);
                 }
                 // throw mailsend Exception
                 catch (TransportExceptionInterface $ex) {
+                    // Laravel facade Log not recognized
                     \Log::error($ex);
                     // show warning message
                     admin_warning(exmtrans('error.header'), exmtrans('error.mailsend_failed'));
@@ -503,13 +548,19 @@ class Notify extends ModelBase
     /**
      * notify_create_update_user
      */
+
+    // @phpstan-ignore-next-line
     public function notifyButtonClick($custom_value, $target_user_keys, $subject, $body, $attachments = [])
     {
         $custom_table = $custom_value->custom_table;
         $mail_send_log_table = CustomTable::getEloquent(SystemTableName::MAIL_SEND_LOG);
         $mail_template = $this->getMailTemplate();
-        $attach_files = collect($attachments)->filter()->map(function ($uuid) {
-            return File::where('uuid', $uuid)->first();
+        // only the files of this record (the dialog offers them)
+        $attach_files = collect($attachments)->filter()->map(function ($uuid) use ($custom_value) {
+            return File::where('uuid', $uuid)
+                ->where('parent_type', $custom_value->custom_table->table_name)
+                ->where('parent_id', $custom_value->id)
+                ->first();
         })->filter();
 
         // loop action setting
@@ -568,10 +619,12 @@ class Notify extends ModelBase
                         'body' => $body,
                         'attach_files' => $attach_files,
                         'action_setting' => $action_setting,
+                        'final_user' => $target_user_key === end($target_user_keys),
                     ]);
                 }
                 // throw mailsend Exception
                 catch (TransportExceptionInterface $ex) {
+                    // Laravel facade Log not recognized
                     \Log::error($ex);
                     // show warning message
                     admin_warning(exmtrans('error.header'), exmtrans('error.mailsend_failed'));
@@ -583,6 +636,8 @@ class Notify extends ModelBase
     /**
      * get notify target datalist
      */
+
+    // @phpstan-ignore-next-line
     protected function getNotifyTargetDatalist()
     {
         // get target date number.
@@ -590,7 +645,7 @@ class Notify extends ModelBase
         $notify_day = intval(array_get($this->trigger_settings, 'notify_day'));
 
         // calc target date
-        $target_date = Carbon::today()->addDay($before_after_number * $notify_day * -1);
+        $target_date = Carbon::today()->addDays($before_after_number * $notify_day * -1);
         $target_date_str = $target_date->format('Y-m-d');
         $table = $this->custom_table;
         $column = CustomColumn::getEloquent(array_get($this, 'trigger_settings.notify_target_column'));
@@ -615,8 +670,11 @@ class Notify extends ModelBase
      *
      * @param CustomValue $custom_value target custom value
      * @param array $action_setting
-     * @return array
+     * @param CustomTable|null $custom_table
+     * @return array|Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getNotifyTargetUsers($custom_value, array $action_setting, ?CustomTable $custom_table = null)
     {
         $notify_action_target = array_get($action_setting, 'notify_action_target');
@@ -636,14 +694,18 @@ class Notify extends ModelBase
         return $values;
     }
 
-
     /**
      * get notify target users for workflow
      *
-     * @param CustomValue $custom_value target custom value
+     * @param CustomValue $custom_value
      * @param array $action_setting
-     * @return array
+     * @param WorkflowAction $workflow_action
+     * @param WorkflowValue $workflow_value
+     * @param $statusTo
+     * @return array|Collection
      */
+
+    // @phpstan-ignore-next-line
     public function getNotifyTargetUsersWorkflow(CustomValue $custom_value, array $action_setting, WorkflowAction $workflow_action, WorkflowValue $workflow_value, $statusTo)
     {
         $notify_action_target = array_get($action_setting, 'notify_action_target');
@@ -665,6 +727,7 @@ class Notify extends ModelBase
             }
         }
 
+        // Exment helper class not recognized
         $loginuser = \Exment::user();
         $values = $values->unique()->filter(function ($value) use ($loginuser) {
             if (is_nullorempty($loginuser)) {
@@ -686,20 +749,30 @@ class Notify extends ModelBase
     /**
      * whether $user is target send user
      */
-    protected function approvalSendUser($mail_template, $custom_table, $custom_value, NotifyTarget $user, $checkHistory = true)
+
+    // @phpstan-ignore-next-line
+    protected function approvalSendUser($mail_template, $custom_table, $custom_value, NotifyTarget $user, $checkHistory = true, $action_setting = null)
     {
         // if $user is myself, return false
+        // Exment helper class not recognized
         $loginuser = \Exment::user();
         if (!$this->isNotifyMyself()) {
-            if ($checkHistory && !is_nullorempty($loginuser) && isMatchString($loginuser->email, $user->email())) {
-                return false;
+            if ($checkHistory && !is_nullorempty($loginuser)) {
+                // system alert: only the user who did it (another user with the same mail address still gets it, #1668)
+                if (static::isPerUserAction($action_setting) && !is_nullorempty($user->id())) {
+                    if (isMatchString($loginuser->getUserId(), $user->id())) {
+                        return false;
+                    }
+                } elseif (isMatchString($loginuser->email, $user->email())) {
+                    return false;
+                }
             }
         }
 
         $mail_send_log_table = CustomTable::getEloquent(SystemTableName::MAIL_SEND_LOG);
 
         // if already send notify in 1 minutes, continue.
-        if ($checkHistory && $custom_value) {
+        if ($checkHistory && $custom_value && $mail_template) {
             $index_user = CustomColumn::getEloquent('user', $mail_send_log_table)->getIndexColumnName();
             $index_mail_template = CustomColumn::getEloquent('mail_template', $mail_send_log_table)->getIndexColumnName();
             $mail_send_histories = getModelName(SystemTableName::MAIL_SEND_LOG)::where($index_user, $user->id())
@@ -711,7 +784,8 @@ class Notify extends ModelBase
 
             foreach ($mail_send_histories as $mail_send_log) {
                 // If user were sending within 5 minutes, false
-                $skip_mitutes = config('exment.notify_saved_skip_minutes', 5);
+                // (int): read from .env as a string, which Carbon 3 refuses
+                $skip_mitutes = (int) config('exment.notify_saved_skip_minutes', 5);
                 $send_datetime = (new Carbon($mail_send_log->getValue('send_datetime')))
                     ->addMinutes($skip_mitutes);
                 $now = Carbon::now();
@@ -740,15 +814,39 @@ class Notify extends ModelBase
 
     /**
      * Unique users. unique key is mail address.
+     * For the system alert, the key is the user: each user has the alert on the screen, even when some users
+     * have the same mail address (#1668).
      *
      * @param array|Collection $users
+     * @param array<mixed>|null $action_setting
      * @return Collection
      */
-    protected function uniqueUsers($users): Collection
+
+    // @phpstan-ignore-next-line
+    protected function uniqueUsers($users, $action_setting = null): Collection
     {
-        return collect($users)->unique(function ($user) {
+        $perUser = static::isPerUserAction($action_setting);
+        return collect($users)->unique(function ($user) use ($perUser) {
+            if ($perUser && $user instanceof NotifyTarget && !is_nullorempty($user->id())) {
+                return 'user:' . $user->id();
+            }
             return NotifyService::getAddress($user);
         })->filter();
+    }
+
+    /**
+     * Whether the action is sent to each user, not to each mail address (the system alert).
+     *
+     * @param array<mixed>|string|null $action_setting
+     * @return bool
+     */
+    protected static function isPerUserAction($action_setting): bool
+    {
+        if (is_nullorempty($action_setting)) {
+            return false;
+        }
+        $notify_action = is_array($action_setting) ? array_get($action_setting, 'notify_action') : $action_setting;
+        return isMatchString($notify_action, NotifyAction::SHOW_PAGE);
     }
 
     protected static function boot()
@@ -763,6 +861,8 @@ class Notify extends ModelBase
         });
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getNotifyTargetValue($custom_value, $column)
     {
         $item = $column->column_item

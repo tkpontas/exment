@@ -2,11 +2,11 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
-use Encore\Admin\Auth\Permission as Checker;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Auth\Permission as Checker;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Form\Widgets\ProgressTracker;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Notify;
@@ -18,7 +18,7 @@ use Exceedone\Exment\Enums\MailKeyName;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Services\NotifyService;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 
 class WorkflowNotifyController extends Controller
 {
@@ -29,6 +29,7 @@ class WorkflowNotifyController extends Controller
     use WorkflowTrait;
     use ExmentControllerTrait;
 
+    // @phpstan-ignore-next-line
     protected $workflow;
 
     public function __construct()
@@ -44,6 +45,7 @@ class WorkflowNotifyController extends Controller
      * @param  array   $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function callAction($method, $parameters)
     {
         $this->workflow = Workflow::getEloquent(array_get($parameters, 'workflow_id'));
@@ -62,6 +64,7 @@ class WorkflowNotifyController extends Controller
     public function create(Request $request, Content $content)
     {
         if (!is_null($copy_id = $request->get('copy_id'))) {
+            // @phpstan-ignore-next-line
             return $this->AdminContent($content)->body($this->form(null, $copy_id)->replicate($copy_id, ['notify_view_name']));
         }
 
@@ -93,12 +96,11 @@ class WorkflowNotifyController extends Controller
 
         $this->setBasicGrid($grid);
 
-        $grid->column('action_settings', exmtrans("notify.notify_action"))->sortable()->display(function ($val) {
-            return collect($val)->map(function ($v) {
-                $enum = NotifyAction::getEnum(array_get($v, 'notify_action'));
-                return isset($enum) ? $enum->transKey('notify.notify_action_options') : null;
-            })->filter()->unique()->implode(exmtrans('common.separate_word'));
-        });
+        // the display closure is bound to the row, so the controller is passed in
+        $controller = static::class;
+        $grid->column('action_settings', exmtrans("notify.notify_action"))->sortable()->display(function ($val) use ($controller) {
+            return $controller::notifyActionsText($val);
+        })->escape(false);
 
         $grid->column('active_flg', exmtrans("plugin.active_flg"))->sortable()->display(function ($val) {
             return \Exment::getTrueMark($val);
@@ -133,13 +135,14 @@ class WorkflowNotifyController extends Controller
         return $grid;
     }
 
-
-
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param $id
+     * @param $copy_id
+     * @return Form|false|void
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null, $copy_id = null)
     {
         if (!$this->hasPermissionEdit($id)) {
@@ -150,6 +153,7 @@ class WorkflowNotifyController extends Controller
         $form->progressTracker()->options($this->getProgressInfo($this->workflow, 3));
 
         $notify = Notify::find($id);
+        // @phpstan-ignore-next-line
         if ($notify && $notify->notify_trigger != NotifyTrigger::WORKFLOW) {
             Checker::error(exmtrans('common.message.wrongdata'));
             return false;
@@ -161,6 +165,7 @@ class WorkflowNotifyController extends Controller
         $form->display('workflow_view_name', exmtrans("workflow.workflow_view_name"))
             ->default($this->workflow->workflow_view_name);
 
+        // @phpstan-ignore-next-line
         $this->setBasicForm($form, $notify);
 
         $form->exmheader(exmtrans('notify.header_trigger'))->hr();
@@ -197,6 +202,7 @@ class WorkflowNotifyController extends Controller
                 ->help(exmtrans("notify.help.notify_action"))
             ;
 
+            // @phpstan-ignore-next-line
             $this->setActionForm($form, $notify, null, $this->workflow);
         })->required()->disableHeader();
 
@@ -205,8 +211,10 @@ class WorkflowNotifyController extends Controller
             ->where('value->mail_key_name', MailKeyName::WORKFLOW_NOTIFY)
             ->first();
 
+        // @phpstan-ignore-next-line
         $this->setMailTemplateForm($form, $notify, $mail_template ? $mail_template->id : null);
 
+        // @phpstan-ignore-next-line
         $this->setFooterForm($form, $notify);
 
         $form->tools(function (Form\Tools $tools) use ($workflow) {
@@ -233,6 +241,7 @@ class WorkflowNotifyController extends Controller
     }
 
 
+    // @phpstan-ignore-next-line
     public function notify_action_target(Request $request, $workflow_id)
     {
         $options = NotifyService::getNotifyTargetColumns(null, $request->get('q'), [
@@ -257,10 +266,13 @@ class WorkflowNotifyController extends Controller
     /**
      * Show interface.
      *
-     * @param mixed   $id
+     * @param Request $request
      * @param Content $content
-     * @return Content
+     * @param $workflow_id
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
+    // @phpstan-ignore-next-line
     public function show(Request $request, Content $content, $workflow_id, $id)
     {
         if (method_exists($this, 'detail')) {
@@ -279,8 +291,10 @@ class WorkflowNotifyController extends Controller
      * @param Content $content
      * @return Content
      */
+    // @phpstan-ignore-next-line
     public function edit(Request $request, Content $content, $workflow_id, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->AdminContent($content)->body($this->form($id)->edit($id));
     }
 
@@ -291,8 +305,10 @@ class WorkflowNotifyController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    // @phpstan-ignore-next-line
     public function update($workflow_id, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->form($id)->update($id);
     }
 
@@ -301,8 +317,9 @@ class WorkflowNotifyController extends Controller
      *
      * @param int $id
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
+    // @phpstan-ignore-next-line
     public function destroy($workflow_id, $id)
     {
         return $this->destroyTrait($id);

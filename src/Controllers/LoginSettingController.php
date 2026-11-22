@@ -2,12 +2,13 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Model\LoginSetting;
 use Exceedone\Exment\Model\System;
@@ -19,12 +20,14 @@ use Exceedone\Exment\Enums\LoginType;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\Login2FactorProviderType;
 use Exceedone\Exment\Enums\MailKeyName;
+use Exceedone\Exment\Exceptions\InvalidZipEntryException;
 use Exceedone\Exment\Exceptions\SsoLoginErrorException;
 use Exceedone\Exment\Services\Installer\InitializeFormTrait;
+use Exceedone\Exment\Services\DemoMode;
 use Exceedone\Exment\Services\Auth2factor\Auth2factorService;
 use Exceedone\Exment\Services\Login\LoginService;
 use Exceedone\Exment\Services\Login as LoginServiceBase;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Layout\Content;
 use Carbon\Carbon;
 use Exceedone\Exment\Exceptions\NoMailTemplateException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -88,7 +91,15 @@ class LoginSettingController extends AdminControllerBase
         $grid->disableExport();
         $grid->actions(function (Grid\Displayers\Actions $actions) {
             $actions->disableView();
+            // demo mode: these settings are refused
+            if (DemoMode::enabled()) {
+                $actions->disableEdit();
+                $actions->disableDelete();
+            }
         });
+        if (DemoMode::enabled()) {
+            $grid->disableCreateButton();
+        }
         $grid->tools(function (Grid\Tools $tools) {
             $tools->prepend(new Tools\SystemChangePageMenu());
         });
@@ -100,6 +111,7 @@ class LoginSettingController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new LoginSetting());
@@ -231,9 +243,11 @@ class LoginSettingController extends AdminControllerBase
             } elseif ($request->get('login_type') == LoginType::OAUTH) {
                 $provider_name = array_get($request->all(), 'options.oauth_provider_type') == 'other' ? array_get($request->all(), 'options.oauth_provider_name') : array_get($request->all(), 'options.oauth_provider_type');
             } elseif ($request->old('login_type') == LoginType::OAUTH) {
+                // @phpstan-ignore-next-line
                 $provider_name = array_get($request->old(), 'options.oauth_provider_type') == 'other' ? array_get($request->old(), 'options.oauth_provider_name') : array_get($request->old(), 'options.oauth_provider_type');
             }
             if (!is_nullorempty($provider_name)) {
+
                 LoginServiceBase\OAuth\OAuthService::setLoginSettingForm($provider_name, $form);
             }
             // Form options area -- End
@@ -256,12 +270,46 @@ class LoginSettingController extends AdminControllerBase
                     route('exment.logintest_modal', ['id' => $login_setting->id]),
                     [
                         'label' => exmtrans('login.login_test'),
-                        'button_class' => 'btn-success',
+                        'button_class' => 'btn-success p-2',
                         'icon' => 'fa-check-circle',
                     ]
                 ));
 
                 $className::appendActivateSwalButton($tools, $login_setting);
+            }
+        });
+
+        // Server-side "required" validation for OAuth options.
+        // Field::required() in laravel-admin only adds the HTML5 "required" attribute
+        // and the label asterisk; it does NOT add a validation rule (see Field::required()).
+        // So the browser check can be removed via devtools and empty values get saved.
+        // These fields are toggled by "login_type", so we validate conditionally here
+        // (the embedded form validator can't see the top-level "login_type").
+        $form->validatorSavingCallback(function ($input, $message, $form) {
+            if (array_get($input, 'login_type') != LoginType::OAUTH) {
+                return;
+            }
+
+            $rules = [
+                'options.oauth_provider_type' => 'required',
+                'options.oauth_client_id'     => 'required',
+                'options.oauth_client_secret' => 'required',
+            ];
+            $attributes = [
+                'options.oauth_provider_type' => exmtrans('login.oauth_provider_type'),
+                'options.oauth_client_id'     => exmtrans('login.oauth_client_id'),
+                'options.oauth_client_secret' => exmtrans('login.oauth_client_secret'),
+            ];
+
+            // "provider name" is required only when the provider type is "other".
+            if (array_get($input, 'options.oauth_provider_type') == Enums\LoginProviderType::OTHER) {
+                $rules['options.oauth_provider_name'] = 'required';
+                $attributes['options.oauth_provider_name'] = exmtrans('login.oauth_provider_name');
+            }
+
+            $validator = \Validator::make($input, $rules, [], $attributes);
+            if ($validator->fails()) {
+                $message->merge($validator->errors());
             }
         });
 
@@ -280,6 +328,7 @@ class LoginSettingController extends AdminControllerBase
      *
      * @return \Illuminate\Support\Collection
      */
+    // @phpstan-ignore-next-line
     protected function checkLibraries()
     {
         $errors = [];
@@ -291,21 +340,26 @@ class LoginSettingController extends AdminControllerBase
             $errors[] = LoginType::SAML();
         }
 
-        if (!class_exists('\\Adldap\\Adldap')) {
+        if (!LoginServiceBase\Ldap\LdapService::isLibraryInstalled()) {
             $errors[] = LoginType::LDAP();
         }
 
-        return collect($errors)->mapWithKeys(function ($error) {
+        /** @var Collection $collection */
+        // @phpstan-ignore-next-line
+        $collection =  collect($errors)->mapWithKeys(function ($error) {
             return [$error->getValue() => '<span class="red">' . exmtrans('login.message.not_install_library', [
                 'name' => $error->transKey('login.login_type_options'),
                 'url' => getManualUrl('login_'.$error->getValue()),
             ]) . '</span>'];
         });
+        return $collection;
     }
 
     /**
      * Send data for global setting
+     *
      * @param Request $request
+     * @return Box
      */
     protected function globalSettingBox(Request $request)
     {
@@ -401,7 +455,10 @@ class LoginSettingController extends AdminControllerBase
 
     /**
      * Send data for global setting
+     *
      * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|true
+     * @throws \Throwable
      */
     public function postGlobal(Request $request)
     {
@@ -415,6 +472,9 @@ class LoginSettingController extends AdminControllerBase
         try {
             $result = $this->postInitializeForm($request, ['login'], false, false);
             if ($result instanceof \Illuminate\Http\RedirectResponse) {
+                // close the transaction before leaving, so nothing else in this request
+                // (a database session write, for one) runs inside an open transaction
+                DB::rollback();
                 return $result;
             }
 
@@ -423,6 +483,11 @@ class LoginSettingController extends AdminControllerBase
             admin_toastr(trans('admin.save_succeeded'));
 
             return redirect(route('exment.login_setting.index'));
+        } catch (InvalidZipEntryException $exception) {
+            // a refused template zip is a bad upload, not a crash. roll back here, where
+            // the transaction was opened, then show the reason under the file field.
+            DB::rollback();
+            return back()->withInput()->withErrors(['upload_template' => $exception->getMessage()]);
         } catch (\Exception $exception) {
             //TODO:error handling
             DB::rollback();
@@ -434,8 +499,8 @@ class LoginSettingController extends AdminControllerBase
      * Showing login test modal
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param mixed $id
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function loginTestModal(Request $request, $id)
     {
@@ -455,8 +520,8 @@ class LoginSettingController extends AdminControllerBase
      * execute login test for form
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param mixed $id
+     * @return mixed
      */
     public function loginTestForm(Request $request, $id)
     {
@@ -469,8 +534,8 @@ class LoginSettingController extends AdminControllerBase
      * execute login test for SSO
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param mixed $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function loginTestSso(Request $request, $id)
     {
@@ -502,8 +567,9 @@ class LoginSettingController extends AdminControllerBase
      * execute login test for callback
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param Content $content
+     * @param mixed $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function loginTestCallback(Request $request, Content $content, $id)
     {
@@ -525,6 +591,7 @@ class LoginSettingController extends AdminControllerBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getEditUrl($id, $testCallback = false)
     {
         $uri = route('exment.login_setting.edit', ['id' => $id]);
@@ -544,6 +611,7 @@ class LoginSettingController extends AdminControllerBase
      */
     public function activate(Request $request, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->toggleActivate($request, $id, true);
     }
 
@@ -556,6 +624,7 @@ class LoginSettingController extends AdminControllerBase
      */
     public function deactivate(Request $request, $id)
     {
+        // @phpstan-ignore-next-line
         return $this->toggleActivate($request, $id, false);
     }
 
@@ -579,12 +648,10 @@ class LoginSettingController extends AdminControllerBase
         ]);
     }
 
-
-
     /**
      * get 2factor setting box.
      *
-     * @return Content
+     * @return WidgetForm
      */
     protected function get2factorSettingForm(): WidgetForm
     {
@@ -626,6 +693,7 @@ class LoginSettingController extends AdminControllerBase
      * Send data
      * @param Request $request
      */
+    // @phpstan-ignore-next-line
     public function post2factor(Request $request)
     {
         $login_2factor_verify_code = $request->get('login_2factor_verify_code');
@@ -673,7 +741,8 @@ class LoginSettingController extends AdminControllerBase
     /**
      * 2factor verify
      *
-     * @return void
+     * @return \Symfony\Component\HttpFoundation\Response
+     * @throws \Exception
      */
     public function auth_2factor_verify()
     {
@@ -681,7 +750,7 @@ class LoginSettingController extends AdminControllerBase
 
         // set 2factor params
         $verify_code = random_int(100000, 999999);
-        $valid_period_datetime = Carbon::now()->addMinute(60);
+        $valid_period_datetime = Carbon::now()->addMinutes(60);
 
         // send verify
         try {
@@ -731,6 +800,7 @@ class LoginSettingController extends AdminControllerBase
      * @param Request $request
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function loginOptionHtml(Request $request)
     {
         $val = $request->get('val');

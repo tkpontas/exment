@@ -3,32 +3,48 @@
 namespace Exceedone\Exment\Controllers;
 
 use Illuminate\Http\Request;
-use Encore\Admin\Auth\Permission as Checker;
-use Encore\Admin\Facades\Admin;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Auth\Permission as Checker;
+use ExmentAdminCore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Model\CustomTable;
 use App\Http\Controllers\Controller;
 
 /**
  * Admin(Exment) Controller for root-table
  *
-* @method \Encore\Admin\Grid grid()
-* @method \Encore\Admin\Form form($id = null)
+* @method \ExmentAdminCore\Admin\Grid grid()
+* @method \ExmentAdminCore\Admin\Form form($id = null)
  */
 abstract class AdminControllerTableBase extends Controller
 {
     use ExmentControllerTrait;
 
+    /**
+     * @var CustomTable|null
+     */
     protected $custom_table;
+
+    /**
+     * @var \Illuminate\Database\Eloquent\Collection|null
+     */
+    // @phpstan-ignore-next-line
     protected $custom_columns;
+
+    /**
+     * @var mixed
+     */
     protected $custom_view;
+
+    /**
+     * @var mixed
+     */
     protected $custom_form;
 
     /**
      * @param CustomTable|null $custom_table
      * @param Request $request
-     * @phpstan-ignore-next-line
      */
+    // @phpstan-ignore-next-line
     public function __construct(?CustomTable $custom_table, Request $request)
     {
         $this->custom_table = $custom_table;
@@ -47,7 +63,7 @@ abstract class AdminControllerTableBase extends Controller
      * Execute an action on the controller.
      *
      * @param  string  $method
-     * @param  array   $parameters
+     * @param  array<string, mixed>   $parameters
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function callAction($method, $parameters)
@@ -60,10 +76,29 @@ abstract class AdminControllerTableBase extends Controller
     }
 
     /**
+     * @param mixed $column
+     * @param mixed $columnType
+     * @return bool
+     */
+    protected function validateEditColumnType($column, $columnType)
+    {
+        if (is_null($columnType) || $columnType !== $column->column_type) {
+            Checker::error(exmtrans("common.message.not_edit_column_type"));
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * validate table_name and id
      * ex. check /admin/column/user/1/edit
      * whether "1" is user's column
      * $isValue: whether
+     *
+     * @param string $className
+     * @param mixed $id
+     * @param mixed $endpoint
+     * @return bool
      */
     protected function validateTableAndId($className, $id, $endpoint)
     {
@@ -107,6 +142,58 @@ abstract class AdminControllerTableBase extends Controller
     }
 
     /**
+     * Check the rows of a setting of this table before they are changed or
+     * deleted: the user has the permission on this table, and every row is a
+     * row of this table (not of another table, whose id was put in the URL).
+     * edit() checks the same for the screen; update() and destroy() are called
+     * by a request of their own, so they check again.
+     *
+     * @param string $className the model of the rows
+     * @param mixed $ids an id, or ids joined with ","
+     * @param mixed $permission the permission on this table
+     * @param callable|null $canEdit more to check for each row (row => bool)
+     * @return bool
+     */
+    protected function validateRowsOfTable(string $className, $ids, $permission, ?callable $canEdit = null): bool
+    {
+        if (!$this->validateTable($this->custom_table, $permission)) {
+            return false;
+        }
+        foreach (collect(explode(',', (string)$ids))->filter() as $id) {
+            $row = $className::find($id);
+            if (!$row || $this->tableIdOfRow($row) != $this->custom_table->id
+                || ($canEdit && !$canEdit($row))) {
+                Checker::error();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The id of the table a setting row belongs to.
+     *
+     * @param mixed $row
+     * @return mixed
+     */
+    protected function tableIdOfRow($row)
+    {
+        if ($row instanceof \Exceedone\Exment\Model\CustomRelation) {
+            return $row->parent_custom_table_id;
+        }
+        if ($row instanceof \Exceedone\Exment\Model\CustomCopy) {
+            return $row->from_custom_table_id;
+        }
+        if ($row instanceof \Exceedone\Exment\Model\CustomFormPriority || $row instanceof \Exceedone\Exment\Model\PublicForm) {
+            return $row->custom_form ? $row->custom_form->custom_table_id : null;
+        }
+        if ($row instanceof \Exceedone\Exment\Model\Notify) {
+            return $row->target_id;
+        }
+        return $row->custom_table_id;
+    }
+
+    /**
      * Index interface.
      *
      * @return Content
@@ -119,9 +206,11 @@ abstract class AdminControllerTableBase extends Controller
     /**
      * Show interface.
      *
-     * @param mixed   $id
+     * @param Request $request
      * @param Content $content
-     * @return Content
+     * @param mixed $tableKey
+     * @param mixed $id
+     * @return Content|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function show(Request $request, Content $content, $tableKey, $id)
     {
@@ -137,8 +226,10 @@ abstract class AdminControllerTableBase extends Controller
     /**
      * Edit interface.
      *
-     * @param mixed   $id
+     * @param Request $request
      * @param Content $content
+     * @param mixed $tableKey
+     * @param mixed $id
      * @return Content
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
@@ -149,6 +240,7 @@ abstract class AdminControllerTableBase extends Controller
     /**
      * Create interface.
      *
+     * @param Request $request
      * @param Content $content
      * @return Content
      */

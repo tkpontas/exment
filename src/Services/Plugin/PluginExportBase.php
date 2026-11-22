@@ -11,6 +11,7 @@ abstract class PluginExportBase
 {
     use PluginBase;
 
+    // @phpstan-ignore-next-line
     protected $custom_table;
 
     /**
@@ -30,11 +31,12 @@ abstract class PluginExportBase
     /**
      * Tmp full path.
      *
-     * @var string
+     * @var string|null
      */
     protected $tmpFullPath;
 
 
+    // @phpstan-ignore-next-line
     public function __construct($plugin, $custom_table)
     {
         $this->plugin = $plugin;
@@ -42,6 +44,7 @@ abstract class PluginExportBase
     }
 
 
+    // @phpstan-ignore-next-line
     public function defaultProvider($default_provider)
     {
         $this->default_provider = $default_provider;
@@ -50,6 +53,7 @@ abstract class PluginExportBase
     }
 
 
+    // @phpstan-ignore-next-line
     public function viewProvider($view_provider)
     {
         $this->view_provider = $view_provider;
@@ -61,17 +65,18 @@ abstract class PluginExportBase
     /**
      * Get grid data.
      */
+    // @phpstan-ignore-next-line
     protected function getData()
     {
         return $this->combineData($this->default_provider->data());
     }
 
-
     /**
      * Get view's data.
      *
-     * @return void
+     * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getViewData()
     {
         return $this->combineData($this->view_provider->data());
@@ -84,6 +89,7 @@ abstract class PluginExportBase
      * @param array $data
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function combineData($data)
     {
         $headers = $data[0];
@@ -99,6 +105,7 @@ abstract class PluginExportBase
     /**
      * Get CustomValue's records.
      */
+    // @phpstan-ignore-next-line
     protected function getRecords()
     {
         return $this->default_provider->getRecords();

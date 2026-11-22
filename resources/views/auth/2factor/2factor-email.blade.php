@@ -3,7 +3,7 @@
         <p class="login-box-msg">{{ exmtrans('2factor.2factor') }}</p>
 
         <form action="{{ admin_url('auth-2factor/verify') }}" method="post">
-            <div class="form-group has-feedback {!! !$errors->has('verify_code') ?: 'has-error' !!}">
+            <div class="form-group mb-3 has-feedback {!! !$errors->has('verify_code') ?: 'has-error' !!}">
                 <p>
                     {!! $email_send_verify !!}
                 </p>
@@ -12,7 +12,7 @@
                 <label class="control-label" for="inputError"><i class="fa fa-times-circle-o"></i>{{$message}}</label></br>
                 @endforeach @endif
 
-                <input type="input" class="form-control" placeholder="{{ exmtrans('2factor.message.input_number') }}" name="verify_code" value="{{ old('verify_code') }}" required />
+                <input type="text" class="form-control" placeholder="{{ exmtrans('2factor.message.input_number') }}" name="verify_code" value="{{ old('verify_code') }}" required />
             </div>
             
             <div class="row">

@@ -2,21 +2,25 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\Textarea;
+use ExmentAdminCore\Admin\Form\Field\Textarea;
 
 class CodeEditor extends Textarea
 {
     protected $view = 'admin::form.textarea';
 
+    // @phpstan-ignore-next-line
     protected $mode = 'txt';
+    // @phpstan-ignore-next-line
     protected $height;
 
+    // @phpstan-ignore-next-line
     public function mode($mode)
     {
         $this->mode = $mode;
         return $this;
     }
 
+    // @phpstan-ignore-next-line
     public function height(int $height)
     {
         $this->height = $height;

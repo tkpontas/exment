@@ -2,22 +2,26 @@
 
 namespace Exceedone\Exment\Form\Tools;
 
-use Encore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Facades\Admin;
 
 /**
  * Open Share button.
  */
 class ShareButton
 {
+    // @phpstan-ignore-next-line
     protected $id;
+    // @phpstan-ignore-next-line
     protected $url;
 
+    // @phpstan-ignore-next-line
     public function __construct($id, $url)
     {
         $this->id = $id;
         $this->url = $url;
     }
 
+    // @phpstan-ignore-next-line
     protected function script($suuid, $label)
     {
         $confirm = trans('admin.confirm');
@@ -40,6 +44,7 @@ class ShareButton
 EOT;
     }
 
+    // @phpstan-ignore-next-line
     public function render()
     {
         // get label

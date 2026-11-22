@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field\Workflow;
 
-use Encore\Admin\Form\Field\Select;
+use ExmentAdminCore\Admin\Form\Field\Select;
 
 class StatusSelects extends Select
 {
@@ -13,13 +13,14 @@ class StatusSelects extends Select
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $column = [];
 
     /**
      * @param $column
      * @param $arguments
-     * @phpstan-ignore-next-line
      */
+    // @phpstan-ignore-next-line
     public function __construct($column = '', $arguments = [])
     {
         $this->column['action_name'] = 'action_name';
@@ -38,7 +39,7 @@ class StatusSelects extends Select
      *
      * @return $this
      */
-    public function setElementClass($class)
+    public function setElementClass($class): self
     {
         $classItem = collect($class)->map(function ($c) {
             return is_array($c) ? implode("_", $c) : $c;
@@ -70,13 +71,14 @@ class StatusSelects extends Select
         }
 
         if ($this->options instanceof \Closure) {
+            // @phpstan-ignore-next-line
             if ($this->form && $this->form->model()) {
                 $this->options = $this->options->bindTo($this->form->model());
             }
 
             $this->options(call_user_func($this->options, $this->value, $this, $this->form->model()));
         }
-
+        // @phpstan-ignore-next-line
         $this->options = array_filter($this->options, 'strlen');
 
         // Whether is show id
@@ -85,6 +87,7 @@ class StatusSelects extends Select
             $action_id = array_get($this->data, 'id');
         }
 
+        // @phpstan-ignore-next-line
         return parent::render()->with([
             'options' => $this->options,
             'action_id' => $action_id,

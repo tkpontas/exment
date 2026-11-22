@@ -9,11 +9,17 @@ use Exceedone\Exment\Services\DataImportExport;
 
 trait ExportCommandTrait
 {
+    /**
+     * Get common parameters for export commands
+     *
+     * @return array<string, mixed>
+     */
     protected function getParametersCommon()
     {
+        /** @var null|string $table_name */
         $table_name = $this->argument("table_name");
 
-        if (!isset($table_name)) {
+        if ($table_name === null) {
             throw new \Exception('parameter table name is empty');
         }
 
@@ -75,8 +81,8 @@ trait ExportCommandTrait
      * Get export action
      *
      * @param CustomTable $custom_table
-     * @param \Encore\Admin\Grid $grid
-     * @param array $options
+     * @param \ExmentAdminCore\Admin\Grid $grid
+     * @param array<string, mixed> $options
      * @return \Exceedone\Exment\Services\DataImportExport\Actions\Export\ActionInterface
      */
     protected function getExportAction(CustomTable $custom_table, $grid, array $options)
@@ -116,6 +122,7 @@ trait ExportCommandTrait
                 'grid' => $grid,
                 'add_setting' => boolval(array_get($options, 'add_setting', false)),
                 'add_relation' => boolval(array_get($options, 'add_relation', false)),
+                'add_comment' => boolval(array_get($options, 'add_comment', false)),
             ]
         );
     }

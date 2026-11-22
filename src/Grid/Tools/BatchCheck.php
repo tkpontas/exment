@@ -2,12 +2,14 @@
 
 namespace Exceedone\Exment\Grid\Tools;
 
-use Encore\Admin\Grid\Tools\BatchAction;
+use ExmentAdminCore\Admin\Grid\Tools\BatchAction;
 
 class BatchCheck extends BatchAction
 {
     /**
      * Script of batch delete action.
+     *
+     * @return string
      */
     public function script()
     {

@@ -16,10 +16,12 @@ use Exceedone\Exment\Enums\SystemColumn;
 class Define
 {
     public const COMPOSER_PACKAGE_NAME = 'exceedone/exment';
-    public const COMPOSER_PACKAGE_NAME_LARAVEL_ADMIN = 'exceedone/laravel-admin';
-    public const COMPOSER_VERSION_CHECK_URL = 'https://repo.packagist.org/p/exceedone/exment.json';
-    public const EXMENT_NEWS_API_URL = 'https://exment.net/wp-json/wp/v2/posts';
-    public const EXMENT_NEWS_LINK = 'https://exment.net/archives/category/news';
+    public const COMPOSER_PACKAGE_NAME_EXMENT_ADMIN = 'exceedone/exment-admin-core';
+    public const COMPOSER_VERSION_CHECK_URL = 'https://packagist.org/packages/exceedone/exment.json';
+    // A static JSON file in the WordPress REST API format (the WordPress path /wp-json/wp/v2/posts redirects here).
+    // It takes no query, so Exment picks the news itself (News::filterItems()).
+    public const EXMENT_NEWS_API_URL = 'https://exment.net/api/posts.json';
+    public const EXMENT_NEWS_LINK = 'https://exment.net/category/news';
     public const USER_IMAGE_LINK = 'vendor/exment/images/user.png';
     public const ORGANIZATION_IMAGE_LINK = 'vendor/exment/images/organization.png';
 
@@ -29,8 +31,15 @@ class Define
     public const RULES_REGEX_LINK_FORMAT = "|<a href=[\"'](.*?)[\"'].*?>(.*?)</a>|mis";
     public const RULES_REGEX_BACKUP_FILENAME = '[ぁ-んァ-ヶ亜-熙a-zA-Z0-9]+';
 
+    /**
+     * Input keys not to flash to the session when redirecting with input
+     */
+    public const DONT_FLASH_INPUT_KEYS = ['password', 'password_confirmation', 'current_password'];
+
     public const DELETE_CONFIRM_KEYWORD = 'delete me';
     public const RESTORE_CONFIRM_KEYWORD = 'restore me';
+    // file in a backup zip recording the Exment / Laravel versions it was taken on
+    public const BACKUP_VERSION_FILE = 'backup_version.json';
     public const YES_KEYWORD = 'yes';
 
     public const API_FEATURE_TEST = 'API_FEATURE_TEST';
@@ -51,11 +60,17 @@ class Define
         'site_favicon' => ['type' => 'file', 'move' => 'system', 'group' => 'initialize'],
         'site_skin' => ['config' => 'admin.skin', 'group' => 'initialize'],
         'site_layout' => ['default' => 'layout_default', 'group' => 'initialize'],
+        'ui_design' => ['default' => 'modern', 'group' => 'initialize'],
 
         'api_available' => ['type' => 'boolean', 'config' => 'exment.api', 'group' => 'initialize'],
         'outside_api' => ['type' => 'boolean', 'group' => 'initialize', 'default' => true],
         'permission_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'initialize'],
         'organization_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'initialize'],
+        'logging_toggle_available' => ['type' => 'boolean', 'default' => '0', 'group' => 'initialize'],
+        // system performance log: save only slow requests (seconds; both 0 = every request), at most N logs in an hour (0 = no limit)
+        'logging_slow_request_seconds' => ['type' => 'int', 'default' => '3', 'group' => 'initialize'],
+        'logging_slow_sql_seconds' => ['type' => 'int', 'default' => '1', 'group' => 'initialize'],
+        'logging_max_per_hour' => ['type' => 'int', 'default' => '100', 'group' => 'initialize'],
 
         // Advanced ----------------------------------
         'filter_search_type' => ['default' => 'forward', 'group' => 'advanced'],
@@ -67,7 +82,7 @@ class Define
         'header_user_info' => ['type' => 'array', 'default' => SystemColumn::CREATED_AT, 'group' => 'advanced'],
 
         // name is "flg", but array is OK.
-        'grid_filter_disable_flg' => ['type' => 'array', 'default' => '', 'group' => 'advanced'] ,
+        'grid_filter_disable_flg' => ['type' => 'array', 'default' => 'comment', 'group' => 'advanced'] ,
 
         'system_values_pos' => ['default' => 'top', 'group' => 'advanced'],
 
@@ -79,6 +94,16 @@ class Define
 
         // public form ----------------------------------------------------
         'publicform_available' => ['type' => 'boolean', 'default' => false, 'group' => 'advanced'],
+        // the features an administrator turns on (Services\Features; Admin setting → Feature management)
+        'features' => ['type' => 'json', 'default' => []],
+        // maintenance mode of the site (Services\MaintenanceMode)
+        'maintenance' => ['type' => 'json', 'default' => []],
+        // an exment:schedule skipped in a maintenance, to run after it
+        'maintenance_missed_schedule' => ['default' => null],
+        // the id of the site (a UUID made once; the market and the licenses of the plugins know the site by it)
+        'site_id' => ['type' => 'string', 'default' => null],
+        // the notices told to the system administrators (Services\PluginDistribution\AdminNotices)
+        'admin_notices_sent' => ['type' => 'json', 'default' => []],
         'recaptcha_type' => ['type' => 'string', 'group' => 'advanced'],
         'recaptcha_site_key' => ['type' => 'password', 'group' => 'advanced'],
         'recaptcha_secret_key' => ['type' => 'password', 'group' => 'advanced'],
@@ -104,6 +129,18 @@ class Define
         'custom_value_save_autoshare' => ['type' => 'int', 'default' => '0', 'group' => 'advanced'],
         'filter_multi_user' => ['type' => 'int', 'default' => '-1', 'group' => 'advanced'],
 
+        // Meilisearch (full-text search) — 'config' maps let get_system_value fall back to .env.
+        'meili_host' => ['config' => 'meilisearch.host', 'group' => 'advanced'],
+        'meili_key' => ['type' => 'password', 'config' => 'meilisearch.key', 'group' => 'advanced'],
+        'meili_index' => ['config' => 'meilisearch.index', 'group' => 'advanced'],
+        'meili_global_search' => ['type' => 'boolean', 'config' => 'meilisearch.global_search', 'group' => 'advanced'],
+        'meili_realtime_sync' => ['type' => 'boolean', 'config' => 'meilisearch.realtime_sync', 'group' => 'advanced'],
+        'meili_batch_size' => ['type' => 'int', 'config' => 'meilisearch.batch_size', 'group' => 'advanced'],
+        'meili_repair_enabled' => ['type' => 'boolean', 'config' => 'meilisearch.repair_enabled', 'group' => 'advanced'],
+        'meili_repair_at' => ['config' => 'meilisearch.repair_at', 'group' => 'advanced'],
+        'meili_filter_mode' => ['config' => 'meilisearch.filter.mode', 'group' => 'advanced'],
+        'meili_indexed_at' => ['type' => 'json', 'group' => 'meili_state'],
+
 
         // notify
         'system_mail_host' => ['config' => 'mail.host', 'group' => 'notify'],
@@ -117,6 +154,23 @@ class Define
 
         'system_slack_user_column' => ['group' => 'notify'],
 
+        'system_line_channel_token' => ['type' => 'password', 'config' => 'exment.line.channel_access_token', 'group' => 'notify'],
+        'system_line_channel_secret' => ['type' => 'password', 'config' => 'exment.line.channel_secret', 'group' => 'notify'],
+        'system_line_oa_basic_id' => ['config' => 'exment.line.oa_basic_id', 'group' => 'notify'],
+
+        'safety_check_auto_enabled' => ['type' => 'boolean', 'default' => '0', 'group' => 'notify'],
+        'safety_check_min_scale' => ['type' => 'int', 'default' => '45', 'group' => 'notify'],
+        'safety_check_cooldown_minutes' => ['type' => 'int', 'default' => '60', 'group' => 'notify'],
+        'safety_check_comment_window_minutes' => ['type' => 'int', 'default' => '60', 'group' => 'notify'],
+        'safety_check_max_bulletin_age_minutes' => ['type' => 'int', 'default' => '10', 'group' => 'notify'],
+        'safety_check_resend_throttle_minutes' => ['type' => 'int', 'default' => '5', 'group' => 'notify'],
+        'safety_check_answer_url_expire_days' => ['type' => 'int', 'default' => '7', 'group' => 'notify'],
+        'safety_check_last_feed_time' => ['type' => 'datetime'],
+        // Comments written before this time ('Y-m-d H:i:s') are shown as the plain text they were
+        // written as; later ones are shown as Markdown. Set once, by the migration that brings
+        // Markdown comments. Not set: every comment is Markdown.
+        'comment_markdown_start' => [],
+
         // Backup
         'backup_enable_automatic' => ['type' => 'boolean', 'default' => '0', 'group' => 'backup'],
         'backup_automatic_term' => ['type' => 'int', 'default' => '1', 'group' => 'backup'],
@@ -124,6 +178,18 @@ class Define
         'backup_target' => ['type' => 'array', 'default' => 'database,plugin,attachment,log,config', 'group' => 'backup'] ,
         'backup_automatic_executed' => ['type' => 'datetime'],
         'backup_history_files' => ['type' => 'int', 'default' => '0', 'group' => 'backup'],
+
+        // Operation log auto-delete
+        // Opt-in (default '0') like backup_enable_automatic above: a destructive housekeeping task
+        // must not silently purge audit logs on a fresh install without an explicit admin choice.
+        'operation_log_enable_automatic' => ['type' => 'boolean', 'default' => '0', 'group' => 'operation_log'],
+        'operation_log_keep_days' => ['type' => 'int', 'default' => '180', 'group' => 'operation_log'],
+        'operation_log_automatic_week' => ['group' => 'operation_log'],
+        'operation_log_automatic_month' => ['group' => 'operation_log'],
+        'operation_log_automatic_day' => ['group' => 'operation_log'],
+        'operation_log_automatic_hour' => ['group' => 'operation_log'],
+        'operation_log_automatic_minute' => ['group' => 'operation_log'],
+        'operation_log_automatic_executed' => ['type' => 'datetime'],
 
         // 2factor ----------------------------------
         'login_use_2factor' => ['type' => 'boolean', 'default' => '0', 'group' => '2factor'],
@@ -144,6 +210,17 @@ class Define
         "skin-black",
         "skin-black-light",
     ];
+
+    /**
+     * Screen designs. The first one is the default.
+     */
+    public const SYSTEM_UI_DESIGN = [
+        'modern',
+        'classic',
+    ];
+
+    /** Cookie holding how the sidebar was last left: "collapsed" or "expanded". */
+    public const COOKIE_SIDEBAR_STATE = 'exment_sidebar';
 
     public const SYSTEM_LAYOUT = [
         'layout_default' => ['sidebar-mini'],
@@ -199,6 +276,7 @@ class Define
     public const SYSTEM_KEY_SESSION_IMPORT_KEY_VALUE = "import_key_value_%s_%s_%s";
     public const SYSTEM_KEY_SESSION_IMPORT_KEY_VALUE_PREFIX = "import_key_value_";
     public const SYSTEM_KEY_SESSION_ORGANIZATION_TREE = "organization_tree";
+    public const SYSTEM_KEY_SESSION_ORGANIZATION_PARENT_INDEX = "organization_parent_index";
     public const SYSTEM_KEY_SESSION_GRID_AUTHORITABLE = "grid_authoritable_%s";
     public const SYSTEM_KEY_SESSION_ACCESSIBLE_TABLE = "accessible_table_%s_%s";
     public const SYSTEM_KEY_SESSION_DISABLE_DATA_URL_TAG = "disable_data_url_tag";
@@ -231,13 +309,41 @@ class Define
             'uri' => 'system',
             'icon' => 'fa-cogs',
         ],
+        'meili_filter' => [
+            'uri' => 'meili-filter',
+            'icon' => 'fa-filter',
+        ],
+        'meili_dictionary' => [
+            'uri' => 'meili-dictionary',
+            'icon' => 'fa-language',
+        ],
+        'file_server' => [
+            'uri' => 'file_server',
+            'icon' => 'fa-folder-open',
+        ],
         'custom_table' => [
             'uri' => 'table',
             'icon' => 'fa-table',
         ],
+        'studio' => [
+            'uri' => 'studio',
+            'icon' => 'fa-th-large',
+        ],
+        'tuning' => [
+            'uri' => 'tuning',
+            'icon' => 'fa-tachometer',
+        ],
+        'maintenance' => [
+            'uri' => 'maintenance',
+            'icon' => 'fa-wrench',
+        ],
         'role_group' => [
             'uri' => 'role_group',
             'icon' => 'fa-user-secret',
+        ],
+        'feature' => [
+            'uri' => 'feature',
+            'icon' => 'fa-toggle-on',
         ],
         'menu' => [
             'uri' => 'auth/menu',
@@ -246,6 +352,10 @@ class Define
         'template' => [
             'uri' => 'template',
             'icon' => 'fa-clone',
+        ],
+        'cell_style_preset' => [
+            'uri' => 'cell_style_preset',
+            'icon' => 'fa-paint-brush',
         ],
         'workflow' => [
             'uri' => 'workflow',
@@ -340,6 +450,8 @@ class Define
         ['name' => 'operation', 'href' => 'operation/:table_name', 'icon' => 'fa-reply-all', 'roles' => [Permission::CUSTOM_TABLE], 'exmtrans' => 'change_page_menu.custom_operation', 'description' => 'custom_operation.description'],
         ['name' => 'notify', 'href' => 'notify/:table_name', 'icon' => 'fa-bell', 'roles' => [Permission::CUSTOM_TABLE], 'exmtrans' => 'change_page_menu.notify', 'description' => 'notify.description'],
         ['name' => 'data', 'href' => 'data/:table_name', 'icon' => 'fa-database', 'roles' => Permission::AVAILABLE_VIEW_CUSTOM_VALUE, 'exmtrans' => 'change_page_menu.custom_value', 'description' => 'custom_value.description'],
+        ['name' => 'qrcode', 'href' => 'table/:id/edit?qrcodesetting=1', 'icon' => 'fa-qrcode', 'roles' => Permission::CUSTOM_TABLE, 'exmtrans' => 'change_page_menu.qrcode', 'description' => 'qrcode.description'],
+        ['name' => 'jancode', 'href' => 'table/:id/edit?jancodesetting=1', 'icon' => 'fa-barcode', 'roles' => Permission::CUSTOM_TABLE, 'exmtrans' => 'change_page_menu.jancode', 'description' => 'jancode.description'],
     ];
 
     public const CUSTOM_VALUE_TRAITS = [
@@ -386,14 +498,18 @@ class Define
     ];
 
     public const DATABASE_VERSION = [
-        'mysql' => ['min' => '5.7.8', 'max_lt' => '8.0.0'],
+        'mysql' => ['min' => '5.7.8'],
         'mariadb' => ['min' => '10.2.7'],
         'sqlsrv' => ['min' => '13.0.0.0'],
     ];
 
+    /**
+     * PHP version range checked on the install screen: [min (inclusive), max (exclusive)].
+     * min must match "php" in composer.json.
+     */
     public const PHP_VERSION = [
-        '8.0.0',
         '8.2.0',
+        '8.5.0',
     ];
 
     public const CUSTOM_TABLE_ENDPOINTS = [
@@ -408,6 +524,8 @@ class Define
         'data',
     ];
 
+
+    // @phpstan-ignore-next-line
     public static function FILE_OPTION()
     {
         // get max size
@@ -434,6 +552,9 @@ class Define
     public const HELP_URLS = [
         ['uri'=> 'template', 'help_uri'=> 'template'],
         ['uri'=> 'search', 'help_uri'=> 'search'],
+        // if has "query", match only when the url has the query string parameter. Set before the entry without "query".
+        ['uri'=> 'table', 'query'=> 'qrcodesetting', 'help_uri'=> '2d_barcode'],
+        ['uri'=> 'table', 'query'=> 'jancodesetting', 'help_uri'=> 'jancode'],
         ['uri'=> 'table', 'help_uri'=> 'table'],
         ['uri'=> 'column', 'help_uri'=> 'column'],
         ['uri'=> 'relation', 'help_uri'=> 'relation'],
@@ -447,6 +568,8 @@ class Define
         ['uri'=> 'backup', 'help_uri'=> 'backup'],
         ['uri'=> 'role_group', 'help_uri'=> 'permission'],
         ['uri'=> 'auth/menu', 'help_uri'=> 'menu'],
+        ['uri'=> 'auth/logs', 'help_uri'=> 'logs'],
+        ['uri'=> 'notify', 'help_uri'=> 'notify'],
         ['uri'=> 'loginuser', 'help_uri'=> 'user'],
         ['uri'=> 'data/user', 'help_uri'=> 'user'],
         ['uri'=> 'data/mail_template', 'help_uri'=> 'mail'],
@@ -457,6 +580,8 @@ class Define
         ['uri'=> 'system', 'help_uri'=> 'system_setting'],
         ['uri'=> 'workflow', 'help_uri'=> 'workflow_setting'],
         ['uri'=> 'login_setting', 'help_uri'=> 'login_setting'],
+        ['uri'=> 'tuning', 'help_uri'=> 'tuning'],
+        ['uri'=> 'feature', 'help_uri'=> 'feature'],
         ['uri'=> '/', 'help_uri'=> 'dashboard'],
     ];
 
@@ -480,7 +605,7 @@ class Define
     public const DISKNAME_TEMP_UPLOAD = 'tmpupload';
     public const DISKNAME_PUBLIC_FORM_TMP = 'public_form_tmp';
 
-    public const IMAGE_RULE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'];
+    public const IMAGE_RULE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
 
     public const CHARTITEM_LABEL = 'chartitem_label';
 
@@ -503,8 +628,13 @@ class Define
     ];
 
 
-    public const HTML_ALLOWED_DEFAULT = 'div,b,strong,i,em,u,a[href|title|target],ul,ol,li,p,br,span,img[width|height|alt|src],h1,h2,h3,h4,h5,h6,blockquote,hr';
-    public const HTML_ALLOWED_EDITOR_DEFAULT = '@[style],@[class],div,b,strong,i,em,u,a[href|title|target],ul,ol,li,p,br,span,img[width|height|alt|src],h1,h2,h3,h4,h5,h6,blockquote,hr';
+    // Safe rich-content elements kept in sync between html_clean() (HTML_ALLOWED_DEFAULT) and the
+    // TinyMCE editor (HTML_ALLOWED_EDITOR_DEFAULT). Table markup and common text elements are added
+    // so html_clean() does not strip legitimate content. Dangerous/embed elements (script, iframe,
+    // object, embed, form, video, audio, svg) are intentionally excluded; a deployment that truly
+    // needs them can override via config('exment.html_allowed') / config('exment.html_allowed_attributes').
+    public const HTML_ALLOWED_DEFAULT = 'div,b,strong,i,em,u,a[href|title|target],ul,ol,li,p,br,span,img[width|height|alt|src],h1,h2,h3,h4,h5,h6,blockquote,hr,table,thead,tbody,tfoot,tr,td[colspan|rowspan],th[colspan|rowspan|scope],caption,colgroup,col,pre,code,small,sub,sup,s,del,ins,dl,dt,dd';
+    public const HTML_ALLOWED_EDITOR_DEFAULT = '@[style],@[class],div,b,strong,i,em,u,a[href|title|target],ul,ol,li,p,br,span,img[width|height|alt|src],h1,h2,h3,h4,h5,h6,blockquote,hr,table,thead,tbody,tfoot,tr,td[colspan|rowspan],th[colspan|rowspan|scope],caption,colgroup,col,pre,code,small,sub,sup,s,del,ins,dl,dt,dd';
     public const HTML_ALLOWED_ATTRIBUTES_DEFAULT = '*.style,*.class';
     public const CSS_ALLOWED_PROPERTIES_DEFAULT = '*';
 }

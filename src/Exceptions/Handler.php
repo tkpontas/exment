@@ -11,8 +11,6 @@ class Handler extends ExceptionHandler
 {
     /**
      * A list of the exception types that are not reported.
-     *
-     * @var array
      */
     protected $dontReport = [
         //
@@ -20,8 +18,6 @@ class Handler extends ExceptionHandler
 
     /**
      * A list of the inputs that are never flashed for validation exceptions.
-     *
-     * @var array
      */
     protected $dontFlash = [
         'password',
@@ -49,6 +45,7 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
+        /** @phpstan-ignore-next-line error() expects Exception, Throwable given */
         return \Exment::error($request, $exception, function ($request, $exception) {
             if ($exception instanceof OAuthServerException) {
                 return response([

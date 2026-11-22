@@ -8,6 +8,8 @@ class BCustomTableTest extends ExmentKitTestCase
 {
     /**
      * pre-excecute process before test.
+     *
+     * @return void
      */
     protected function setUp(): void
     {
@@ -18,6 +20,8 @@ class BCustomTableTest extends ExmentKitTestCase
 
     /**
      * display custom table list.
+     *
+     * @return void
      */
     public function testDisplayInstalledTable()
     {
@@ -36,17 +40,18 @@ class BCustomTableTest extends ExmentKitTestCase
 
     /**
      * display custom table create page.
+     * @return void
      */
     public function testDisplayCustomTableCreate()
     {
         $this->visit(admin_url('table/create'))
                 ->seePageIs(admin_url('table/create'))
                 ->seeInElement('h1', 'カスタムテーブル設定')
-                ->seeInElement('h3[class=box-title]', '作成')
+                ->seeInElement('h3.box-title', '作成')
                 ->seeInElement('label', 'テーブル名(英数字)')
                 ->seeInElement('label', 'テーブル表示名')
                 ->seeInElement('label', '説明')
-                ->seeInElement('h4[class=field-header]', '詳細設定')
+                ->seeInElement('h4.field-header', '詳細設定')
                 ->seeInElement('label', '色')
                 ->seeInElement('label', 'アイコン')
                 ->seeInElement('label', '検索可能')
@@ -63,6 +68,7 @@ class BCustomTableTest extends ExmentKitTestCase
 
     /**
      * create custom table.
+     * @return void
      */
     public function testCreateCustomTableSuccess()
     {
@@ -77,6 +83,7 @@ class BCustomTableTest extends ExmentKitTestCase
                 ->type('test description', 'description')
                 ->type('#ff0000', 'options[color]')
                 ->type('fa-automobile', 'options[icon]')
+                // @phpstan-ignore-next-line
                 ->type(50, 'options[revision_count]')
                 ->press('admin-submit')
                 ->seePageIs(admin_url('column/test'))
@@ -86,10 +93,11 @@ class BCustomTableTest extends ExmentKitTestCase
 
     /**
      * edit custom table.
+     * @return void
      */
     public function testEditCustomTableSuccess()
     {
-        $row = CustomTable::orderBy('created_at', 'desc')->first();
+        $row = CustomTable::orderBy('id', 'desc')->first();
         $id = array_get($row, 'id');
 
         // Update custom table

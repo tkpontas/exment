@@ -22,7 +22,7 @@
 - Laravelのプロジェクトを作成します。
 
 ~~~
-composer create-project "laravel/laravel=9.*" (プロジェクト名)
+composer create-project "laravel/laravel=12.*" (プロジェクト名)
 cd (プロジェクト名)
 ~~~
 
@@ -53,20 +53,28 @@ composer require psr/simple-cache=^2.0.0
 ~~~
 git clone https://github.com/hirossyi73/exment.git
 ~~~
+- (任意)あなたのexment-admin-coreリポジトリをクローンします。
+(ex. https://github.com/hirossyi73/exment-admin-core.git)
+
+~~~
+git clone https://github.com/hirossyi73/exment-admin-core.git
+~~~
 
 - Laravelプロジェクトフォルダ直下の、composer.jsonを書き換えます。
 **便宜上、下記の記述にコメントを記載していますが、実際はコメントを削除してください。**
 
 ~~~
     "require": {
-        "php": "^8.0.2",
-        "guzzlehttp/guzzle": "^7.2",
-        "laravel/framework": "^9.19",
-        "laravel/sanctum": "^3.0",
-        "laravel/tinker": "^2.7",
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.10",
+        "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.2",
+        "laravel/tinker": "^2.10",
         "psr/simple-cache": "2.0.0",
         // 行追加
         "exceedone/exment": "dev-master"
+        // 任意
+        ,"exceedone/exment-admin-core": "dev-master"
     },
 
     "autoload": {
@@ -84,6 +92,15 @@ git clone https://github.com/hirossyi73/exment.git
         {
             "type": "path",
             "url": "packages/hirossyi73/exment",
+            "options": {
+                "symlink": true
+            }
+        }
+        // 任意
+        ,
+        {
+            "type": "path",
+            "url": "packages/hirossyi73/exment-admin-core",
             "options": {
                 "symlink": true
             }
@@ -214,6 +231,26 @@ php artisan exment:publish
 GitHubのブランチを、以下のように運用しています。  
 [Gitのブランチモデルについて](https://qiita.com/okuderap/items/0b57830d2f56d1d51692)
 
+> **今の運用（2026-11-20 から）**: pull request は、すべて `master` に出します。
+>
+> | ブランチ | 内容 | pull request |
+> |---|---|---|
+> | `master` | 次の版の開発 | **すべてここに出す**（機能の追加・高速化・不具合の修正） |
+> | `7.1` | 7.1.x の保守（v7.1.0 のタグから作る） | 直接は出さない。`master` に出して、ラベル `backport-7.1` を付ける |
+> | `7.0` | 7.0.x の保守 | 直接は出さない。`master` に出して、ラベル `backport-7.0` を付ける |
+> | `6.2` | 6.2.x の保守（脆弱性の修正だけ。2027-03-31 まで） | 直接は出さない。ラベル `backport-6.2` |
+>
+> **リリースの流れ**
+> 1. `master` には、**次の版で出してよいものだけ**をマージする。**出したくないものは、リリースが終わるまで PR をマージしない**。作りかけ・大きな変更（例：Laravel 13 への移行）は、機能のブランチ（`feature/XXX`）で育てる。入れても見せたくないものは、設定で切り替えられるようにして**初期値をオフ**にする
+> 2. リリースの日に、`master` にタグ（例：`v7.2.0`）を付けてリリースする
+> 3. **版のブランチ（例：`7.2`）は、タグを付けたときに、そのタグの位置で作る**（`git push origin v7.2.0^{commit}:refs/heads/7.2`）。それまでは作らない。作ったブランチは、そのまま 7.2.x の保守に使う
+> 4. もう `master` に入っていて出したくないものがあったら、タグを付ける前に `master` で `git revert` する（出したあとで、もう一度入れる）
+> 5. 出したあとの直しは `master` に出し、`backport-7.x` のラベルを付ける。まとめ役が版のブランチに cherry-pick し、7.x.y として出す
+>
+> 脆弱性の修正は、公開の Issue・pull request にせず、[SECURITY.md](../../SECURITY.md) の方法で扱います。
+>
+> 下の表は以前のブランチの運用です。
+
 | GitHub Brunch Name | Derived from | Explain |
 | ------------------ | -------------| ------------- |
 | `master` | - | 現在の安定版です。リリースした時点でのソースコードを管理します。 |
@@ -240,9 +277,9 @@ composer global require friendsofphp/php-cs-fixer
 #### ソース整形
 ~~~
 # 不要な"use"を削除
-php-cs-fixer fix ./vendor/hirossyi73/exment --rules=no_unused_imports 
+php-cs-fixer fix ./packages/hirossyi73/exment --rules=no_unused_imports 
 # すべてのソースを整形
-php-cs-fixer fix ./vendor/hirossyi73/exment
+php-cs-fixer fix ./packages/hirossyi73/exment
 ~~~
 
 
@@ -251,5 +288,5 @@ php-cs-fixer fix ./vendor/hirossyi73/exment
 
 - GitHubのpull requestを実行します。  
 
-- exceedone/exmentのブランチhotfix(不具合対応)、もしくはdevelop(機能追加)を対象に、pull requestを実行します。  
+- exceedone/exmentの、上の「今の運用」の表のブランチ（新しい機能も不具合の修正も **master**）を対象に、pull requestを実行します。ブランチ名は、機能追加は `feature/XXX`、不具合対応は `fix/XXX` としてください。  
 コメントは、可能な限り記載してください。

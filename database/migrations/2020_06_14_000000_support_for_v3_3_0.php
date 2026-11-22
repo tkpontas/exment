@@ -17,23 +17,23 @@ class SupportForV330 extends Migration
     public function up()
     {
         $schema = \DB::connection()->getSchemaBuilder();
-        $schema->blueprintResolver(function ($table, $callback) {
-            return new ExtendedBlueprint($table, $callback);
+        $schema->blueprintResolver(function ($connection, $table, $callback) {
+            return new ExtendedBlueprint($connection, $table, $callback);
         });
 
         if (!Schema::hasTable('login_settings')) {
-            $schema->create('login_settings', function (Blueprint $table) {
+            $schema->create('login_settings', function (ExtendedBlueprint $table) {
                 $table->increments('id');
                 $table->string('login_view_name');
                 $table->string('login_type');
                 $table->boolean('active_flg')->default(false);
                 $table->json('options')->nullable();
-                
+
                 $table->timestamps();
                 $table->timeusers();
             });
         }
-        
+
         if (Schema::hasTable('login_users')) {
             Schema::table('login_users', function (Blueprint $table) {
                 if (!Schema::hasColumn('login_users', 'login_type')) {
@@ -60,7 +60,7 @@ class SupportForV330 extends Migration
                 $table->timeusers();
             });
         }
-        
+
         \Artisan::call('exment:patchdata', ['action' => 'login_type_sso']);
     }
 
@@ -72,8 +72,8 @@ class SupportForV330 extends Migration
     public function down()
     {
         $schema = DB::connection()->getSchemaBuilder();
-        $schema->blueprintResolver(function ($table, $callback) {
-            return new ExtendedBlueprint($table, $callback);
+        $schema->blueprintResolver(function ($connection, $table, $callback) {
+            return new ExtendedBlueprint($connection, $table, $callback);
         });
 
         if (Schema::hasTable('login_users')) {

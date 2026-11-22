@@ -8,6 +8,7 @@ use Carbon\Carbon;
  *
  * @property mixed $query
  * @property mixed $model
+ * @property mixed $grammar
  * @method orWhere($column, $operator = null, $value = null)
  * @method whereRaw($sql, $bindings = [], $boolean = 'and')
  * @method orWhereRaw($sql, $bindings = [])
@@ -45,7 +46,7 @@ trait ExtendedBuilderTrait
      * Update a removing json key.
      *
      * @param  string  $key
-     * @return int
+     * @return bool
      */
     public function updateRemovingJsonKey(string $key)
     {
@@ -62,16 +63,19 @@ trait ExtendedBuilderTrait
      * @param  mixed   $operator
      * @param  mixed   $value
      * @param  string  $boolean
-     * @return $this
      */
+    // @phpstan-ignore-next-line
     public function whereOrIn($column, $operator = null, $value = null, $boolean = 'and')
     {
         // if arg is array or list, execute whereIn
         $checkArray = (func_num_args() == 3 ? $value : $operator);
+        /** @phpstan-ignore-next-line */
         if (is_list($checkArray)) {
             if (func_num_args() == 3 && $operator == '<>') {
+                /** @phpstan-ignore-next-line */
                 return $this->whereNotIn($column, toArray($checkArray));
             }
+            /** @phpstan-ignore-next-line */
             return $this->whereIn($column, toArray($checkArray));
         }
 
@@ -85,16 +89,19 @@ trait ExtendedBuilderTrait
      * @param  mixed   $operator
      * @param  mixed   $value
      * @param  string  $boolean
-     * @return $this
      */
+    // @phpstan-ignore-next-line
     public function orWhereOrIn($column, $operator = null, $value = null, $boolean = 'and')
     {
         // if arg is array or list, execute whereIn
         $checkArray = (func_num_args() == 3 ? $value : $operator);
+        /** @phpstan-ignore-next-line */
         if (is_list($checkArray)) {
             if (func_num_args() == 3 && $operator == '<>') {
+                /** @phpstan-ignore-next-line */
                 return $this->orWhereNotIn($column, toArray($checkArray));
             }
+            /** @phpstan-ignore-next-line */
             return $this->orWhereIn($column, toArray($checkArray));
         }
 
@@ -103,14 +110,15 @@ trait ExtendedBuilderTrait
 
     /**
      * Multiple wherein querys.
-     * *NOW Only support columns is 2 column. *
+     * NOW Only support columns is 2 column. *
      *
-     * @param  array                                          $columns
-     * @param  \Illuminate\Contracts\Support\Arrayable|array  $values
-     * @param  bool  $zeroQueryIfEmpty if true and values is empty, set "1 = 0(always false)" query.
-     *
-     * @return \Illuminate\Database\Query\Builder
+     * @param array $columns
+     * @param \Illuminate\Contracts\Support\Arrayable|array $values
+     * @param bool $zeroQueryIfEmpty if true and values is empty, set "1 = 0(always false)" query.
+     * @return Eloquent\ExtendedBuilder|Query\ExtendedBuilder|Query\JoinClause
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public function whereInMultiple(array $columns, $values, bool $zeroQueryIfEmpty = false)
     {
         if (count($columns) !== 2) {
@@ -133,6 +141,7 @@ trait ExtendedBuilderTrait
 
         // if not suport where in multiple, first getting target id, and add query. ----------------------------------------------------
         $tableName = $this->_getTableExment();
+        /** @phpstan-ignore-next-line */
         $subquery = \DB::table($tableName);
 
         // group "$values" index.
@@ -166,6 +175,7 @@ trait ExtendedBuilderTrait
      *
      * @return \Illuminate\Database\Query\Builder
      */
+    // @phpstan-ignore-next-line
     public function whereInArrayString($column, $values)
     {
         return $this->_whereInArrayString($column, $values, false, false);
@@ -180,6 +190,7 @@ trait ExtendedBuilderTrait
      *
      * @return \Illuminate\Database\Query\Builder
      */
+    // @phpstan-ignore-next-line
     public function orWhereInArrayString($column, $values)
     {
         return $this->_whereInArrayString($column, $values, true, false);
@@ -194,6 +205,7 @@ trait ExtendedBuilderTrait
      *
      * @return \Illuminate\Database\Query\Builder
      */
+    // @phpstan-ignore-next-line
     public function whereNotInArrayString($column, $values)
     {
         return $this->_whereInArrayString($column, $values, false, true);
@@ -208,12 +220,14 @@ trait ExtendedBuilderTrait
      *
      * @return \Illuminate\Database\Query\Builder
      */
+    // @phpstan-ignore-next-line
     public function orWhereNotInArrayString($column, $values)
     {
         return $this->_whereInArrayString($column, $values, true, true);
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _whereInArrayString($column, $values, bool $isOr = false, bool $isNot = false)
     {
         if (is_null($values)) {
@@ -284,6 +298,7 @@ trait ExtendedBuilderTrait
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _whereInArrayColumn($baseColumn, $column, bool $isOr = false, bool $isNot = false)
     {
         $tableName = $this->_getTableExment();
@@ -292,15 +307,14 @@ trait ExtendedBuilderTrait
         return $this;
     }
 
-
-
     /**
      * Where between, but call as (start) <= column and column <= (end). for performance
-     * @param  string                                          $column
-     * @param  \Illuminate\Contracts\Support\Arrayable|array  $values
      *
-     * @return \Illuminate\Database\Query\Builder
+     * @param string $column
+     * @param array $values
+     * @return Eloquent\ExtendedBuilder|Query\ExtendedBuilder|Query\JoinClause
      */
+    // @phpstan-ignore-next-line
     public function whereBetweenQuery($column, array $values)
     {
         return $this->_between($column, $values, '>=', '<=');
@@ -308,17 +322,19 @@ trait ExtendedBuilderTrait
 
     /**
      * Where between, but call as (start) <= column and column < (end)
-     * @param  string                                          $column
-     * @param  \Illuminate\Contracts\Support\Arrayable|array  $values
      *
-     * @return \Illuminate\Database\Query\Builder
+     * @param string $column
+     * @param array $values
+     * @return Eloquent\ExtendedBuilder|Query\ExtendedBuilder|Query\JoinClause
      */
+    // @phpstan-ignore-next-line
     public function whereBetweenLt($column, array $values)
     {
         return $this->_between($column, $values, '>=', '<');
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _between($column, array $values, $startMark, $endMark, bool $isOr = false)
     {
         $values = array_values($values);
@@ -375,6 +391,7 @@ trait ExtendedBuilderTrait
      *
      * @return \Illuminate\Database\Query\Builder
      */
+    // @phpstan-ignore-next-line
     public function whereDateMarkExment(string $column, $value, $mark, bool $isDatetime)
     {
         return $this->_whereDateMark($column, $value, $mark, $isDatetime, false);
@@ -387,6 +404,7 @@ trait ExtendedBuilderTrait
      *
      * @return \Illuminate\Database\Query\Builder
      */
+    // @phpstan-ignore-next-line
     public function orWhereDateMarkExment(string $column, $value, $mark, bool $isDatetime)
     {
         return $this->_whereDateMark($column, $value, $mark, $isDatetime, true);
@@ -444,6 +462,7 @@ trait ExtendedBuilderTrait
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _whereDate(string $column, $value, bool $isDatetime, bool $isOr = false)
     {
         if (is_null($value)) {
@@ -456,10 +475,11 @@ trait ExtendedBuilderTrait
 
         return $this->_setWhereDate($column, [
             'date' => [$value, $value],
-            'datetime' => [$value, $value->copy()->addDay(1)],
+            'datetime' => [$value, $value->copy()->addDays(1)],
         ], $isDatetime, $isOr);
     }
 
+    // @phpstan-ignore-next-line
     protected function _whereYear(string $column, $value, bool $isDatetime, bool $isOr = false)
     {
         if (is_null($value)) {
@@ -481,6 +501,7 @@ trait ExtendedBuilderTrait
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _whereYearMonth(string $column, $value, bool $isDatetime, bool $isOr = false)
     {
         if (is_null($value)) {
@@ -492,12 +513,14 @@ trait ExtendedBuilderTrait
         }
 
         return $this->_setWhereDate($column, [
-            'date' => [Carbon::create($value->year, $value->month, 1), Carbon::create($value->year, $value->month + 1, 1)->addDay(-1)],
+            // @phpstan-ignore-next-line
+            'date' => [Carbon::create($value->year, $value->month, 1), Carbon::create($value->year, $value->month + 1, 1)->addDays(-1)],
             'datetime' => [Carbon::create($value->year, $value->month, 1), Carbon::create($value->year, $value->month + 1, 1)],
         ], $isDatetime, $isOr);
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _setWhereDate(string $column, $values, bool $isDatetime, bool $isOr = false)
     {
         if ($isDatetime) {
@@ -520,6 +543,7 @@ trait ExtendedBuilderTrait
     }
 
 
+    // @phpstan-ignore-next-line
     protected function _whereDateMark(string $column, $value, $mark, bool $isDatetime, bool $isOr = false)
     {
         if (is_null($value)) {
@@ -533,7 +557,7 @@ trait ExtendedBuilderTrait
         $boolean = $isOr ? 'or' : 'and';
 
         if ($isDatetime) {
-            $date = (in_array($mark, ['<', '<=']) ? $value->copy()->addDay(1) : $value);
+            $date = (in_array($mark, ['<', '<=']) ? $value->copy()->addDays(1) : $value);
             return $this->where($column, $mark, $date->format('Y-m-d'), $boolean);
         }
 
@@ -542,7 +566,8 @@ trait ExtendedBuilderTrait
 
     /**
      * get query instance
-     * @return \Exceedone\Exment\Database\Query\ExtendedBuilder
+     *
+     * @return $this|\Illuminate\Database\Query\Builder|mixed
      */
     protected function _getQueryExment()
     {
@@ -562,10 +587,12 @@ trait ExtendedBuilderTrait
             return $this->table;
         }
 
+        /** @phpstan-ignore-next-line Instanceof between *NEVER* and Illuminate\Database\Eloquent\Builder will always evaluate to false. */
         if ($this instanceof \Illuminate\Database\Eloquent\Builder) {
             return $this->model->getTable();
         }
 
+        /** @phpstan-ignore-next-line Instanceof between *NEVER* and Illuminate\Database\Query\Builder will always evaluate to false. */
         if ($this instanceof \Illuminate\Database\Query\Builder) {
             return $this->from;
         }

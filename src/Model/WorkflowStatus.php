@@ -3,13 +3,38 @@
 namespace Exceedone\Exment\Model;
 
 /**
+ * @property mixed $workflow_id
+ * @property mixed $status_name
+ * @property mixed $status_type
+ * @property mixed $order
+ * @property mixed $ignore_work
+ * @property mixed $datalock_flg
+ * @property mixed $completed_flg
+ * @property mixed $created_user_id
+ * @property mixed $updated_user_id
+ * @property mixed $created_at
+ * @property mixed $updated_at
  * @phpstan-consistent-constructor
  */
 class WorkflowStatus extends ModelBase
 {
     use Traits\UseRequestSessionTrait;
     use Traits\ClearCacheTrait;
+    use Traits\TemplateTrait;
 
+
+    // @phpstan-ignore-next-line
+    public static $templateItems = [
+        'excepts' => ['id'],
+        'uniqueKeys' => [
+            'export' => ['workflow.workflow_view_name', 'status_name'],
+            'import' => ['workflow_id', 'status_name'],
+        ],
+        'parent' => 'workflow_id',
+    ];
+
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
     }
@@ -26,6 +51,8 @@ class WorkflowStatus extends ModelBase
      * get eloquent using Cache.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentCache($id, $withs);
@@ -101,6 +128,8 @@ class WorkflowStatus extends ModelBase
      * @param bool $ignoreReject
      * @return \Illuminate\Support\Collection
      */
+
+    // @phpstan-ignore-next-line
     public static function getActionsByFrom($workflow_status = null, $workflow = null, $ignoreReject = false)
     {
         if (!isset($workflow_status)) {

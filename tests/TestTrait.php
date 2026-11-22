@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Tests;
 
+use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Model\CustomTable;
@@ -14,50 +15,70 @@ use DMS\PHPUnitExtensions\ArraySubset\ArraySubsetAsserts;
 
 trait TestTrait
 {
-    use ArraySubsetAsserts;
+    // use ArraySubsetAsserts;
 
     /**
      * Assert that the response is a superset of the given JSON.
      *
-     * @param  array  $data1
-     * @param  array  $data2
+     * @param  array<mixed>  $subset
+     * @param  array<mixed>  $array
+     * @param  string  $message
      * @param  bool  $strict
-     * @return $this
+     * @return void
      */
-    public function assertJsonExment(array $data1, $data2, $strict = false)
+    public function assertArraySubset(array $subset, array $array, string $message = '', bool $strict = false): void
     {
-        self::assertArraySubset($data1, $data2, $strict);
-        // cannot call PHPUnit\Framework\Constraint\ArraySubset.
-        // if(function_exists($this, 'assertArraySubset')){
-        //     self::assertArraySubset($data1, $data2, $strict);
-        // }
-        // else{
-        //     self::assertArraySubsetExm($data1, $data2, $strict);
-        // }
+        foreach ($subset as $key => $value) {
+            $this->assertArrayHasKey($key, $array, $message ?: "Failed asserting that array has key '$key'");
 
-        return $this;
+            if (is_array($value) && is_array($array[$key])) {
+                $this->assertArraySubset($value, $array[$key], $message, $strict);
+            } else {
+                $strict
+                    ? $this->assertSame($value, $array[$key], $message ?: "Failed asserting that values for key '$key' are identical")
+                    : $this->assertEquals($value, $array[$key], $message ?: "Failed asserting that values for key '$key' are equal");
+            }
+        }
     }
 
+    /**
+     * @param  mixed $value1
+     * @param mixed $value2
+     * @return $this
+     */
     protected function assertMatch($value1, $value2)
     {
         return $this->_assertMatch($value1, $value2, true);
     }
 
 
+    /**
+     * @param string $pattern
+     * @param string $string
+     * @param string $message
+     * @return void
+     */
     protected function assertMatchRegex(string $pattern, string $string, string $message = ''): void
     {
-        if (method_exists($this, 'assertMatchesRegularExpression')) {
-            $this->assertMatchesRegularExpression($pattern, $string, $message);
-            return;
-        }
-        $this->assertRegExp($pattern, $string, $message);
+        $this->assertMatchesRegularExpression($pattern, $string, $message);
     }
 
+    /**
+     * @param mixed $value1
+     * @param mixed $value2
+     * @return $this
+     */
     protected function assertNotMatch($value1, $value2)
     {
         return $this->_assertMatch($value1, $value2, false);
     }
 
+    /**
+     * @param mixed  $value1
+     * @param mixed  $value2
+     * @param bool $isTrue
+     * @return $this
+     */
     protected function _assertMatch($value1, $value2, bool $isTrue)
     {
         $messageV1 = is_array($value1) ? json_encode($value1) : $value1;
@@ -67,6 +88,36 @@ trait TestTrait
         $this->assertTrue($result === $isTrue, "value1 is $messageV1, but value2 is $messageV2. Expect result is " . ($isTrue ? 'match' : 'not match') . '.');
 
         return $this;
+    }
+
+    /**
+     * Get the body of a file download response.
+     *
+     * FileController::responseStream() never builds the body as a string: a local file is sent
+     * as a BinaryFileResponse and any other disk as a streamed response, because reading a whole
+     * file into memory is what breaks the memory_limit of php.ini on a large file.
+     *
+     * getContent() returns false for both of those responses, so the body has to be read from
+     * the file itself or captured while the response writes it out.
+     *
+     * @param mixed $response
+     * @return string
+     */
+    protected function getDownloadedContent($response)
+    {
+        $baseResponse = $response->baseResponse ?? $response;
+
+        if ($baseResponse instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse) {
+            return (string)file_get_contents($baseResponse->getFile()->getPathname());
+        }
+
+        if ($baseResponse instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+            ob_start();
+            $baseResponse->sendContent();
+            return (string)ob_get_clean();
+        }
+
+        return (string)$baseResponse->getContent();
     }
 
 
@@ -87,13 +138,13 @@ trait TestTrait
         }
     }
 
-
     /**
      * Skip test temporarily.
      *
-     * @param \Closure $skipMatchFunc Checking function. Please return boolean.
-     * @param string $messsage showing message why this test is skipped.
+     * @param mixed $skipMatch
+     * @param string|null $messsage
      * @return void
+     * @throws \Exception
      */
     protected function skipTempTestIfTrue($skipMatch, string $messsage = null)
     {
@@ -141,13 +192,14 @@ trait TestTrait
      * Check custom value's permission after getting api
      *
      * @param CustomTable $custom_table
-     * @param array $ids
+     * @param array<mixed> $ids
      * @param \Closure|null $filterCallback
      * @return void
      */
     protected function checkCustomValuePermission(CustomTable $custom_table, $ids, ?\Closure $filterCallback = null)
     {
         // get all ids
+        /** @phpstan-ignore-next-line */
         $allIds = \DB::table(getDBTableName($custom_table))->select('id')->pluck('id');
         $query = $custom_table->getValueModel()->withoutGlobalScopes();
 
@@ -158,6 +210,7 @@ trait TestTrait
 
         foreach ($all_custom_values as $all_custom_value) {
             // if find target user ids, check has permisison
+            /** @var mixed $all_custom_value */
             $hasPermission = in_array($all_custom_value->id, $ids);
             $hasPermissionString = $hasPermission ? 'true' : 'false';
 
@@ -166,59 +219,100 @@ trait TestTrait
     }
 
 
+    /**
+     * @return string
+     */
     protected function getTextDirPath(): string
     {
         $dir = storage_path('app/tests');
+        /** @phpstan-ignore-next-line */
         \Exment::makeDirectory($dir);
 
         return $dir;
     }
 
+    /**
+     * @param string $fileName
+     * @return string
+     */
     protected function getTextFilePath($fileName = 'file.txt'): string
     {
         $dir = $this->getTextDirPath();
 
         // create file
         $file = path_join($dir, $fileName);
+        /** @phpstan-ignore-next-line */
         if (!\File::exists($file)) {
+            /** @phpstan-ignore-next-line */
             \File::put($file, TestDefine::FILE_BASE64);
         }
         return $file;
     }
 
+    /**
+     * @param string $imageName
+     * @return mixed|string
+     */
     protected function getTextImagePath($imageName = 'image.png')
     {
         $dir = $this->getTextDirPath();
         // create file
         $file = path_join($dir, $imageName);
+        /** @phpstan-ignore-next-line */
         if (!\File::exists($file)) {
             // convert to base64. This string is 1*1 rad color's image
             $f = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAANSURBVBhXY3gro/IfAAVUAi3GPZKdAAAAAElFTkSuQmCC');
+            /** @phpstan-ignore-next-line */
             \File::put($file, $f);
         }
         return $file;
     }
 
+    /**
+     * @param string $fileName
+     * @return mixed
+     */
     protected function getTextFileObject($fileName = 'file.txt')
     {
         $file = $this->getTextFilePath($fileName);
+        /** @phpstan-ignore-next-line */
         return \File::get($file);
     }
 
+    /**
+     * @param string $imageName
+     * @return mixed
+     */
     protected function getTextImageObject($imageName = 'image.png')
     {
         $file = $this->getTextImagePath($imageName);
+        /** @phpstan-ignore-next-line */
         return \File::get($file);
     }
 
 
+    /**
+     * @param mixed $obj
+     * @param mixed $methodName
+     * @param mixed[] $args
+     * @return mixed
+     * @throws \ReflectionException
+     */
     protected function callProtectedMethod($obj, $methodName, ...$args)
     {
+        // @phpstan-ignore-next-line
         $method = new \ReflectionMethod(get_class($obj), $methodName);
         $method->setAccessible(true);
         return $method->invoke($obj, ...$args);
     }
 
+    /**
+     * @param mixed $className
+     * @param mixed $methodName
+     * @param mixed[] $args
+     * @return mixed
+     * @throws \ReflectionException
+     */
     protected function callStaticProtectedMethod($className, $methodName, ...$args)
     {
         $method = new \ReflectionMethod($className, $methodName);
@@ -257,4 +351,16 @@ trait TestTrait
 
     //     static::assertThat($array, $constraint, $message);
     // }
+
+    /**
+     * Assert that the expected error array is a subset of the actual validation messages.
+     *
+     * @param array<mixed> $errors expected errors, e.g. ['field' => ['message']]
+     * @param array<mixed> $messages actual messages from validator->getMessages()
+     * @return void
+     */
+    protected function assertJsonExment(array $errors, array $messages): void
+    {
+        $this->assertArraySubset($errors, $messages);
+    }
 }

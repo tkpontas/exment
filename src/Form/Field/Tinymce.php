@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\Textarea;
+use ExmentAdminCore\Admin\Form\Field\Textarea;
 use Exceedone\Exment\Model\Define;
 
 class Tinymce extends Textarea
@@ -13,8 +13,10 @@ class Tinymce extends Textarea
         '/vendor/exment/tinymce/tinymce.min.js',
     ];
 
+    // @phpstan-ignore-next-line
     protected $config = [];
 
+    // @phpstan-ignore-next-line
     protected $disableImage = false;
 
     /**
@@ -61,6 +63,7 @@ class Tinymce extends Textarea
         return parent::readonly();
     }
 
+    // @phpstan-ignore-next-line
     protected function getValidElements()
     {
         $tags = Define::HTML_ALLOWED_EDITOR_DEFAULT;
@@ -87,9 +90,8 @@ class Tinymce extends Textarea
     /**
      * Set post url. If null, return adminurl, else, return this value
      *
-     * @param  string  $postUrl  POST url. If null, return adminurl, else, return this value
-     *
-     * @return  self
+     * @param string $postImageUri
+     * @return $this
      */
     public function setPostImageUri(string $postImageUri)
     {
@@ -153,18 +155,18 @@ class Tinymce extends Textarea
             config['images_upload_handler'] = function(blobInfo, success, failure){
                 const image_size = blobInfo.blob().size;
                 const max_size   = $max_file_size;
-                if( image_size  > max_size){        
+                if( image_size  > max_size){
                     failure('$message');
-                    return;      
+                    return;
                 };
                 var xhr, formData;
-    
+
                 xhr = new XMLHttpRequest();
                 xhr.withCredentials = false;
                 xhr.open('POST', '$url');
                 xhr.onload = function() {
                     var json = JSON.parse(xhr.responseText);
-    
+
                     if (xhr.status >= 400 && xhr.status < 500) {
                         failure('Error: ' + json[0]);
                         return;
@@ -173,22 +175,22 @@ class Tinymce extends Textarea
                         failure('HTTP Error: ' + xhr.status);
                         return;
                     }
-    
+
                     if (!json || typeof json.location != 'string') {
                         failure('Invalid JSON: ' + xhr.responseText);
                         return;
                     }
-    
+
                     success(json.location);
                 };
-    
+
                 xhr.onerror = function () {
                     failure('Image upload failed due to a XHR Transport error. Code: ' + xhr.status);
                 };
-              
+
                 formData = new FormData();
                 formData.append('file', blobInfo.blob(), blobInfo.filename());
-            
+
                 xhr.send(formData);
             };
 
@@ -196,10 +198,10 @@ class Tinymce extends Textarea
                 var input = document.createElement('input');
                 input.setAttribute('type', 'file');
                 input.setAttribute('accept', 'image/*');
-            
+
                 input.onchange = function () {
                     var file = this.files[0];
-                
+
                     var reader = new FileReader();
                     reader.onload = function () {
                         var id = 'blobid' + (new Date()).getTime();
@@ -207,13 +209,13 @@ class Tinymce extends Textarea
                         var base64 = reader.result.split(',')[1];
                         var blobInfo = blobCache.create(id, file, base64);
                         blobCache.add(blobInfo);
-                
+
                         /* call the callback and populate the Title field with the file name */
                         cb(blobInfo.blobUri(), { title: file.name });
                     };
                     reader.readAsDataURL(file);
                 };
-            
+
                 input.click();
             };
         }

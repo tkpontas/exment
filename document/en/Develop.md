@@ -21,7 +21,7 @@ This page explains how to set up developing Exment engine.
 - Please execute this command on any path.
 
 ~~~
-composer create-project "laravel/laravel=9.*" (project name)
+composer create-project "laravel/laravel=12.*" (project name)
 cd (project name)
 ~~~
 
@@ -53,20 +53,27 @@ composer require psr/simple-cache=^2.0.0
 ~~~
 git clone https://github.com/hirossyi73/exment.git
 ~~~
+- (Optional)Clone your exment-admin-core repository.
+(ex. https://github.com/hirossyi73/exment-admin-core.git)
 
+~~~
+git clone https://github.com/hirossyi73/exment-admin-core.git
+~~~
 - rewrite composer.json on project root directory.  
 ***When you edit composer.json, please remove comments. We cannot add comments on json file.**
 
 ~~~
     "require": {
-        "php": "^8.0.2",
-        "guzzlehttp/guzzle": "^7.2",
-        "laravel/framework": "^9.19",
-        "laravel/sanctum": "^3.0",
-        "laravel/tinker": "^2.7",
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.10",
+        "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.2",
+        "laravel/tinker": "^2.10",
         "psr/simple-cache": "2.0.0",
         // Add this line
         "exceedone/exment": "dev-master"
+        // Optional
+        ,"exceedone/exment-admin-core": "dev-master"
     },
 
     "autoload": {
@@ -84,6 +91,15 @@ git clone https://github.com/hirossyi73/exment.git
         {
             "type": "path",
             "url": "packages/hirossyi73/exment",
+            "options": {
+                "symlink": true
+            }
+        }
+        // Optional
+        ,
+        {
+            "type": "path",
+            "url": "packages/hirossyi73/exment-admin-core",
             "options": {
                 "symlink": true
             }
@@ -209,6 +225,26 @@ When modifying the program, please edit the 'packages' folder.
 GitHub brunch is operated as follows.  
 *Reference(Japanese site)： [Gitのブランチモデルについて](https://qiita.com/okuderap/items/0b57830d2f56d1d51692)
 
+> **Current workflow (since 2026-11-20)**: send every pull request to `master`.
+>
+> | Branch | What it is | Pull requests |
+> |---|---|---|
+> | `master` | The next version | **All of them** (features, performance, bug fixes) |
+> | `7.1` | Maintenance of 7.1.x (made from the v7.1.0 tag) | Not directly. Send to `master` and add the label `backport-7.1` |
+> | `7.0` | Maintenance of 7.0.x | Not directly. Send to `master` and add the label `backport-7.0` |
+> | `6.2` | Maintenance of 6.2.x (security fixes only, until 2027-03-31) | Not directly. Label `backport-6.2` |
+>
+> **How a release is made**
+> 1. Merge into `master` **only what can ship in the next version**. **Do not merge a pull request that should not ship until the release is out.** Unfinished or large work (e.g. Laravel 13) grows in a feature branch (`feature/XXX`). Work that is in but should not show yet goes behind a setting that is **off by default**
+> 2. On the release day, tag the release (e.g. `v7.2.0`) on `master`
+> 3. **The version branch (e.g. `7.2`) is made when the tag is made, at the tag** (`git push origin v7.2.0^{commit}:refs/heads/7.2`), not before. It then keeps 7.2.x maintenance
+> 4. If something already in `master` should not ship, `git revert` it on `master` before tagging (and bring it back after the release)
+> 5. Fixes after the release go to `master` with a `backport-7.x` label; the maintainers cherry-pick them into the version branch and release 7.x.y
+>
+> Security fixes are not handled in public issues or pull requests; see [SECURITY.md](../../SECURITY.md).
+>
+> The table below describes the previous branch model.
+
 | GitHub Brunch Name | Derived from | Explain |
 | ------------------ | -------------| ------------- |
 | `master` | - | The current stable version. Manage source code at the time of release. |
@@ -235,9 +271,9 @@ composer global require friendsofphp/php-cs-fixer
 
 ```
 #Remove unused use
-php-cs-fixer fix ./vendor/hirossyi73/exment --rules=no_unused_imports
+php-cs-fixer fix ./packages/hirossyi73/exment --rules=no_unused_imports
 #Fix all source
-php-cs-fixer fix ./vendor/hirossyi73/exment
+php-cs-fixer fix ./packages/hirossyi73/exment
 ```
 
 
@@ -246,6 +282,6 @@ If you want to commit to exceedone/exment of the main unit, follow the procedure
 
 - Exment pull request on GitHub.  
 
-- Execute a pull request for the branch hotfix (fixing a bug) or develop (adding a function) of exceedone/exment.  
+- Execute a pull request for the branch in the "Current workflow" table above (**master** for new functions and bug fixes alike) of exceedone/exment. Please name your branch `feature/XXX` for new functions or `fix/XXX` for bug fixes.  
 Please include comments as much as possible.
 

@@ -2,12 +2,13 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\Radio;
+use ExmentAdminCore\Admin\Form\Field\Radio;
 
 class RadioButton extends Radio
 {
     protected $view = 'exment::form.field.radiobutton';
 
+    // @phpstan-ignore-next-line
     protected $addEmpty = false;
 
     /**

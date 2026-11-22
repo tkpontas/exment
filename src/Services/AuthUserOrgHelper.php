@@ -8,6 +8,8 @@ use Exceedone\Exment\Model\CustomValue;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\RoleGroup;
 use Exceedone\Exment\Model\LoginUser;
+use Exceedone\Exment\Model\RoleGroupPermission;
+use Exceedone\Exment\Model\RoleGroupUserOrganization;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\RoleType;
@@ -24,8 +26,14 @@ class AuthUserOrgHelper
     /**
      * get organiztions who has roles.
      * this function is called from custom value role
+     *
+     * @param mixed $target_table
+     * @param mixed $tablePermission
+     * @param mixed $builder
+     * @return \Illuminate\Database\Eloquent\Builder|null
      */
     // getRoleUserOrgQuery
+    // @phpstan-ignore-next-line
     public static function getRoleOrganizationQueryTable($target_table, $tablePermission = null, $builder = null)
     {
         if (!System::organization_available()) {
@@ -41,7 +49,8 @@ class AuthUserOrgHelper
             return null;
         }
 
-        $key = sprintf(Define::SYSTEM_KEY_SESSION_TABLE_ACCRSSIBLE_ORGS, $target_table->id);
+        $key = static::getUserScopedCacheKey(sprintf(Define::SYSTEM_KEY_SESSION_TABLE_ACCRSSIBLE_ORGS, $target_table->id));
+        // @phpstan-ignore-next-line
         return static::_getRoleUserOrOrgQueryTable(SystemTableName::ORGANIZATION, $key, $target_table, $tablePermission, $builder);
     }
 
@@ -49,8 +58,14 @@ class AuthUserOrgHelper
     /**
      * get users who has roles for target table.
      * this function is called from custom value display's role
+     *
+     * @param mixed $target_table
+     * @param mixed $tablePermission
+     * @param mixed $builder
+     * @return \Illuminate\Database\Eloquent\Builder|null
      */
     // getRoleUserOrgQuery
+    // @phpstan-ignore-next-line
     public static function getRoleUserQueryTable($target_table, $tablePermission = null, $builder = null)
     {
         $target_table = CustomTable::getEloquent($target_table);
@@ -58,7 +73,8 @@ class AuthUserOrgHelper
             return null;
         }
 
-        $key = sprintf(Define::SYSTEM_KEY_SESSION_TABLE_ACCRSSIBLE_USERS, $target_table->id);
+        $key = static::getUserScopedCacheKey(sprintf(Define::SYSTEM_KEY_SESSION_TABLE_ACCRSSIBLE_USERS, $target_table->id));
+        // @phpstan-ignore-next-line
         return static::_getRoleUserOrOrgQueryTable(SystemTableName::USER, $key, $target_table, $tablePermission, $builder);
     }
 
@@ -67,16 +83,23 @@ class AuthUserOrgHelper
      * get users who has roles for target table.
      * and get users joined parent or children organizations
      * this function is called from custom value display's role
+     *
+     * @param mixed $target_table
+     * @param mixed $tablePermission
+     * @param mixed $builder
+     * @return \Illuminate\Database\Eloquent\Builder|null
      */
     // getRoleUserOrgQuery
+    // @phpstan-ignore-next-line
     public static function getRoleUserAndOrgBelongsUserQueryTable($target_table, $tablePermission = null, $builder = null)
     {
         if (is_null($target_table)) {
             return null;
         }
         $target_table = CustomTable::getEloquent($target_table);
-        $key = sprintf(Define::SYSTEM_KEY_SESSION_TABLE_ACCRSSIBLE_USERS_ORGS, $target_table->id);
+        $key = static::getUserScopedCacheKey(sprintf(Define::SYSTEM_KEY_SESSION_TABLE_ACCRSSIBLE_USERS_ORGS, $target_table->id));
 
+        // @phpstan-ignore-next-line
         return static::_getRoleUserOrOrgQueryTable(SystemTableName::USER, $key, $target_table, $tablePermission, $builder, function ($target_ids, $target_table) use ($tablePermission) {
             // joined organization belongs user ----------------------------------------------------
             if (!System::organization_available()) {
@@ -89,8 +112,10 @@ class AuthUserOrgHelper
             foreach ($organizations as $organization) {
                 // get JoinedOrgFilterType. this method is for org_joined_type_role_group. get users for has role groups.
                 $enum = JoinedOrgFilterType::getEnum(System::org_joined_type_role_group(), JoinedOrgFilterType::ONLY_JOIN);
+                // @phpstan-ignore-next-line
                 $relatedOrgs = CustomTable::getEloquent(SystemTableName::ORGANIZATION)->getValueModel()->with('users')->find($organization->getOrganizationIdsForQuery($enum));
 
+                // @phpstan-ignore-next-line
                 foreach ($relatedOrgs as $related_organization) {
                     foreach ($related_organization->users as $user) {
                         $target_ids[] = $user->getUserId();
@@ -102,7 +127,16 @@ class AuthUserOrgHelper
         });
     }
 
-
+    /**
+     * @param mixed $table_name
+     * @param string $key
+     * @param mixed $target_table
+     * @param mixed $tablePermission
+     * @param mixed $builder
+     * @param \Closure|null $target_ids_callback
+     * @return \Illuminate\Database\Eloquent\Builder|array<int, mixed>
+     */
+    // @phpstan-ignore-next-line
     protected static function _getRoleUserOrOrgQueryTable($table_name, $key, $target_table, $tablePermission = null, $builder = null, ?\Closure $target_ids_callback = null)
     {
         if (is_null($target_table)) {
@@ -113,23 +147,27 @@ class AuthUserOrgHelper
         // get custom_value's users
         $target_ids = [];
         $all = false;
+        $userId = \Exment::getUserId();
 
         if ($target_table->allUserAccessable()) {
             $all = true;
         } else {
-            // if set $tablePermission, always call
-            if (isset($tablePermission) || is_null($target_ids = System::requestSession($key))) {
+            $resolver = function () use ($target_table, $table_name, $tablePermission, $target_ids_callback) {
                 // get user ids
+                // @phpstan-ignore-next-line
                 $target_ids = static::getRoleUserOrgId($target_table ?? [], $table_name, $tablePermission);
 
                 if ($target_ids_callback) {
                     $target_ids = $target_ids_callback($target_ids, $target_table);
                 }
 
-                if (!isset($tablePermission)) {
-                    System::requestSession($key, $target_ids);
-                }
-            }
+                return $target_ids;
+            };
+
+            // Explicit permission checks and unauthenticated contexts must not use persistent cache.
+            $target_ids = isset($tablePermission)
+                ? $resolver()
+                : (!is_null($userId) ? System::cache($key, $resolver) : System::requestSession($key, $resolver));
         }
 
         $target_ids = array_unique($target_ids);
@@ -144,14 +182,26 @@ class AuthUserOrgHelper
         return $builder;
     }
 
+    /**
+     * Scope a permission cache key to the current Exment user.
+     *
+     * @param string $key Base cache key for the target table and permission query.
+     * @return string Cache key that cannot be shared by different users.
+     */
+    protected static function getUserScopedCacheKey(string $key): string
+    {
+        return $key . '.user.' . md5((string) (\Exment::getUserId() ?? 'guest'));
+    }
+
 
     /**
      * get all users and organizations who can access custom_value.
      *
-     * @param CustomValue $custom_value
+     * @param CustomValue|null $custom_value
      * @param string|null|array $tablePermission
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function getRoleUserAndOrganizations($custom_value, $tablePermission = null, ?CustomTable $custom_table = null)
     {
         if (!$custom_table) {
@@ -214,6 +264,7 @@ class AuthUserOrgHelper
      * @param string $related_type "user" or "organization"
      * @param string|array|null $tablePermission target permission
      */
+    // @phpstan-ignore-next-line
     protected static function getRoleUserOrgId($target_table, $related_type, $tablePermission = null)
     {
         $target_table = CustomTable::getEloquent($target_table);
@@ -236,6 +287,7 @@ class AuthUserOrgHelper
             // check permission
             if (!$roleGroup->role_group_permissions->contains(function ($role_group_permission) use ($target_table, $tablePermission) {
                 // check as system
+                /** @var RoleGroupPermission $role_group_permission */
                 if ($role_group_permission->role_group_permission_type == RoleType::SYSTEM) {
                     $tablePermission = [Permission::SYSTEM, Permission::CUSTOM_TABLE, Permission::CUSTOM_VALUE_EDIT_ALL];
                 }
@@ -260,6 +312,7 @@ class AuthUserOrgHelper
                 continue;
             }
 
+            /** @var RoleGroupUserOrganization $role_group_user_organization */
             foreach ($roleGroup->role_group_user_organizations as $role_group_user_organization) {
                 // merge users from $role_group_user_organization
                 if ($role_group_user_organization->role_group_user_org_type != $related_type) {
@@ -286,6 +339,7 @@ class AuthUserOrgHelper
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function getOrganizationIdsForQuery($filterType = JoinedOrgFilterType::ALL, $targetUserId = null)
     {
         // if system doesn't use organization, return empty array.
@@ -313,6 +367,7 @@ class AuthUserOrgHelper
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected static function getOrganizationTreeArray(): array
     {
         return System::requestSession(Define::SYSTEM_KEY_SESSION_ORGANIZATION_TREE, function () {
@@ -320,74 +375,168 @@ class AuthUserOrgHelper
             $indexName = $modelname::getParentOrgIndexName();
 
             // get query
-            $orgs = $modelname::with([
-                'users' => function ($query) {
-                    // pass aborting
-                    return $query->withoutGlobalScope(CustomValueModelScope::class);
-                }
-                ])
-                // pass aborting
-                ->withoutGlobalScopes([CustomValueModelScope::class])
-                ->get(['id', $indexName])->toArray();
-
-            $baseOrgs = $orgs;
+            // only the id and the parent are used, so do not make the models
+            $orgs = $modelname::withoutGlobalScopes([CustomValueModelScope::class])
+                ->toBase()
+                ->get(['id', $indexName])
+                ->map(function ($org) {
+                    $org = (array)$org;
+                    // same type as the model (the key is cast to int)
+                    $org['id'] = (int)$org['id'];
+                    return $org;
+                })->all();
 
             if (is_nullorempty($orgs)) {
                 return [];
             }
 
+            // set the users of each organization. Only the user id is used (setJoinedOrganization),
+            // so read the ids from the pivot table instead of loading all the user models.
+            $usersByOrg = static::getOrganizationUserIds(array_column($orgs, 'id'));
             foreach ($orgs as &$org) {
-                static::parents($org, $baseOrgs, $org, $indexName);
-                static::children($org, $orgs, $org, $indexName);
+                $org['users'] = $usersByOrg[$org['id']] ?? [];
+            }
+            unset($org);
+
+            $baseOrgs = $orgs;
+
+            // index: id => first position, parent id => positions of the children (in the order of $orgs)
+            $idIndex = [];
+            $childrenIndex = [];
+            foreach ($baseOrgs as $i => $o) {
+                $idKey = (string)$o['id'];
+                if (!array_key_exists($idKey, $idIndex)) {
+                    $idIndex[$idKey] = $i;
+                }
+                if (isset($o[$indexName]) && is_scalar($o[$indexName])) {
+                    $childrenIndex[(string)$o[$indexName]][] = $i;
+                }
             }
 
-            return $orgs;
+            $results = [];
+            foreach ($baseOrgs as $i => $org) {
+                static::parents($org, $baseOrgs, $org, $indexName, $idIndex);
+                static::children($org, $baseOrgs, $org, $indexName, $childrenIndex);
+                $results[$i] = $org;
+            }
+
+            return $results;
         });
     }
 
-    protected static function parents(&$org, $orgs, $target, $indexName)
+    /**
+     * Get the user ids of the organizations, as [organization id => [['id' => user id], ...]].
+     * Same users as the "users" relation of the organization (deleted users are not contained).
+     *
+     * @param array<int|string> $orgIds
+     * @return array<int|string, array<int, array{id: int|string}>>
+     */
+    protected static function getOrganizationUserIds(array $orgIds): array
     {
-        if (!isset($target[$indexName])) {
-            return;
-        }
+        $userModelname = getModelName(SystemTableName::USER);
+        $userTable = getDBTableName(SystemTableName::USER);
+        $pivot = CustomRelation::getRelationNameByTables(SystemTableName::ORGANIZATION, SystemTableName::USER);
 
-        // if same id, return
-        if ($org['id'] == $target[$indexName]) {
-            return;
+        $result = [];
+        foreach (array_chunk($orgIds, 1000) as $chunk) {
+            $rows = $userModelname::withoutGlobalScope(CustomValueModelScope::class)
+                ->join($pivot, "$pivot.child_id", '=', "$userTable.id")
+                ->whereIn("$pivot.parent_id", $chunk)
+                ->toBase()
+                ->get(["$pivot.parent_id as pivot_parent_id", "$userTable.id as user_id"]);
+            foreach ($rows as $row) {
+                $result[$row->pivot_parent_id][] = ['id' => $row->user_id];
+            }
         }
-
-        $newTarget = collect($orgs)->first(function ($o) use ($target, $indexName) {
-            return $target[$indexName] == $o['id'];
-        });
-        if (!isset($newTarget)) {
-            return;
-        }
-
-        // set parent
-        $org['parents'][] = $newTarget;
-        static::parents($org, $orgs, $newTarget, $indexName);
+        return $result;
     }
 
-    protected static function children(&$org, $orgs, $target, $indexName)
+    /**
+     * Set all the parents of the target to $org['parents'] (the nearest first).
+     *
+     * @param array<string, mixed> $org
+     * @param array<int, array<string, mixed>> $orgs
+     * @param array<string, mixed> $target
+     * @param string $indexName
+     * @param array<string, int>|null $idIndex id => position in $orgs. if null, made from $orgs.
+     * @return void
+     */
+    protected static function parents(&$org, $orgs, $target, $indexName, ?array $idIndex = null)
     {
-        $children = collect($orgs)->filter(function ($o) use ($target, $indexName) {
-            if (!isset($o[$indexName])) {
+        if (is_null($idIndex)) {
+            $idIndex = [];
+            foreach ($orgs as $i => $o) {
+                if (!array_key_exists((string)$o['id'], $idIndex)) {
+                    $idIndex[(string)$o['id']] = $i;
+                }
+            }
+        }
+
+        $visited = [];
+        while (true) {
+            if (!isset($target[$indexName]) || !is_scalar($target[$indexName])) {
                 return;
             }
 
-            return $o[$indexName] == $target['id'];
-        });
-
-        foreach ($children as $child) {
-            if ($org['id'] == $child['id']) {
-                continue;
+            // if same id, return
+            if ($org['id'] == $target[$indexName]) {
+                return;
             }
-            // set children
-            $org['children'][] = $child;
-            static::children($org, $orgs, $child, $indexName);
+
+            $position = $idIndex[(string)$target[$indexName]] ?? null;
+            if (is_null($position) || isset($visited[$position])) {
+                // not found, or a loop of parents that does not contain $org
+                return;
+            }
+            $visited[$position] = true;
+            $newTarget = $orgs[$position];
+
+            // set parent
+            $org['parents'][] = $newTarget;
+            $target = $newTarget;
         }
     }
 
+    /**
+     * Set all the children (and their children) of the target to $org['children'].
+     *
+     * @param array<string, mixed> $org
+     * @param array<int, array<string, mixed>> $orgs
+     * @param array<string, mixed> $target
+     * @param string $indexName
+     * @param array<string, array<int>>|null $childrenIndex parent id => positions of the children in $orgs. if null, made from $orgs.
+     * @param array<int, bool> $visited
+     * @return void
+     */
+    protected static function children(&$org, $orgs, $target, $indexName, ?array $childrenIndex = null, array &$visited = [])
+    {
+        if (is_null($childrenIndex)) {
+            $childrenIndex = [];
+            foreach ($orgs as $i => $o) {
+                if (isset($o[$indexName]) && is_scalar($o[$indexName])) {
+                    $childrenIndex[(string)$o[$indexName]][] = $i;
+                }
+            }
+        }
+
+        foreach ($childrenIndex[(string)$target['id']] ?? [] as $position) {
+            $child = $orgs[$position];
+            if ($org['id'] == $child['id']) {
+                continue;
+            }
+            // a loop of children that does not contain $org
+            if (isset($visited[$position])) {
+                continue;
+            }
+            $visited[$position] = true;
+
+            // set children
+            $org['children'][] = $child;
+            static::children($org, $orgs, $child, $indexName, $childrenIndex, $visited);
+        }
+    }
+
+    // @phpstan-ignore-next-line
     protected static function setJoinedOrganization(&$results, $org, $filterType, $targetUserId)
     {
         // set $org id only $targetUserId
@@ -419,6 +568,7 @@ class AuthUserOrgHelper
      * @param string $db_table_name
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function filterUserOnlyJoin($builder, $user, $db_table_name)
     {
         $setting = System::filter_multi_user();
@@ -435,6 +585,7 @@ class AuthUserOrgHelper
 
         // First, get users org joined
         $db_table_name_pivot = CustomRelation::getRelationNameByTables(SystemTableName::ORGANIZATION, SystemTableName::USER);
+        // @phpstan-ignore-next-line
         $target_users = \DB::table($db_table_name_pivot)->whereIn('parent_id', $user->getOrganizationIdsForQuery($joinedOrgFilterType))
             ->pluck('child_id');
 
@@ -452,6 +603,7 @@ class AuthUserOrgHelper
      * @param string $db_table_name
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function filterOrganizationOnlyJoin($builder, $user, $db_table_name)
     {
         $setting = System::filter_multi_user();
@@ -467,6 +619,7 @@ class AuthUserOrgHelper
         $joinedOrgFilterType = JoinedOrgFilterType::getEnum($setting);
 
         // get only login user's organization
+        // @phpstan-ignore-next-line
         $builder->whereIn("$db_table_name.id", $user->getOrganizationIdsForQuery($joinedOrgFilterType));
     }
 }

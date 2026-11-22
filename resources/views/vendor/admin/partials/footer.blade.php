@@ -1,13 +1,8 @@
-<!-- Main Footer -->
-<footer class="main-footer clearfix">
-    <!-- To the right -->
-    <div class="pull-right hidden-xs">
-
-        @if(config('admin.show_version'))
-        <strong>Version</strong>&nbsp;&nbsp; <span id="version">{!! \Exment::version() !!}</span>
-        @endif
-    </div>
-    <!-- Default to the left -->
-    <strong>Powered by <a href="https://github.com/exceedone/exment" target="_blank">Exment</a></strong> (Interface <a href="https://github.com/z-song/laravel-admin" target="_blank">laravel-admin</a>)
-
-</footer>
+{{--
+    No footer. It only said "Powered by Exment" and the version, and took a
+    line at the foot of every page; the version is on the system settings
+    page (and /api/version). What else it carried has moved: the label of the
+    QR scanner's way back is set in Middleware\Bootstrap, and its hidden scan
+    button was never clicked - the dashboard's barcode box has the real one.
+    The file stays, empty, because exment-admin-core's layout includes it.
+--}}

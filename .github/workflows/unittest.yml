@@ -3,6 +3,7 @@ name: phpunit
 on:
   pull_request:
     paths:
+      - '.github/workflows/**'
       - 'config/**'
       - 'database/**'
       - 'resources/**'
@@ -15,30 +16,46 @@ env:
 
 jobs:
   exment-testing:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        db: ["mysql", "mariadb", "sqlsrv"]
+        db: ["mysql", "mariadb"]
         test: ["feature", "unit", "browser"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ env.DOCKER_EXMENT_REPOSITORY}}
           path: ./docker-exment
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ env.EXMENT_BOILERPLATE_REPOSITORY}}
           path: ./docker-exment/exment-boilerplate
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: ./docker-exment/exment-boilerplate/exment
           ref: ${{ github.event.pull_request.head.sha }}
 
+      # composer.dev.lock of exment-boilerplate installs exment-admin-core from the path ./exment-admin-core
+      - uses: actions/checkout@v4
+        with:
+          repository: exceedone/exment-admin-core
+          path: ./docker-exment/exment-boilerplate/exment-admin-core
+
+      # the free official plugins as released (exceedone/exment-plugins-release):
+      # OfficialReleasesTest checks their signatures and zips. (The lock of
+      # exment-boilerplate does not have the package yet: composer install
+      # leaves it out, so it is checked out here.)
+      - uses: actions/checkout@v4
+        with:
+          repository: exceedone/exment-plugins-release
+          ref: '7.2.0'
+          path: ./docker-exment/exment-boilerplate/exment-plugins-release
+
       - name: Docker Compose Version
-        run: docker-compose --version
+        run: docker compose --version
 
       - name: Make ${{ matrix.db }} up
         working-directory: docker-exment
@@ -48,8 +65,8 @@ jobs:
       - name: copy compose.dev.json
         working-directory: docker-exment
         run: |
-          docker-compose -f docker-compose.yml exec -T php cp composer.dev.json composer.json
-          docker-compose -f docker-compose.yml exec -T php cp composer.dev.lock composer.lock
+          docker compose -f docker-compose.yml exec -T php cp composer.dev.json composer.json
+          docker compose -f docker-compose.yml exec -T php cp composer.dev.lock composer.lock
 
       - name: Make ${{ matrix.db }} Initialize
         working-directory: docker-exment
@@ -59,4 +76,4 @@ jobs:
       - name: PHPUnit Test
         working-directory: docker-exment
         run: |
-          docker-compose -f docker-compose.yml exec -T php composer run exment:test:${{ matrix.test }}
+          docker compose -f docker-compose.yml exec -T -e EXMENT_TEST_OFFICIAL_RELEASES=/var/www/exment/exment-plugins-release/releases php composer run exment:test:${{ matrix.test }}

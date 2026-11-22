@@ -9,8 +9,10 @@ use Exceedone\Exment\Model\PublicForm;
  */
 class PluginPublicBase
 {
+    // @phpstan-ignore-next-line
     protected $plugin;
 
+    // @phpstan-ignore-next-line
     public function _plugin()
     {
         return $this->plugin;
@@ -21,6 +23,7 @@ class PluginPublicBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function css($skipPath = false)
     {
         return $this->getCssJsFiles($skipPath ? null : 'css', 'css');
@@ -29,8 +32,10 @@ class PluginPublicBase
     /**
      * get js path
      *
-     * @return void
+     * @param $skipPath
+     * @return array
      */
+    // @phpstan-ignore-next-line
     public function js($skipPath = false)
     {
         return $this->getCssJsFiles($skipPath ? null : 'js', 'js');
@@ -39,8 +44,11 @@ class PluginPublicBase
     /**
      * get public path
      *
-     * @return array
+     * @param $path
+     * @param $type
+     * @return array|mixed[]
      */
+    // @phpstan-ignore-next-line
     protected function getCssJsFiles($path, $type)
     {
         $base_path = $this->plugin->getFullPath('public');
@@ -53,6 +61,7 @@ class PluginPublicBase
         $files = \File::allFiles($type_path);
 
         return collect($files)->filter(function ($file) use ($type) {
+            // @phpstan-ignore-next-line
             return pathinfo($file)['extension'] == $type;
         })->map(function ($file) use ($base_path) {
             $path = trim(str_replace($base_path, '', $file->getPathName()), '/');
@@ -60,12 +69,14 @@ class PluginPublicBase
         })->toArray();
     }
 
-
     /**
      * Get css and js url
      *
-     * @return void
+     * @param $fileName
+     * @param bool $asPublicForm
+     * @return mixed|string|null
      */
+    // @phpstan-ignore-next-line
     public function getCssJsUrl($fileName, bool $asPublicForm = false)
     {
         if ($asPublicForm) {

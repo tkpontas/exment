@@ -2,12 +2,15 @@
 
 namespace Exceedone\Exment\Services\Installer;
 
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Exceedone\Exment\Enums;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Services\DemoMode;
+use Exceedone\Exment\Services\SafetyCheck\SafetyCheckDefine;
+use Exceedone\Exment\Services\SafetyCheck\SafetyCheckSender;
 use Exceedone\Exment\Services\TemplateImportExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,9 +88,28 @@ trait InitializeFormTrait
             ->disableClear()
             ->help(exmtrans("system.help.site_layout"));
 
+        // Screen design: on the system setting page only. The installer does
+        // not ask - a new installation starts with the default design.
+        // When the server fixes it (EXMENT_UI_DESIGN), a select would have no
+        // effect, so the design in effect is shown as text instead and
+        // nothing is posted.
+        if (!$isInitialize) {
+            $uiDesignForced = \Exment::getUiDesignForced();
+            if (is_null($uiDesignForced)) {
+                $form->select('ui_design', exmtrans("system.ui_design"))
+                    ->options(getTransArray(Define::SYSTEM_UI_DESIGN, "system.ui_design_options"))
+                    ->disableClear()
+                    ->help(exmtrans("system.help.ui_design"));
+            } else {
+                $form->display('ui_design_forced', exmtrans("system.ui_design"))
+                    ->displayText(exmtrans("system.ui_design_forced", exmtrans("system.ui_design_options.$uiDesignForced")))
+                    ->help(exmtrans("system.help.ui_design"));
+            }
+        }
+
         $form->switchbool('api_available', exmtrans("system.api_available"))
             ->default(0)
-            ->help(exmtrans("system.help.api_available"));
+            ->help(exmtrans("system.help.api_available", getManualUrl('system_setting?id=')));
 
         $form->switchbool('outside_api', exmtrans("system.outside_api"))
             ->default(!config('exment.outside_api') ? 1 : 0)
@@ -98,6 +120,25 @@ trait InitializeFormTrait
 
         $form->switchbool('organization_available', exmtrans("system.organization_available"))
             ->help(exmtrans("system.help.organization_available"));
+
+        $form->switchbool('logging_toggle_available', exmtrans("system.logging_toggle_available"))
+            ->help(exmtrans("system.help.logging_toggle_available"));
+
+        // which requests the system performance log saves (not on the install screen)
+        if (!$isInitialize) {
+            $form->number('logging_slow_request_seconds', exmtrans("system.logging_slow_request_seconds"))
+                ->min(0)
+                ->default(3)
+                ->help(exmtrans("system.help.logging_slow_request_seconds"));
+            $form->number('logging_slow_sql_seconds', exmtrans("system.logging_slow_sql_seconds"))
+                ->min(0)
+                ->default(1)
+                ->help(exmtrans("system.help.logging_slow_sql_seconds"));
+            $form->number('logging_max_per_hour', exmtrans("system.logging_max_per_hour"))
+                ->min(0)
+                ->default(100)
+                ->help(exmtrans("system.help.logging_max_per_hour"));
+        }
 
         // template list
         if ($isInitialize) {
@@ -129,11 +170,12 @@ trait InitializeFormTrait
             ->attribute(['data-senddata' => json_encode(['test_mail_to'])])
             ->button_label(exmtrans('system.submit_test_mail'))
             ->send_params('test_mail_to');
-
+        /** @phpstan-ignore-next-line constructor expects string, ExmentAdminCore\Admin\Widgets\Form given */
         return new Box(exmtrans("system.submit_test_mail"), $form);
     }
 
 
+    // @phpstan-ignore-next-line
     protected function setNotifyForm($form)
     {
         // use mail setting
@@ -168,9 +210,59 @@ trait InitializeFormTrait
         $form->select('system_slack_user_column', exmtrans('system.system_slack_user_column'))
             ->help(exmtrans('system.help.system_slack_user_column'))
             ->options($this->getUserOrgSlackColumns('user'));
+
+        $form->exmheader(exmtrans('system.system_line'))->hr();
+
+        $form->password('system_line_channel_token', exmtrans('system.system_line_channel_token'));
+
+        $form->password('system_line_channel_secret', exmtrans('system.system_line_channel_secret'));
+
+        $form->text('system_line_oa_basic_id', exmtrans('system.system_line_oa_basic_id'))
+            ->help(exmtrans('system.help.system_line_oa_basic_id'));
+
+        $form->display('system_line_webhook_url', exmtrans('system.system_line_webhook_url'))
+            ->default(admin_url('line/webhook'));
+
+        $form->exmheader(exmtrans('system.safety_check'))->hr();
+        if (!\Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::SAFETY_CHECK)) {
+            $form->descriptionHtml('<span class="text-warning">' . esc_html(exmtrans('safety.feature_off')) . '</span> <a href="' . esc_html(admin_url('feature')) . '">' . esc_html(exmtrans('feature.open_feature')) . '</a>');
+        }
+
+        $form->switchbool('safety_check_auto_enabled', exmtrans('system.safety_check_auto_enabled'))
+            ->help(exmtrans('system.help.safety_check_auto_enabled'));
+
+        $form->select('safety_check_min_scale', exmtrans('system.safety_check_min_scale'))
+            ->help(exmtrans('system.help.safety_check_min_scale'))
+            ->options(SafetyCheckDefine::scaleOptions())
+            ->disableClear()
+            ->default(45);
+
+        $form->number('safety_check_cooldown_minutes', exmtrans('system.safety_check_cooldown_minutes'))
+            ->help(exmtrans('system.help.safety_check_cooldown_minutes'))
+            ->default(60)
+            ->min(1);
+        $form->number('safety_check_comment_window_minutes', exmtrans('system.safety_check_comment_window_minutes'))
+            ->help(exmtrans('system.help.safety_check_comment_window_minutes'))
+            ->default(60)
+            ->min(1);
+        $form->number('safety_check_max_bulletin_age_minutes', exmtrans('system.safety_check_max_bulletin_age_minutes'))
+            ->help(exmtrans('system.help.safety_check_max_bulletin_age_minutes'))
+            ->default(10)
+            ->min(1);
+        $form->number('safety_check_resend_throttle_minutes', exmtrans('system.safety_check_resend_throttle_minutes'))
+            ->help(exmtrans('system.help.safety_check_resend_throttle_minutes'))
+            ->default(5)
+            ->min(0);
+        $form->number('safety_check_answer_url_expire_days', exmtrans('system.safety_check_answer_url_expire_days'))
+            ->help(exmtrans('system.help.safety_check_answer_url_expire_days'))
+            ->default(7)
+            ->required()
+            ->min(0)
+            ->max(SafetyCheckSender::ANSWER_URL_MAX_EXPIRE_DAYS);
     }
 
 
+    // @phpstan-ignore-next-line
     protected function postInitializeForm(Request $request, $group = null, $initialize = false, $validateUser = false)
     {
         $rules = [
@@ -192,15 +284,34 @@ trait InitializeFormTrait
 
         $validation = Validator::make($request->all(), $rules);
         if ($validation->fails()) {
-            return back()->withInput()->withErrors($validation);
+            return back()->withInput(get_flash_input())->withErrors($validation);
         }
 
         $inputs = $request->all(System::get_system_keys($group));
         array_forget($inputs, 'initialized');
+        // Screen design: save only one of the known designs. The installer
+        // form, and the system setting page when the server fixes the design,
+        // have no select; a missing or unknown value must not replace the
+        // stored one.
+        if (array_key_exists('ui_design', $inputs) && !in_array($inputs['ui_design'], Define::SYSTEM_UI_DESIGN, true)) {
+            array_forget($inputs, 'ui_design');
+        }
+
+        // demo mode: the mail, LINE, search server, IP filter, reCAPTCHA and API settings are kept
+        $inputs = DemoMode::filterSystemInputs($inputs);
+
+        $loggingWasOn = boolval(System::logging_toggle_available());
 
         // set system_key and value
         foreach ($inputs as $k => $input) {
             System::{$k}($input);
+        }
+        // the log is on: make the table "System Performance Log" if it is not there yet,
+        // and its menu too when the log has just been turned on
+        TemplateImportExport\TemplateImporter::importSystemLogsTemplateIfEnabled(!$loggingWasOn);
+        // demo mode: no template upload or import
+        if (DemoMode::enabled()) {
+            return true;
         }
         // upload zip file
         $this->uploadTemplate($request);
@@ -212,6 +323,7 @@ trait InitializeFormTrait
         return true;
     }
 
+    // @phpstan-ignore-next-line
     protected function addTemplateTile($form)
     {
         $form->exmheader(exmtrans('template.header'))->hr();
@@ -234,9 +346,11 @@ trait InitializeFormTrait
         //     ->options(Define::FILE_OPTION());
 
         // template search url
-        $template_search_url = admin_urls('api', 'template', 'search');
+        $template_search_url = System::initialized()
+            ? admin_urls('webapi', 'template', 'search')
+            : admin_urls('api', 'template', 'search');
         $script = <<<EOT
-    
+
     $(function(){
         searchTemplate(null);
     });
@@ -267,6 +381,7 @@ EOT;
     /**
      * Upload Template
      */
+    // @phpstan-ignore-next-line
     protected function uploadTemplate(Request $request)
     {
         // upload zip file
@@ -277,14 +392,15 @@ EOT;
             $file = $request->file('upload_template');
 
             // upload excel file
+            // @phpstan-ignore-next-line
             if ($file->getClientOriginalExtension() == 'xlsx') {
                 $json = $importer->uploadTemplateExcel($file);
                 $importer->import($json, false, false, true);
             }
             // upload zip file
+            // @phpstan-ignore-next-line
             elseif ($file->getClientOriginalExtension() == 'zip') {
-                $upload_template = $importer->uploadTemplate($file);
-                $importer->importTemplate($upload_template);
+                $importer->uploadTemplate($file);
             }
         }
     }
@@ -292,6 +408,7 @@ EOT;
     /**
      * file delete system.
      */
+    // @phpstan-ignore-next-line
     public function filedelete(Request $request)
     {
         // get file delete flg column name
@@ -303,17 +420,20 @@ EOT;
         ]);
     }
 
+    // @phpstan-ignore-next-line
     protected function guard()
     {
         return Auth::guard('admin');
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getUserOrgSlackColumns(string $table_name)
     {
         return $this->getUserOrgColumns($table_name, Enums\ColumnType::TEXT);
     }
 
+    // @phpstan-ignore-next-line
     protected function getUserOrgColumns(string $table_name, string $column_type)
     {
         $custom_table = CustomTable::getEloquent($table_name);
@@ -334,6 +454,7 @@ EOT;
      * @param bool $isAdvanced
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getProgressInfo(bool $isAdvanced): array
     {
         $steps = [];

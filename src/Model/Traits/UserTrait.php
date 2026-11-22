@@ -9,6 +9,9 @@ use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\JoinedOrgFilterType;
 use Exceedone\Exment\Services\AuthUserOrgHelper;
 
+/**
+ * @used-by \Exceedone\Exment\Services\ClassBuilder
+ */
 trait UserTrait
 {
     use ClearCacheTrait;
@@ -16,6 +19,8 @@ trait UserTrait
     /**
      * get login users.
      * Why "hasMany" not "hasOne" is It can be logged in by multiple providers.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Model\LoginUser, $this>
      */
     public function login_users()
     {
@@ -25,12 +30,17 @@ trait UserTrait
     /**
      * get login user.
      * only support login provider is null (default)
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Model\LoginUser, $this>
      */
     public function login_user()
     {
         return $this->hasOne(Model\LoginUser::class, "base_user_id")->whereNull('login_provider');
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Model\UserSetting, $this>
+     */
     public function user_setting()
     {
         return $this->hasOne(Model\UserSetting::class, "user_id");
@@ -83,12 +93,13 @@ trait UserTrait
      */
     public function belong_role_groups_all()
     {
-        return Model\RoleGroup::whereHas('role_group_user_organizations', function ($query) {
+        $filterType = JoinedOrgFilterType::getEnum(System::org_joined_type_role_group(), JoinedOrgFilterType::ALL);
+        return Model\RoleGroup::whereHas('role_group_user_organizations', function ($query) use ($filterType) {
             $query->where(function ($qry) {
                 $qry->where('role_group_target_id', $this->id)
                     ->where('role_group_user_org_type', 'user');
-            })->orWhere(function ($qry) {
-                $qry->whereIn('role_group_target_id', $this->getOrganizationIdsForQuery())
+            })->orWhere(function ($qry) use ($filterType) {
+                $qry->whereIn('role_group_target_id', $this->getOrganizationIdsForQuery($filterType))
                     ->where('role_group_user_org_type', 'organization');
             });
         })->get();
@@ -102,13 +113,35 @@ trait UserTrait
     public function disabled_delete_trait()
     {
         // only administrator can delete and edit administrator record
+
         if (!\Exment::user()->isAdministrator() && isset($this->login_user) && $this->login_user->isAdministrator()) {
             return true;
         }
         // cannnot delete myself
+
         if (\Exment::getUserId() == $this->id) {
             return true;
         }
+    }
+
+    /**
+     * Whether the login user may not edit this record
+     *
+     * Only an administrator can edit an administrator's record, the login
+     * settings of that user included. CustomValue::enableEdit() asks this, so
+     * the rule holds on every page and in the API, not only where the Edit
+     * button is hidden (LoginUserItem::setEditDelete).
+     *
+     * @return bool
+     */
+    public function disabled_edit_trait(): bool
+    {
+        if (!$this->isAdministrator()) {
+            return false;
+        }
+
+        $login_user = \Exment::user();
+        return !isset($login_user) || !$login_user->isAdministrator();
     }
 
     /**

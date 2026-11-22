@@ -4,21 +4,24 @@ namespace Exceedone\Exment\DashboardBoxItems\SystemItems;
 
 use Exceedone\Exment\Model\DashboardBox;
 use Exceedone\Exment\Model\Define;
-use Encore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\NotifyNavbar as NotifyNavbarModel;
-use Encore\Admin\Widgets\Table as WidgetTable;
+use ExmentAdminCore\Admin\Widgets\Table as WidgetTable;
+use Illuminate\Support\Collection;
 
 class NotifyNavbar
 {
+    // @phpstan-ignore-next-line
     protected $dashboard_box;
 
     /**
      * WordPress Page Items
      *
-     * @var array
+     * @var array|Collection
      */
+    // @phpstan-ignore-next-line
     protected $items = [];
 
     public function __construct(?DashboardBox $dashboard_box)
@@ -29,6 +32,7 @@ class NotifyNavbar
     /**
      * get header
      */
+    // @phpstan-ignore-next-line
     public function header()
     {
         return null;
@@ -37,6 +41,7 @@ class NotifyNavbar
     /**
      * get footer
      */
+    // @phpstan-ignore-next-line
     public function footer()
     {
         $link = admin_url('notify_navbar');
@@ -47,6 +52,7 @@ class NotifyNavbar
     /**
      * get html body
      */
+    // @phpstan-ignore-next-line
     public function body()
     {
         $this->setItems();
@@ -71,11 +77,13 @@ class NotifyNavbar
             if (is_null($parent_type) || is_null($custom_table = CustomTable::getEloquent($parent_type))) {
                 $body[] = null;
             } else {
-                $body[] =  $custom_table->table_view_name;
+                $body[] =  esc_html($custom_table->table_view_name);
             }
 
-            $body[] =  array_get($item, 'notify_subject');
-            $body[] =  array_get($item, 'created_at');
+            // the table widget prints the cells as HTML; the subject is a text
+            // anyone who sends a notification writes
+            $body[] =  esc_html(array_get($item, 'notify_subject'));
+            $body[] =  esc_html(array_get($item, 'created_at'));
 
 
             // reference target data
@@ -89,9 +97,10 @@ class NotifyNavbar
             }
 
             $linker = (new Linker())
-                ->url(admin_url("notify_navbar/{$item->id}"))
+                // the notification itself: notify_navbar/{id} alone opens the record
+                ->url(admin_url("notify_navbar/{$item->id}") . '?content=1')
                 ->icon('fa-eye')
-                ->tooltip(trans('admin.show'));
+                ->tooltip(exmtrans('notify_navbar.show_content'));
             $html .= $linker->render();
 
             $html .= '<input type="hidden" data-id="' . esc_html($item->id) . '">';
@@ -103,6 +112,7 @@ class NotifyNavbar
         $widgetTable = new WidgetTable($headers, $bodies);
         $widgetTable->class('table table-hover');
 
+        // @phpstan-ignore-next-line
         return $widgetTable->render() ?? null;
     }
 
@@ -132,6 +142,7 @@ class NotifyNavbar
     /**
      * set laravel admin embeds option
      */
+    // @phpstan-ignore-next-line
     public static function setAdminOptions(&$form, $dashboard)
     {
         $grid_per_pages = stringToArray(config('exment.grid_per_pages'));

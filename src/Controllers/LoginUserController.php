@@ -2,18 +2,21 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Auth\Permission as Checker;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Form\Tools;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
+use Exceedone\Exment\Model\CustomValue;
 use Exceedone\Exment\Model\LoginSetting;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Services\DataImportExport;
+use Exceedone\Exment\Services\DemoMode;
 use Exceedone\Exment\PartialCrudItems\Providers\LoginUserItem;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -29,13 +32,28 @@ class LoginUserController extends AdminControllerBase
     /**
      * Show interface.
      *
-     * @param mixed   $id
+     * @param Request $request
      * @param Content $content
-     * @return Content
+     * @param $id
+     * @return Content|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
     public function show(Request $request, Content $content, $id)
     {
         return redirect(admin_urls('loginuser', $id, 'edit'));
+    }
+
+    /**
+     * Edit interface.
+     *
+     * @param Request $request
+     * @param Content $content
+     * @param mixed $id
+     * @return Content
+     */
+    public function edit(Request $request, Content $content, $id)
+    {
+        $this->denyUneditableUser($id);
+        return parent::edit($request, $content, $id);
     }
 
     /**
@@ -67,6 +85,10 @@ class LoginUserController extends AdminControllerBase
         $grid->actions(function (Grid\Displayers\Actions $actions) {
             $actions->disableDelete();
             $actions->disableView();
+            // only administrator can change administrator's login (see denyUneditableUser)
+            if ($actions->row instanceof CustomValue && method_exists($actions->row, 'disabled_edit_trait') && $actions->row->disabled_edit_trait()) {
+                $actions->disableEdit();
+            }
         });
 
         $grid->filter(function ($filter) use ($table) {
@@ -87,6 +109,7 @@ class LoginUserController extends AdminControllerBase
             $button = new Tools\ExportImportButton(admin_url('loginuser'), $grid, false, true);
             $button->setBaseKey('common');
 
+            /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\ExportImportButton given */
             $tools->append($button);
             $tools->batch(function (Grid\Tools\BatchActions $actions) {
                 $actions->disableDelete();
@@ -100,12 +123,14 @@ class LoginUserController extends AdminControllerBase
     /**
      * get import modal
      */
+    // @phpstan-ignore-next-line
     public function importModal(Request $request)
     {
         $service = $this->getImportExportService();
         return $service->getImportModal();
     }
 
+    // @phpstan-ignore-next-line
     protected function getImportExportService($grid = null)
     {
         // create exporter
@@ -126,6 +151,7 @@ class LoginUserController extends AdminControllerBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $classname = getModelName(SystemTableName::USER);
@@ -136,7 +162,7 @@ class LoginUserController extends AdminControllerBase
 
         LoginUserItem::getItem()->setAdminFormOptions($form, $id);
 
-        if (!LoginSetting::isUseDefaultLoginForm()) {
+        if (!LoginSetting::isUseDefaultLoginForm() || DemoMode::enabled()) {
             $form->disableSubmit();
         }
         $form->disableReset();
@@ -149,12 +175,15 @@ class LoginUserController extends AdminControllerBase
     /**
      * Update the specified resource in storage.
      *
-     * @param int $id
-     *
-     * @return \Illuminate\Http\Response
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Routing\Redirector|Response
+     * @throws \Throwable
      */
+    // @phpstan-ignore-next-line
     public function update($id)
     {
+        $this->denyUneditableUser($id);
+
         DB::beginTransaction();
         try {
             $result = LoginUserItem::getItem()->saved(null, $id);
@@ -167,7 +196,7 @@ class LoginUserController extends AdminControllerBase
             \Log::error($ex);
             admin_error('Error', exmtrans('error.mailsend_failed'));
             DB::rollback();
-            return back()->withInput();
+            return back()->withInput(get_flash_input());
         } catch (\Exception $ex) {
             DB::rollback();
             throw $ex;
@@ -179,6 +208,7 @@ class LoginUserController extends AdminControllerBase
     /**
      * @param Request $request
      */
+    // @phpstan-ignore-next-line
     public function import(Request $request)
     {
         // create exporter
@@ -196,6 +226,7 @@ class LoginUserController extends AdminControllerBase
         return getAjaxResponse($result);
     }
 
+    // @phpstan-ignore-next-line
     protected function response()
     {
         $message = trans('admin.update_succeeded');
@@ -213,6 +244,25 @@ class LoginUserController extends AdminControllerBase
         return redirect($url);
     }
 
+    /**
+     * Only an administrator can change the login of an administrator
+     * (UserTrait::disabled_edit_trait). The list hides the Edit button of
+     * that row; the edit page and the save refuse it. The user is read
+     * without the record scope: LoginUserItem finds the login by its user
+     * id, whether the scope shows that user or not.
+     *
+     * @param mixed $id
+     * @return void
+     */
+    protected function denyUneditableUser($id)
+    {
+        $user = getModelName(SystemTableName::USER)::withoutGlobalScopes()->find($id);
+        if (isset($user) && $user->disabled_edit_trait()) {
+            Checker::error();
+        }
+    }
+
+    // @phpstan-ignore-next-line
     protected function getLoginUser($user)
     {
         $login_user = $user->login_users()->whereNull('login_provider')->first();

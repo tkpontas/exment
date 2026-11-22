@@ -11,6 +11,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
     use GrammarTrait;
 
 
+    // @phpstan-ignore-next-line
     public function compileUpdateRemovingJsonKey($query, string $key): string
     {
         $table = $this->wrapTable($query->from);
@@ -31,6 +32,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
         $joins = '';
 
         if (isset($query->joins)) {
+            // @phpstan-ignore-next-line
             $joins = ' '.$this->compileJoins($query, $query->joins);
         }
 
@@ -60,7 +62,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      * @param \Illuminate\Database\Query\Builder $builder
      * @param string $tableName database table name
      * @param string $column target table name
-     * @param array $values
+     * @param mixed $values one value, or a list of them (array or Collection)
      * @return \Illuminate\Database\Query\Builder
      */
     public function whereInArrayString($builder, string $tableName, string $column, $values, bool $isOr = false, bool $isNot = false)
@@ -122,6 +124,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getCastColumn($type, $column, $options = [])
     {
         $cast = $this->getCastString($type, $column, $options);
@@ -136,6 +139,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getColumnTypeString($type)
     {
         switch ($type) {
@@ -161,6 +165,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getCastString($type, $addOption = false, $options = [])
     {
         $cast = '';
@@ -214,8 +219,9 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      * @param string $column column name
      * @param bool $groupBy if group by query, return true
      *
-     * @return void
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     public function getDateFormatString($groupCondition, $column, $groupBy = false, $wrap = true)
     {
         if ($wrap) {
@@ -251,7 +257,7 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
      * @param GroupCondition $groupCondition Y, YM, YMD, ...
      * @param \Carbon\Carbon $carbon
      *
-     * @return string
+     * @return string|null
      */
     public function convertCarbonDateFormat($groupCondition, $carbon)
     {
@@ -285,5 +291,17 @@ class MySqlGrammar extends BaseGrammar implements GrammarInterface
     public function wrapJsonUnquote($value, $prefixAlias = false)
     {
         return "json_unquote(" . $this->wrap($value, $prefixAlias) . ")";
+    }
+
+    /**
+     * Wrap and add json_extract if needs
+     *
+     * @param mixed $column
+     * @param string $path
+     * @return string
+     */
+    public function wrapJsonExtract($column, $path = '$')
+    {
+        return "json_extract({$this->wrap($column)}, '{$path}')";
     }
 }

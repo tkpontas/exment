@@ -2,13 +2,14 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Layout\Content;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Services\Calc\CalcService;
 use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\ColumnItems\CustomItem;
+use Exceedone\Exment\ColumnItems\GridCellStyle;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
@@ -17,6 +18,7 @@ use Exceedone\Exment\Model\CustomForm;
 use Exceedone\Exment\Model\CustomFormColumn;
 use Exceedone\Exment\Model\CustomView;
 use Exceedone\Exment\Model\CustomViewColumn;
+use Exceedone\Exment\Model\CellStylePreset;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Enums\MultisettingType;
@@ -47,7 +49,7 @@ class CustomColumnController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -58,15 +60,14 @@ class CustomColumnController extends AdminControllerTableBase
         return parent::index($request, $content);
     }
 
-
     /**
      * Edit
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|Response
+     * @param $tableKey
+     * @param $id
+     * @return Content|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -81,9 +82,39 @@ class CustomColumnController extends AdminControllerTableBase
     }
 
     /**
+     * Update the specified resource in storage.
+     *
+     * @param int $id
+     *
+     * @return \Illuminate\Http\Response|void
+     */
+    // @phpstan-ignore-next-line
+    public function update($tableKey, $id)
+    {   
+        //Validation table value
+        if (!$this->validateTable($this->custom_table, Permission::CUSTOM_TABLE)) {
+            return;
+        }
+        if (!$this->validateTableAndId(CustomColumn::class, $id, 'column')) {
+            return;
+        }
+        if (request()->has('column_type')) {
+            $column_type = request()->get('column_type');
+            $column = $this->custom_columns->first(function ($value) use ($id) {
+                return $value->id == $id;
+            });
+            if (!$this->validateEditColumnType($column, $column_type)) {
+                return;
+            }
+        }
+
+        return $this->form($id)->update($id);
+    }
+
+    /**
      * Create interface.
      *
-     * @return Content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -135,6 +166,7 @@ class CustomColumnController extends AdminControllerTableBase
         });
 
         $grid->tools(function (Grid\Tools $tools) {
+            /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('column', $this->custom_table));
         });
 
@@ -170,8 +202,12 @@ class CustomColumnController extends AdminControllerTableBase
     /**
      * Make a form builder.
      *
+     * @param $id
      * @return Form
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new CustomColumn());
@@ -255,34 +291,42 @@ class CustomColumnController extends AdminControllerTableBase
             $form->hidden('column_type')->default($column_type);
         }
 
-        $form->embeds('options', exmtrans("custom_column.options.header"), function ($form) use ($column_item, $id) {
+        $form->embeds('options', exmtrans("custom_column.options.header"), function ($form) use ($column_item, $id, $custom_column) {
             $form->switchbool('required', exmtrans("common.required"));
             $form->switchbool('index_enabled', exmtrans("custom_column.options.index_enabled"))
                 ->rules([
                     new Validator\CustomColumnIndexCountRule($this->custom_table, $id),
                     new Validator\CustomColumnUsingIndexRule($id),
                 ])
-                ->attribute(['data-filtertrigger' =>true])
+                ->attribute(['data-filtertrigger' =>true,
+                    'data-filter' => json_encode(['parent' => 1, 'key' => 'column_type', 'value' => ColumnType::COLUMN_TYPE_SAVE()])
+                    ])
                 ->help(sprintf(exmtrans("custom_column.help.index_enabled"), getManualUrl('column?id='.exmtrans('custom_column.options.index_enabled'))));
 
             $form->switchbool('freeword_search', exmtrans("custom_column.options.freeword_search"))
-                ->attribute(['data-filter' => json_encode(['parent' => 1, 'key' => 'options_index_enabled', 'value' => '1'])])
+                ->attribute(['data-filter' => json_encode([['parent' => 1, 'key' => 'options_index_enabled', 'value' => '1'],
+                    ['parent' => 1, 'key' => 'column_type', 'value' => ColumnType::COLUMN_TYPE_SAVE()]])])
                 ->help(exmtrans("custom_column.help.freeword_search"));
 
             $form->switchbool('unique', exmtrans("custom_column.options.unique"))
+                ->attribute(['data-filter' => json_encode(['parent' => 1, 'key' => 'column_type', 'value' => ColumnType::COLUMN_TYPE_INPUT()])])
                 ->help(exmtrans("custom_column.help.unique"));
 
             $form->switchbool('init_only', exmtrans("custom_column.options.init_only"))
+                ->attribute(['data-filter' => json_encode(['parent' => 1, 'key' => 'column_type', 'value' => ColumnType::COLUMN_TYPE_INPUT()])])
                 ->help(exmtrans("custom_column.help.init_only"));
 
             $form->text('placeholder', exmtrans("custom_column.options.placeholder"))
+                ->attribute(['data-filter' => json_encode(['parent' => 1, 'key' => 'column_type', 'value' => ColumnType::COLUMN_TYPE_INPUT()])])
                 ->help(exmtrans("custom_column.help.placeholder"));
 
             $form->text('dropzone_title', exmtrans("custom_column.options.dropzone_title"))
                 ->attribute(['data-filter' => json_encode(['parent' => 1, 'key' => 'column_type', 'value' => ['file', 'image']])])
                 ->help(exmtrans("custom_column.help.dropzone_title"));
 
-            $form->text('help', exmtrans("custom_column.options.help"))->help(exmtrans("custom_column.help.help"));
+            $form->text('help', exmtrans("custom_column.options.help"))->help(exmtrans("custom_column.help.help"))
+                ->attribute(['data-filter' => json_encode(['parent' => 1, 'key' => 'column_type', 'value' => ColumnType::COLUMN_TYPE_INPUT()])])
+            ;
 
             $form->numberRange('min_width', 'max_width', exmtrans("custom_column.options.min_max_width"))
                 ->help(exmtrans("custom_column.help.min_max_width"))
@@ -291,6 +335,56 @@ class CustomColumnController extends AdminControllerTableBase
             $form->select('text_align', exmtrans("custom_column.options.text_align"))
                 ->help(exmtrans("custom_column.help.text_align"))
                 ->options(TextAlignType::transArray('custom_column.align_type_options'));
+
+            // ----------------------------------------- cell appearance ----
+            // Only the data list is affected. A badge compares one record
+            // against the others, which the detail screen and the form -
+            // showing a single record - have nothing to compare against.
+            $form->html('<hr /><h5>' . esc_html(exmtrans('custom_column.options.grid_style_header')) . '</h5>')->plain();
+
+            // The preset is the whole look. There is no per-column tweaking
+            // under it: a tweak becomes a preset of its own (the pencil in
+            // the picker starts one), so every other column can pick it up
+            // instead of the adjustment staying private to this column.
+            // A column styled before presets existed carries its settings
+            // raw, and showed an empty picker beside a preview full of
+            // colored tags - the screen saying nothing while the column
+            // plainly had a look. Naming the preset that means the same
+            // thing puts the two back in agreement; saving only moves where
+            // the answer is kept.
+            $form->select('grid_preset', exmtrans("custom_column.options.grid_preset"))
+                ->default(isset($custom_column) && is_nullorempty($custom_column->getOption('grid_preset'))
+                    ? CellStylePreset::findMatchingKey($custom_column->options) : null)
+                ->help(exmtrans("custom_column.help.grid_preset"))
+                ->options(CellStylePreset::getPickerOptions())
+                ->attribute([
+                    'data-cellstyle-preset' => $this->custom_table->table_name,
+                    'data-cellstyle-preset-label' => exmtrans('cell_style_preset.edit_preset'),
+                    'data-cellstyle-preset-placeholder' => exmtrans('cell_style_preset.select_placeholder'),
+                ]);
+
+            // The raw fields of columns styled before presets existed pass
+            // through unseen. They keep such a column painted until a preset
+            // is picked, and they are what the pencil promotes into a new
+            // preset - but the screen no longer edits them one by one.
+            foreach (['grid_style', 'grid_color', 'grid_bg_color', 'grid_border_color', 'grid_font_weight', 'grid_icon', 'grid_nowrap'] as $legacy_grid_key) {
+                $form->hidden($legacy_grid_key);
+            }
+
+            // Per-value colors stay on the column: the values they color are
+            // this column's own choices, which no shared preset can know.
+            // The script turns the textarea into a small table built from
+            // those choices; the textarea itself stays the stored value, so
+            // without the script the setting is still editable by hand.
+            $form->textarea('grid_value_colors', exmtrans("custom_column.options.grid_value_colors"))
+                ->rows(4)
+                ->attribute([
+                    'data-cellstyle-valuecolors' => '1',
+                    'data-cellstyle-labels' => json_encode(GridCellStyle::valueColorLabels()),
+                ])
+                ->help(exmtrans("custom_column.help.grid_value_colors"));
+
+            $form->html(view('exment::custom-column.cellstyle-preview')->render())->plain();
 
             if ($this->custom_table->table_name == SystemTableName::USER) {
                 $form->select('editable_userinfo', exmtrans("custom_column.editable_userinfo"))
@@ -343,11 +437,13 @@ class CustomColumnController extends AdminControllerTableBase
             if (isset($id) && boolval(CustomColumn::getEloquent($id)->disabled_delete)) {
                 $tools->disableDelete();
             }
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('column', $custom_table));
         });
         return $form;
     }
 
+    // @phpstan-ignore-next-line
     public function calcModal(Request $request, $tableKey, $id = null)
     {
         // get other columns
@@ -373,10 +469,10 @@ class CustomColumnController extends AdminControllerTableBase
         ]);
     }
 
-
     /**
      * add column form and view after saved
      */
+    // @phpstan-ignore-next-line
     protected function addColumnAfterSaved($model)
     {
         // set custom form columns --------------------------------------------------
@@ -401,6 +497,7 @@ class CustomColumnController extends AdminControllerTableBase
                 $order++;
 
                 // get width
+                // @phpstan-ignore-next-line
                 $width = $form_block->custom_form_columns()
                     ->where('row_no', 1)
                     ->where('column_no', 1)
@@ -479,6 +576,7 @@ class CustomColumnController extends AdminControllerTableBase
      * @param Request $request
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function columnTypeHtml(Request $request)
     {
         $val = $request->get('val');
@@ -508,6 +606,7 @@ class CustomColumnController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getCustomItem(Request $request, $id, $column_type)
     {
         return CustomItem::getItem(new CustomColumn([
@@ -515,5 +614,15 @@ class CustomColumnController extends AdminControllerTableBase
             'id' => $id,
             'column_type' => $column_type,
         ]));
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\CustomColumn::class, \Exceedone\Exment\Enums\Permission::CUSTOM_TABLE];
     }
 }

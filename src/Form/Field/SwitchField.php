@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field\SwitchField as AdminSwitchField;
+use ExmentAdminCore\Admin\Form\Field\SwitchField as AdminSwitchField;
 
 class SwitchField extends AdminSwitchField
 {
@@ -51,6 +51,7 @@ EOT;
         ]);
     }
 
+    // @phpstan-ignore-next-line
     protected function getParentClassname()
     {
         return get_parent_class(get_parent_class($this));

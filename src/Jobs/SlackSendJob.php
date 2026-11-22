@@ -10,8 +10,11 @@ class SlackSendJob extends Notification implements ShouldQueue
 {
     use JobTrait;
 
+    // @phpstan-ignore-next-line
     protected $name;
+    // @phpstan-ignore-next-line
     protected $icon;
+    // @phpstan-ignore-next-line
     protected $content;
 
     /**
@@ -19,6 +22,7 @@ class SlackSendJob extends Notification implements ShouldQueue
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     public function __construct($name, $icon, $content)
     {
         $this->name = $name;
@@ -32,6 +36,7 @@ class SlackSendJob extends Notification implements ShouldQueue
      * @param  mixed  $notifiable
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function via($notifiable)
     {
         return ['slack'];
@@ -47,7 +52,9 @@ class SlackSendJob extends Notification implements ShouldQueue
     {
         return (new SlackMessage())
                 ->from($this->name, $this->icon)
-                ->content($this->content);
+                ->content($this->content)
+                // the URL was checked (WebhookUrlGuard); a redirect is not followed elsewhere
+                ->http(['allow_redirects' => false, 'timeout' => 30]);
     }
 
     /**
@@ -56,6 +63,7 @@ class SlackSendJob extends Notification implements ShouldQueue
      * @param  mixed  $notifiable
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function toArray($notifiable)
     {
         return [

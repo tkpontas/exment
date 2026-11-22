@@ -3,7 +3,7 @@
 namespace Exceedone\Exment\Providers;
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Exceedone\Exment\Providers\ExmentRouteServiceProvider as ServiceProvider;
 use Illuminate\Routing\Router;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
@@ -33,6 +33,9 @@ class RoutePublicFormServiceProvider extends ServiceProvider
         $this->mapExmentPublicFormWebRotes();
     }
 
+    /**
+     * @return void
+     */
     protected function mapExmentPublicFormWebRotes()
     {
         if (!canConnection() || !hasTable(SystemTableName::SYSTEM) || !System::publicform_available()) {
@@ -64,6 +67,7 @@ class RoutePublicFormServiceProvider extends ServiceProvider
         }
 
         foreach ($public_form->getCssJsPlugins() as $plugin) {
+            /** @var \Exceedone\Exment\Model\Plugin $plugin */
             $this->pluginScriptStyleRoute($plugin, $public_form->getBasePath(), 'publicform_plugin_public');
         }
     }

@@ -5,9 +5,15 @@ namespace Exceedone\Exment\Middleware;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Enums\EnumBase;
 use Illuminate\Console\Scheduling\Schedule;
+use Exceedone\Exment\Model\CustomTable;
+use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Services\QueryLogger;
 
 class ExmentDebug
 {
+    /**
+     * @return mixed
+     */
     public function handle(Request $request, \Closure $next)
     {
         static::handleLog($request);
@@ -16,10 +22,22 @@ class ExmentDebug
     }
 
 
+    /**
+     * @return void
+     */
     public static function handleLog(?Request $request = null)
     {
-        if (boolval(config('exment.debugmode', false)) || boolval(config('exment.debugmode_sql', false))) {
-            static::logDatabase();
+        // Check if database is initialized before accessing System settings
+        $loggingToggle = false;
+        try {
+            $loggingToggle = System::initialized() && System::logging_toggle_available();
+        } catch (\Exception $e) {
+            // Ignore errors when database is not yet set up
+        }
+
+        $debugSql = boolval(config('exment.debugmode', false)) || boolval(config('exment.debugmode_sql', false));
+        if ($debugSql || $loggingToggle) {
+            static::logDatabase($debugSql, $loggingToggle);
         }
 
         if (isset($request) && boolval(config('exment.debugmode_request', false))) {
@@ -27,15 +45,29 @@ class ExmentDebug
         }
     }
 
+    /**
+     * @var array<int, mixed>
+     */
+    protected static $queryLogs = [];
 
     /**
      * Output log database
      *
+     * @param bool $debugSql write the SQL with the values to the application log (the debug settings in .env, for developers)
+     * @param bool $performanceLog keep the SQL for the system performance log (without the values)
      * @return void
      */
-    protected static function logDatabase()
+    protected static function logDatabase($debugSql = true, $performanceLog = false)
     {
-        \DB::listen(function ($query) {
+        \DB::listen(function ($query) use ($debugSql, $performanceLog) {
+            // system performance log: keep "?" as it is, so that no personal or secret data is saved
+            if ($performanceLog) {
+                QueryLogger::add($query->sql, $query->time);
+            }
+            if (!$debugSql) {
+                return;
+            }
+
             $sql = $query->sql;
             foreach ($query->bindings as $binding) {
                 if ($binding instanceof \DateTime) {
@@ -46,7 +78,7 @@ class ExmentDebug
                 $sql = preg_replace("/\?/", "'{$binding}'", $sql, 1);
             }
 
-            $log_string = "TIME:{$query->time}ms;    SQL: $sql";
+            $log_string = "TIME:{$query->time}ms SQL: $sql";
             if (boolval(config('exment.debugmode_sqlfunction', false))) {
                 $function = static::getFunctionName();
                 $log_string .= ";    function: $function";
@@ -64,12 +96,14 @@ class ExmentDebug
     /**
      * Output log request
      *
+     * @param Request $request
      * @return void
      */
     protected static function logRequest($request)
     {
-        $input = collect($request->input())->map(function ($value, $key) {
-            if (in_array($key, LogOperation::getHideColumns())) {
+        $hideColumns = LogOperation::getHideColumnsByPath($request->path());
+        $input = collect($request->input())->map(function ($value, $key) use ($hideColumns) {
+            if (in_array($key, $hideColumns)) {
                 return "$key:xxxx";
             } elseif (is_array($value)) {
                 return "$key:" . json_encode($value);
@@ -84,6 +118,10 @@ class ExmentDebug
         \Log::debug("\nIP : {$ip}\nURL : $url\nInput : $input\nHeaders --------------------------------------\n$headers");
     }
 
+    /**
+     * @param bool $oneFunction
+     * @return string
+     */
     protected static function getFunctionName($oneFunction = false)
     {
         $bt = debug_backtrace();
@@ -91,6 +129,7 @@ class ExmentDebug
         $i = 0;
         foreach ($bt as $b) {
             if ($i > 1 && strpos_ex(array_get($b, 'class'), 'Exceedone') !== false) {
+                // @phpstan-ignore-next-line
                 $functions[] = $b['class'] . '->' . $b['function'] . '.' . array_get($b, 'line');
             }
 

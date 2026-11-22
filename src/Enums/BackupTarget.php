@@ -15,9 +15,10 @@ class BackupTarget extends EnumBase
     /**
      * Get backup target disk and relative path
      *
-     * @param string $target
-     * @return \Storage|string
+     * @param string|array $target
+     * @return array|null
      */
+    // @phpstan-ignore-next-line
     public static function dirOrDisk($target)
     {
         if (is_array($target)) {

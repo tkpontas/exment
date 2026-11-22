@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property mixed $relation_type
  * @property mixed $parent_custom_table_id
  * @property mixed $child_custom_table_id
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
+ * @method static int count($columns = '*')
+ * @method static \Illuminate\Database\Query\Builder where($column, $operator = null, $value = null, $boolean = 'and')
  * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
  */
 class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInterface
@@ -25,6 +26,8 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
     //protected $with = ['parent_custom_table', 'child_custom_table'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['parent_custom_table', 'child_custom_table'],
         'langs' => [
@@ -79,20 +82,32 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
         ]
     ];
 
+
+    /**
+     * @return BelongsTo<CustomTable, $this>
+     */
     public function parent_custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'parent_custom_table_id');
     }
 
+
+    /**
+     * @return BelongsTo<CustomTable, $this>
+     */
     public function child_custom_table(): BelongsTo
     {
         return $this->belongsTo(CustomTable::class, 'child_custom_table_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getParentCustomTableCacheAttribute()
     {
         return CustomTable::getEloquent($this->parent_custom_table_id);
     }
+
+    // @phpstan-ignore-next-line
     public function getChildCustomTableCacheAttribute()
     {
         return CustomTable::getEloquent($this->child_custom_table_id);
@@ -101,11 +116,13 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
     /**
      * get relations by parent table
      */
+
+    // @phpstan-ignore-next-line
     public static function getRelationsByParent($parent_table, $relation_type = null, $reget_database = false)
     {
         $parent_table = CustomTable::getEloquent($parent_table);
 
-        return static::allRecordsCache(function ($record) use ($parent_table, $relation_type) {
+        $filter = function ($record) use ($parent_table, $relation_type) {
             if ($record->parent_custom_table_id != array_get($parent_table, 'id')) {
                 return false;
             }
@@ -113,12 +130,26 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
                 return false;
             }
             return true;
-        }, $reget_database);
+        };
+
+        // find by the index (the same records as checking all of them). If none, check all of them as before.
+        $id = array_get($parent_table, 'id');
+        if (isset($id)) {
+            $records = static::recordsCacheBy(['parent_custom_table_id'], [$id])->filter($filter);
+            // the ids are integer columns, so the index finds the same records as "!=". Read the database again only when asked.
+            if ($records->count() > 0 || !$reget_database) {
+                return $records;
+            }
+        }
+
+        return static::allRecordsCache($filter, $reget_database);
     }
 
     /**
      * get relation by child table. (Only one record)
      */
+
+    // @phpstan-ignore-next-line
     public static function getRelationByChild($child_table, $relation_type = null, $reget_database = false)
     {
         $items = static::getRelationsByChild($child_table, $relation_type, $reget_database);
@@ -131,11 +162,13 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
     /**
      * get relation by child table.
      */
+
+    // @phpstan-ignore-next-line
     public static function getRelationsByChild($child_table, $relation_type = null, $reget_database = false)
     {
         $child_table = CustomTable::getEloquent($child_table);
 
-        return static::allRecordsCache(function ($record) use ($child_table, $relation_type) {
+        $filter = function ($record) use ($child_table, $relation_type) {
             if ($record->child_custom_table_id != array_get($child_table, 'id')) {
                 return false;
             }
@@ -143,13 +176,27 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
                 return false;
             }
             return true;
-        }, $reget_database);
+        };
+
+        // find by the index (the same records as checking all of them). If none, check all of them as before.
+        $id = array_get($child_table, 'id');
+        if (isset($id)) {
+            $records = static::recordsCacheBy(['child_custom_table_id'], [$id])->filter($filter);
+            // the ids are integer columns, so the index finds the same records as "!=". Read the database again only when asked.
+            if ($records->count() > 0 || !$reget_database) {
+                return $records;
+            }
+        }
+
+        return static::allRecordsCache($filter, $reget_database);
     }
 
 
     /**
      * get relation by parent and child table.
      */
+
+    // @phpstan-ignore-next-line
     public static function getRelationByParentChild($parent_table, $child_table, $relation_type = null, $reget_database = false)
     {
         $parent_table = CustomTable::getEloquent($parent_table);
@@ -183,7 +230,7 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
      * Get relation name using parent and child table.
      * @param CustomTable|string|null $parent
      * @param CustomTable|string|null $child
-     * @return string
+     * @return string|null
      */
     public static function getRelationNamebyTables($parent, $child)
     {
@@ -202,6 +249,8 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
      * @param boolean $isCallAsParent
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany|\Illuminate\Database\Eloquent\Relations\MorphMany|\Illuminate\Database\Eloquent\Relations\BelongsTo
      */
+
+    // @phpstan-ignore-next-line
     public function getDynamicRelationValue(CustomValue $custom_value, bool $isCallAsParent)
     {
         if ($isCallAsParent) {
@@ -217,6 +266,7 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
             else {
                 // Create pivot table
                 if (!hasTable($pivot_table_name)) {
+                    // Laravel facade Schema not recognized
                     \Schema::createRelationValueTable($pivot_table_name);
                 }
 
@@ -235,6 +285,7 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
             else {
                 // Create pivot table
                 if (!hasTable($pivot_table_name)) {
+                    // Laravel facade Schema not recognized
                     \Schema::createRelationValueTable($pivot_table_name);
                 }
 
@@ -246,6 +297,8 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
     /**
      * get sheet name for excel, csv
      */
+
+    // @phpstan-ignore-next-line
     public function getSheetName()
     {
         if ($this->relation_type == RelationType::MANY_TO_MANY) {
@@ -266,21 +319,29 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentCache($id, $withs);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getParentImportColumnAttribute()
     {
         return CustomColumn::getEloquent($this->getOption('parent_import_column_id'));
     }
 
+
+    // @phpstan-ignore-next-line
     public function getParentExportColumnAttribute()
     {
         return CustomColumn::getEloquent($this->getOption('parent_export_column_id'));
     }
 
+
+    // @phpstan-ignore-next-line
     public static function importReplaceJson(&$json, $options = [])
     {
         static::importReplaceJsonCustomColumn($json, 'options.parent_import_column_id', 'options.parent_import_column_name', 'options.parent_import_table_name', $options);
@@ -316,12 +377,23 @@ class CustomRelation extends ModelBase implements Interfaces\TemplateImporterInt
         static::deleting(function ($model) {
             // Delete items
             $model->deletingChildren();
+            // Clear child table option (inherit parent permission)
+            if ($model->relation_type == RelationType::ONE_TO_MANY) {
+                $child_table = $model->child_custom_table;
+                if (boolval($child_table->getOption('inherit_parent_permission'))) {
+                    $child_table->setOption('inherit_parent_permission');
+                    $child_table->save();
+                }
+                return;
+            }
         });
     }
 
     /**
      * Delete children items
      */
+
+    // @phpstan-ignore-next-line
     public function deletingChildren()
     {
         $target = $this->parent_custom_table;

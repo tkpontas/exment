@@ -24,6 +24,7 @@ use Exceedone\Exment\Services\Plugin\PluginPublicDefault;
  * @method static PluginType EVENT()
  * @method static PluginType VIEW()
  * @method static PluginType CRUD()
+ * @method static PluginType FORMAT()
  */
 class PluginType extends EnumBase
 {
@@ -42,11 +43,13 @@ class PluginType extends EnumBase
     public const EVENT = '12';
     public const VIEW = '13';
     public const CRUD = '14';
+    public const FORMAT = '15';
 
     /**
      * Plugin type. Can call from endpoint.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_PUBLIC_CLASS()
     {
         return [
@@ -64,6 +67,7 @@ class PluginType extends EnumBase
      * plugin page types. Needs Page's endpoint.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_PLUGIN_PAGE()
     {
         return [
@@ -79,6 +83,7 @@ class PluginType extends EnumBase
      * plugin show menu. Needs Page's endpoint.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_SHOW_MENU()
     {
         return [
@@ -91,6 +96,7 @@ class PluginType extends EnumBase
      * Get plugin scripts and styles. Needs script and css endpoint, and read public file.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_SCRIPT_STYLE()
     {
         return [
@@ -106,6 +112,7 @@ class PluginType extends EnumBase
      * plugin types. Can read resource view.
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_PLUGIN_USE_VIEW()
     {
         return [
@@ -120,6 +127,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_CUSTOM_TABLE()
     {
         return [
@@ -139,6 +147,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_FILTER_ACCESSIBLE()
     {
         return [
@@ -160,6 +169,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_BUTTON()
     {
         return [
@@ -174,6 +184,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_EVENT()
     {
         return [
@@ -187,6 +198,7 @@ class PluginType extends EnumBase
      *
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function PLUGIN_TYPE_URL()
     {
         return [
@@ -200,11 +212,12 @@ class PluginType extends EnumBase
     /**
      * Get plugin class using plugin type
      *
-     * @param string $plugin_type
+     * @param string|null $plugin_type
      * @param Plugin $plugin
      * @param array $options
      * @return mixed
      */
+    // @phpstan-ignore-next-line
     public static function getPluginClass($plugin_type, $plugin, $options = [])
     {
         $options = array_merge([
@@ -245,6 +258,7 @@ class PluginType extends EnumBase
                             'event_type' => array_get($options, 'event_type'),
                             'page_type' => array_get($options, 'page_type'),
                             'is_modal' => array_get($options, 'is_modal'),
+                            'force_delete' => array_get($options, 'force_delete'),
                         ]
                     );
                 case PluginType::BATCH:
@@ -265,6 +279,7 @@ class PluginType extends EnumBase
                 case PluginType::EXPORT:
                     return new $classname($plugin, array_get($options, 'custom_table'));
                 case PluginType::VALIDATOR:
+                case PluginType::FORMAT:
                     $custom_value = !is_null($options['custom_value']) ? $options['custom_value'] : $options['id'];
                     return new $classname($plugin, array_get($options, 'custom_table'), $custom_value, $options);
                 case PluginType::VIEW:
@@ -292,6 +307,7 @@ class PluginType extends EnumBase
      * @param array $options
      * @return ?string
      */
+    // @phpstan-ignore-next-line
     public static function getPluginClassName($plugin_type, $plugin, $options = []): ?string
     {
         $options = array_merge([
@@ -307,7 +323,6 @@ class PluginType extends EnumBase
 
         $classname = $plugin->getNameSpace($classShortName);
         $fuleFullPath = $plugin->getFullPath($classShortName . '.php');
-
         if (\File::exists($fuleFullPath) && class_exists($classname)) {
             return $classname;
         }
@@ -331,6 +346,7 @@ class PluginType extends EnumBase
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     public static function getPluginClassShortName($plugin_type, $plugin, $options = [])
     {
         $options = array_merge([
@@ -342,7 +358,6 @@ class PluginType extends EnumBase
             if (boolval($options['as_setting'])) {
                 return 'PluginSetting';
             }
-
             return 'Plugin' . pascalize(strtolower($plugin_type->getKey()));
         }
 

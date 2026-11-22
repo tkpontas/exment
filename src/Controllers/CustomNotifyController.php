@@ -2,11 +2,11 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
-use Encore\Admin\Auth\Permission as Checker;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Auth\Permission as Checker;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\CustomRelation;
@@ -75,12 +75,11 @@ class CustomNotifyController extends AdminControllerTableBase
 
         $this->setBasicGrid($grid);
 
-        $grid->column('action_settings', exmtrans("notify.notify_action"))->sortable()->display(function ($val) {
-            return collect($val)->map(function ($v) {
-                $enum = NotifyAction::getEnum(array_get($v, 'notify_action'));
-                return isset($enum) ? $enum->transKey('notify.notify_action_options') : null;
-            })->filter()->unique()->implode(exmtrans('common.separate_word'));
-        });
+        // the display closure is bound to the row, so the controller is passed in
+        $controller = static::class;
+        $grid->column('action_settings', exmtrans("notify.notify_action"))->sortable()->display(function ($val) use ($controller) {
+            return $controller::notifyActionsText($val);
+        })->escape(false);
 
         $grid->column('active_flg', exmtrans("plugin.active_flg"))->sortable()->display(function ($val) {
             return \Exment::getTrueMark($val);
@@ -95,6 +94,7 @@ class CustomNotifyController extends AdminControllerTableBase
             ->whereIn('notify_trigger', NotifyTrigger::CUSTOM_TABLES());
 
         $grid->tools(function (Grid\Tools $tools) {
+            /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('notify', $this->custom_table));
         });
 
@@ -123,12 +123,14 @@ class CustomNotifyController extends AdminControllerTableBase
         return $grid;
     }
 
-
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @param $id
+     * @param $copy_id
+     * @return Form|false|void
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null, $copy_id = null)
     {
         if (!$this->hasPermissionEdit($id)) {
@@ -137,6 +139,7 @@ class CustomNotifyController extends AdminControllerTableBase
 
         $form = new Form(new Notify());
         $notify = Notify::find($id);
+        // @phpstan-ignore-next-line
         if ($notify && !in_array($notify->notify_trigger, NotifyTrigger::CUSTOM_TABLES())) {
             Checker::error(exmtrans('common.message.wrongdata'));
             return false;
@@ -147,6 +150,7 @@ class CustomNotifyController extends AdminControllerTableBase
         $form->internal('target_id')->default($this->custom_table->id);
         $form->display('custom_table.table_view_name', exmtrans("custom_table.table"))->default($this->custom_table->table_view_name);
 
+        // @phpstan-ignore-next-line
         $this->setBasicForm($form, $notify);
 
         $form->exmheader(exmtrans('notify.header_trigger'))->hr();
@@ -250,14 +254,18 @@ class CustomNotifyController extends AdminControllerTableBase
             ->help(exmtrans("notify.help.notify_action"))
             ;
 
+            // @phpstan-ignore-next-line
             $this->setActionForm($form, $notify, $custom_table);
         })->required()->disableHeader();
 
+        // @phpstan-ignore-next-line
         $this->setMailTemplateForm($form, $notify);
 
+        // @phpstan-ignore-next-line
         $this->setFooterForm($form, $notify);
 
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('notify', $custom_table));
         });
 
@@ -266,6 +274,7 @@ class CustomNotifyController extends AdminControllerTableBase
 
 
 
+    // @phpstan-ignore-next-line
     public function notify_action_target(Request $request)
     {
         $options = NotifyService::getNotifyTargetColumns($this->custom_table, $request->get('q'), [
@@ -275,6 +284,7 @@ class CustomNotifyController extends AdminControllerTableBase
         return $options;
     }
 
+    // @phpstan-ignore-next-line
     protected function getTargetDateColumnOptions($custom_table_id, $table_name = null)
     {
         return CustomColumn::where('custom_table_id', $custom_table_id)
@@ -288,6 +298,7 @@ class CustomNotifyController extends AdminControllerTableBase
             });
     }
 
+    // @phpstan-ignore-next-line
     protected function getTargetColumnOptions($custom_table)
     {
         $custom_table = CustomTable::getEloquent($custom_table);
@@ -313,6 +324,7 @@ class CustomNotifyController extends AdminControllerTableBase
         return $options->pluck('text', 'id');
     }
 
+    // @phpstan-ignore-next-line
     public function getNotifyTriggerTemplate(Request $request)
     {
         $keyName = 'mail_template_id';
@@ -343,5 +355,15 @@ class CustomNotifyController extends AdminControllerTableBase
         return [
             $keyName => $mail_template->id
         ];
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\Notify::class, \Exceedone\Exment\Enums\Permission::CUSTOM_TABLE];
     }
 }

@@ -61,8 +61,10 @@ trait SummaryItemTrait
             $wrapCastColumn = $this->getCastColumn($value_table_column, true, false);
             $result = "$summary_condition($wrapCastColumn)";
         } elseif (isset($group_condition)) {
+            /** @phpstan-ignore-next-line */
             $result = \DB::getQueryGrammar()->getDateFormatString($group_condition, $value_table_column, false);
         } else {
+            /** @phpstan-ignore-next-line */
             $result = \Exment::wrapColumn($value_table_column);
         }
 
@@ -83,16 +85,20 @@ trait SummaryItemTrait
         $options = $this->getSummaryParams();
         $value_table_column = $asSqlAsName ? $this->getTableColumn($this->sqlAsName()) : $options['value_table_column'];
         $group_condition = $options['group_condition'];
+        $is_wrapped = $options['is_wrapped'];
 
-        if (isset($group_condition)) {
+        if (isset($group_condition) && !$asSqlAsName) {
+            /** @phpstan-ignore-next-line */
             $result = \DB::getQueryGrammar()->getDateFormatString($group_condition, $value_table_column, !$asSelect);
         } else {
-            $result = \Exment::wrapColumn($value_table_column);
+            /** @phpstan-ignore-next-line */
+            $result = $is_wrapped? $value_table_column: \Exment::wrapColumn($value_table_column);
         }
 
         return $result;
     }
 
+    // @phpstan-ignore-next-line
     protected function getSummaryParams()
     {
         $group_condition = array_get($this->options, 'group_condition');
@@ -101,9 +107,19 @@ trait SummaryItemTrait
         // get value_table_column(Contains table and column)
         $value_table_column = $this->getTableColumn($this->sqlname());
 
+        $is_wrapped = false;
+
+        if ($this->isMultipleEnabled()) {
+            /** @phpstan-ignore-next-line */
+            $value_table_column = \Exment::wrapColumn($value_table_column);
+            $value_table_column = "CASE WHEN {$value_table_column} = '[]' THEN NULL ELSE {$value_table_column} END";
+            $is_wrapped = true;
+        }
+
         return [
             'group_condition' => $group_condition,
             'value_table_column' => $value_table_column,
+            'is_wrapped' => $is_wrapped,
         ];
     }
 

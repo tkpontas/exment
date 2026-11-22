@@ -3,13 +3,14 @@
 namespace Exceedone\Exment\Controllers;
 
 use App\Http\Controllers\Controller;
-use Encore\Admin\Facades\Admin;
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
-use Encore\Admin\Widgets\Form as WidgetForm;
-use Encore\Admin\Widgets\Box;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Facades\Admin;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Alert;
+use ExmentAdminCore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Model\CustomForm;
 use Exceedone\Exment\Model\CustomFormBlock;
 use Exceedone\Exment\Model\CustomFormColumn;
@@ -50,7 +51,9 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -201,15 +204,14 @@ class CustomFormController extends AdminControllerTableBase
         }
     }
 
-
     /**
      * Edit
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|Response
+     * @param $tableKey
+     * @param $id
+     * @return Content|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -225,15 +227,19 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
     /**
      * Showing preview
      *
      * @param Request $request
-     * @return void
+     * @return Content|\Illuminate\Http\RedirectResponse
      */
     public function preview(Request $request)
     {
+        $validator = $this->saveformValidate($request, null, false);
+        if ($validator->fails()) {
+            return back()->withInput()->withErrors($validator);
+        }
+
         // get requested form
         $requestItem = $this->getModelFromRequest($request, null, false);
         $custom_form = $requestItem['custom_form'];
@@ -254,13 +260,11 @@ class CustomFormController extends AdminControllerTableBase
         return $this->getPreviewContent($request, $custom_form);
     }
 
-
-
     /**
      * Preview error. (If called as GET request)
      *
      * @param Request $request
-     * @return void
+     * @return Content
      */
     public function previewError(Request $request)
     {
@@ -269,13 +273,13 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
     /**
      * Showing preview by id
      *
      * @param Request $request
+     * @param string $tableKey
      * @param string $suuid
-     * @return void
+     * @return Content
      */
     public function previewBySuuid(Request $request, string $tableKey, string $suuid)
     {
@@ -284,6 +288,11 @@ class CustomFormController extends AdminControllerTableBase
     }
 
 
+    /**
+     * @param Request $request
+     * @param CustomForm $custom_form
+     * @return Content
+     */
     protected function getPreviewContent(Request $request, CustomForm $custom_form)
     {
         $form_item = $custom_form->form_item;
@@ -299,12 +308,12 @@ class CustomFormController extends AdminControllerTableBase
         return $content;
     }
 
-
-
     /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -323,12 +332,18 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Update the specified resource in storage.
      *
-     * @param int $id
-     *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @param $tableKey
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|null
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public function update(Request $request, $tableKey, $id)
     {
+        if (!$this->validateResourceRows($id)) {
+            return null;
+        }
         $validator = $this->saveformValidate($request, $id);
         if ($validator->fails()) {
             return back()->withInput()->withErrors($validator);
@@ -348,7 +363,9 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|null
+     * @throws \Exception
      */
     public function store(Request $request)
     {
@@ -392,6 +409,7 @@ class CustomFormController extends AdminControllerTableBase
 
         $custom_table = $this->custom_table;
         $grid->tools(function (Grid\Tools $tools) {
+            /**@phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('form', $this->custom_table));
             $tools->batch(function (Grid\Tools\BatchActions $actions) {
                 $actions->disableDelete();
@@ -401,8 +419,7 @@ class CustomFormController extends AdminControllerTableBase
         $grid->disableExport();
         $grid->disableRowSelector();
 
-        if ($custom_table->hasPermission(Permission::EDIT_CUSTOM_FORM)) {
-        } else {
+        if (!$custom_table->hasPermission(Permission::EDIT_CUSTOM_FORM)) {
             $grid->disableCreateButton();
         }
 
@@ -445,11 +462,16 @@ class CustomFormController extends AdminControllerTableBase
     }
 
     /**
-     *
      * Make a form
      *
-     * @return Form|void
+     * @param $content
+     * @param $id
+     * @param $copy_id
+     * @return void
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     protected function createForm($content, $id = null, $copy_id = null)
     {
         // get form
@@ -472,6 +494,17 @@ class CustomFormController extends AdminControllerTableBase
         });
 
 
+        // the required columns this form does not have are saved empty from it (ISS00374)
+        if (isset($id) && $form->exists) {
+            $missing = $this->missingRequiredColumns($form);
+            if (count($missing) > 0) {
+                $names = implode(exmtrans('custom_form.name_separator'), array_map(function ($name) {
+                    return sprintf(exmtrans('custom_form.name_quote'), esc_html($name));
+                }, $missing));
+                $content->row(new Alert(sprintf(exmtrans('custom_form.missing_required'), $names), exmtrans('custom_form.missing_required_title'), 'warning'));
+            }
+        }
+
         // create endpoint
         $formroot = admin_url("form/{$this->custom_table->table_name}");
         $endpoint = $formroot.(isset($id) ? "/{$id}" : "");
@@ -485,16 +518,44 @@ class CustomFormController extends AdminControllerTableBase
         ]));
     }
 
+    /**
+     * The required columns of the table that the form does not have.
+     *
+     * The required rule is checked only on the columns of the form, so data
+     * entered with this form is saved with these empty. The form is still
+     * saved as it is: a form of a part of the columns can be made on purpose.
+     *
+     * @return array<int, string> the names of the columns
+     */
+    protected function missingRequiredColumns(CustomForm $form): array
+    {
+        $block = $form->custom_form_blocks()->where('form_block_type', FormBlockType::DEFAULT)->first();
+        $placed = isset($block)
+            ? $block->custom_form_columns()->where('form_column_type', FormColumnType::COLUMN)->pluck('form_column_target_id')->map(function ($id) {
+                return intval($id);
+            })->all()
+            : [];
+
+        $missing = [];
+        foreach ($this->custom_table->custom_columns as $column) {
+            if (boolval($column->getOption('required')) && !in_array(intval($column->id), $placed, true)) {
+                $missing[] = strval($column->column_view_name);
+            }
+        }
+        return $missing;
+    }
 
     /**
      * Get header box ex. view name, label, default flg....
      *
      * @param CustomForm|null $custom_form
+     * @param string $formroot
      * @return Box
      */
     protected function getHeaderBox(?CustomForm $custom_form, string $formroot)
     {
         ///// set default setting
+        // @phpstan-ignore-next-line
         $form = new WidgetForm($custom_form);
         $form->disableSubmit()->disableReset()->onlyRenderFields();
 
@@ -517,7 +578,6 @@ class CustomFormController extends AdminControllerTableBase
             ->help(exmtrans('custom_form.help.form_label_type'))
             ->default(FormLabelType::HORIZONTAL)
             ->options(FormLabelType::transArrayFilter('custom_form.form_label_type_options', FormLabelType::getFormLabelTypes()));
-
         $box = new Box(exmtrans('custom_form.header_basic_setting'), $form);
         $box->tools(view('exment::tools.button', [
             'href' => 'javascript:void(0);',
@@ -537,6 +597,7 @@ class CustomFormController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function getFormBlocks($form)
     {
         // Loop using CustomFormBlocks
@@ -586,13 +647,16 @@ class CustomFormController extends AdminControllerTableBase
      *
      * @return array|\Illuminate\Support\Collection
      */
+    // @phpstan-ignore-next-line
     protected function getFormBlockItems($form)
     {
         // get custom_form_blocks from request
         $req_custom_form_blocks = old('custom_form_blocks');
         if (!isset($req_custom_form_blocks)
         ) {
-            return $form->custom_form_blocks;
+            return $form->custom_form_blocks->sortBy(function ($item, $key) {
+                return $item->getOption('form_block_order')?? 0;
+            });
         }
 
         return collect($req_custom_form_blocks)->map(function ($req_custom_form_block, $key) {
@@ -608,7 +672,8 @@ class CustomFormController extends AdminControllerTableBase
     /**
      * validate before update or store
      */
-    protected function saveformValidate($request, $id = null)
+    // @phpstan-ignore-next-line
+    protected function saveformValidate($request, $id = null, $validateImages = true)
     {
         //not required check, confirm on display.
         // $inputs = $request->get('custom_form_blocks');
@@ -645,14 +710,25 @@ class CustomFormController extends AdminControllerTableBase
         //     // }
         // }
 
-        return \Validator::make($request->all(), [
-            'custom_form_blocks.*.custom_form_columns.*.options.image' => ['nullable', new \Exceedone\Exment\Validator\ImageRule()],
+        $rules = [
+            'custom_form_blocks.*.options' => ['sometimes', 'array'],
+            'custom_form_blocks.*.options.hasmany_type' => ['nullable', 'boolean'],
+            'custom_form_blocks.*.options.lazy_load_enabled' => ['sometimes', 'boolean'],
+        ];
+        if ($validateImages) {
+            $rules['custom_form_blocks.*.custom_form_columns.*.options.image'] = ['nullable', new \Exceedone\Exment\Validator\ImageRule()];
+        }
+
+        return \Validator::make($request->all(), $rules, [], [
+            'custom_form_blocks.*.options.hasmany_type' => exmtrans('custom_form.hasmany_type'),
+            'custom_form_blocks.*.options.lazy_load_enabled' => exmtrans('custom_form.lazy_load_enabled'),
         ]);
     }
 
     /**
      * Store form data
      */
+    // @phpstan-ignore-next-line
     protected function saveform(Request $request, $id = null)
     {
         $saveData = $this->getModelFromRequest($request, $id);
@@ -713,6 +789,7 @@ class CustomFormController extends AdminControllerTableBase
      *     'deletes' => [(column_ids)],
      * ]
      */
+    // @phpstan-ignore-next-line
     protected function getModelFromRequest(Request $request, $id = null, $isPrepareOptions = true): array
     {
         $result = [
@@ -749,9 +826,19 @@ class CustomFormController extends AdminControllerTableBase
             } else {
                 $block = CustomFormBlock::findOrFail($key);
             }
+            /** @var CustomFormBlock $block */
             $block->available = array_get($value, 'available') ?? 0;
             $block->form_block_view_name = array_get($value, 'form_block_view_name');
-            $block->options = array_get($value, 'options', []);
+            $submittedOptions = array_get($value, 'options', []);
+            $blockOptions = array_replace(jsonToArray($block->options), $submittedOptions);
+            if ($block->form_block_type == FormBlockType::ONE_TO_MANY) {
+                $blockOptions['hasmany_type'] = array_get($submittedOptions, 'hasmany_type', 0);
+            }
+            $blockOptions['lazy_load_enabled'] = $block->form_block_type == FormBlockType::ONE_TO_MANY
+                && boolval(array_get($blockOptions, 'hasmany_type'))
+                    ? intval(boolval(array_get($blockOptions, 'lazy_load_enabled', 0)))
+                    : 0;
+            $block->options = $blockOptions;
 
             // create columns --------------------------------------------------
             $order = 1;
@@ -787,6 +874,7 @@ class CustomFormController extends AdminControllerTableBase
                     $column = CustomFormColumn::findOrFail($column_key);
                 }
 
+                // @phpstan-ignore-next-line
                 $column_item = FormSetting\FormColumn\ColumnBase::make($column);
 
                 // if change row_no and calc_no, increment no's.
@@ -802,18 +890,24 @@ class CustomFormController extends AdminControllerTableBase
                 $real_before_row_no = array_get($column_value, 'row_no', 1);
                 $real_before_column_no = array_get($column_value, 'column_no', 1);
 
+                // @phpstan-ignore-next-line
                 $column->row_no = $before_row_no;
+                // @phpstan-ignore-next-line
                 $column->column_no = $before_column_no;
+                // @phpstan-ignore-next-line
                 $column->width = array_get($column_value, 'width', 1);
 
                 $form_options = jsonToArray(array_get($column_value, 'options', "[]"));
                 if ($isPrepareOptions) {
+                    // @phpstan-ignore-next-line
                     $column->options = $column_item->prepareSavingOptions($form_options);
                 }
                 // if preview, options set directrly.
                 else {
+                    // @phpstan-ignore-next-line
                     $column->options = $form_options;
                 }
+                // @phpstan-ignore-next-line
                 $column->order = $order++;
 
                 $result_block['custom_form_columns'][] = $column;
@@ -837,18 +931,18 @@ class CustomFormController extends AdminControllerTableBase
 
 
     // create form because we need for delete
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         return Admin::form(CustomForm::class, function (Form $form) {
         });
     }
 
-
     /**
      * Get setting modal
      *
      * @param Request $request
-     * @return void
+     * @return Response
      */
     public function settingModal(Request $request)
     {
@@ -881,12 +975,12 @@ class CustomFormController extends AdminControllerTableBase
         ]);
     }
 
-
     /**
      * Save attachment and get column name
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function saveAndStoreImage(array $new_columns)
     {
         $files = request()->files->all();
@@ -914,6 +1008,7 @@ class CustomFormController extends AdminControllerTableBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function deleteImage($deletes)
     {
         collect($deletes)->map(function ($delete) {
@@ -939,5 +1034,15 @@ class CustomFormController extends AdminControllerTableBase
             return false;
         }
         return true;
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\CustomForm::class, \Exceedone\Exment\Enums\Permission::EDIT_CUSTOM_FORM];
     }
 }

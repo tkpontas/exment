@@ -435,6 +435,11 @@
             "title": "HOME"
         },
         {
+            "menu_type": "system",
+            "menu_name": "file_server",
+            "title": "ファイルサーバー"
+        },
+        {
             "menu_type": "parent_node",
             "menu_name": "master",
             "title": "マスター管理"
@@ -510,14 +515,39 @@
             "title": "プラグイン"
         },
         {
+            "menu_type": "system",
+            "menu_name": "studio",
+            "title": "スタジオ"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "feature",
+            "title": "機能の管理"
+        },
+        {
             "menu_type": "table",
             "menu_name": "mail_template",
             "title": "通知テンプレート"
         },
         {
-            "menu_type": "table",
-            "menu_name": "mail_send_log",
-            "title": "メール送信履歴"
+            "menu_type": "system",
+            "menu_name": "login_setting",
+            "title": "ログイン設定"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "api_setting",
+            "title": "APIアプリ設定"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "tuning",
+            "title": "チューニング"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "maintenance",
+            "title": "メンテナンスモード"
         }
     ]
 }

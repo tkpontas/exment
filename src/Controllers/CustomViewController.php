@@ -2,17 +2,19 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Auth\Permission as Checker;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Auth\Permission as Checker;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomView;
 use Exceedone\Exment\Model\CustomViewColumn;
+use Exceedone\Exment\Model\CustomViewFilter;
+use Exceedone\Exment\Model\CustomViewSort;
 use Exceedone\Exment\Model\DataShareAuthoritable;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Enums;
@@ -20,11 +22,19 @@ use Exceedone\Exment\Enums\SummaryCondition;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Enums\ViewKindType;
 use Exceedone\Exment\ConditionItems\ConditionItemBase;
+use Exceedone\Exment\Services\ViewFilter\ViewFilterBase;
 use Exceedone\Exment\DataItems\Grid as DataGrid;
 
 class CustomViewController extends AdminControllerTableBase
 {
     use HasResourceTableActions;
+
+    /**
+     * How many posted rows the preview had to leave out.
+     *
+     * @var int
+     */
+    protected $preview_skipped = 0;
 
     public function __construct(?CustomTable $custom_table, Request $request)
     {
@@ -37,7 +47,9 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function index(Request $request, Content $content)
     {
@@ -48,15 +60,14 @@ class CustomViewController extends AdminControllerTableBase
         return parent::index($request, $content);
     }
 
-
     /**
      * Edit interface.
      *
      * @param Request $request
      * @param Content $content
-     * @param string $tableKey
-     * @param string|int|null $id
-     * @return void|bool
+     * @param $tableKey
+     * @param $id
+     * @return Content|false|void
      */
     public function edit(Request $request, Content $content, $tableKey, $id)
     {
@@ -79,9 +90,258 @@ class CustomViewController extends AdminControllerTableBase
     }
 
     /**
+     * Show what the settings on the edit screen would look like, without
+     * saving them.
+     *
+     * The form posts itself here, exactly as the custom form preview does, so
+     * what arrives is the settings as they stand on screen - including the
+     * rows just added and the ones just removed. They are turned into a view
+     * that lives only for this request and handed to the very renderer the
+     * data screen uses, so the preview cannot drift away from the real thing.
+     *
+     * @param Request $request
+     * @param string $tableKey
+     * @param string|int|null $id
+     * @return Content|void
+     */
+    public function preview(Request $request, $tableKey, $id = null)
+    {
+        //Validation table value
+        if (!$this->validateTable($this->custom_table, Permission::AVAILABLE_VIEW_CUSTOM_VALUE)) {
+            return;
+        }
+
+        // A preview only draws. Its grid is still a real grid, and a grid
+        // writes a file whenever the request asks for one - which here
+        // would export settings that were never saved, past the export
+        // permission the data screen checks.
+        if ($request->has(Grid\Exporter::$queryName)) {
+            return $this->previewError($request);
+        }
+
+        $custom_view = $this->getViewFromRequest($request, $id);
+        if (!isset($custom_view)) {
+            return $this->previewError($request);
+        }
+
+        // only the view kinds that draw a data screen of their own
+        if (!in_array(intval($custom_view->view_kind_type), [
+            ViewKindType::DEFAULT,
+            ViewKindType::ALLDATA,
+            ViewKindType::KANBAN,
+            ViewKindType::GANTT,
+        ])) {
+            $content = new Content();
+            $content->withWarning(exmtrans('common.preview'), exmtrans('custom_view.message.preview_not_supported'));
+            return $content;
+        }
+
+        $grid = $custom_view->grid_item->preview(true)->grid();
+
+        $content = new Content();
+        $this->setPageInfo(
+            $this->custom_table->table_view_name,
+            $this->custom_table->table_view_name,
+            $this->custom_table->description,
+            $this->custom_table->getOption('icon')
+        );
+        $this->AdminContent($content);
+        $content->row($grid);
+
+        admin_info(exmtrans('common.preview'), exmtrans('common.message.preview'));
+
+        if ($this->preview_skipped > 0) {
+            admin_warning(exmtrans('common.preview'), exmtrans('custom_view.message.preview_skipped', [
+                'count' => $this->preview_skipped,
+            ]));
+        }
+
+        return $content;
+    }
+
+    /**
+     * Preview error. (If called as GET request)
+     *
+     * The preview lives in the posted settings alone, so a reload of this
+     * window - or a link that leaves the first page - has nothing to draw.
+     *
+     * @param Request $request
+     * @return Content
+     */
+    public function previewError(Request $request)
+    {
+        $content = new Content();
+        $content->withError(exmtrans('common.error'), exmtrans('common.message.preview_error'));
+        return $content;
+    }
+
+    /**
+     * Build the view the preview draws, from the posted settings.
+     *
+     * Nothing here touches the database: the view keeps the id and suuid of
+     * the one being edited (a copy of it, so the one held in cache for this
+     * request is left alone) and every setting is overwritten by what was
+     * posted.
+     *
+     * @param Request $request
+     * @param string|int|null $id
+     * @return CustomView|null null when the settings could not be read
+     */
+    protected function getViewFromRequest(Request $request, $id = null)
+    {
+        $base = isset($id) ? CustomView::getEloquent($id) : null;
+        // The id comes from the url, so it can name a view of any table. Only
+        // a view of the table in the url is one this screen edits.
+        if (isset($base) && $base->custom_table_id != $this->custom_table->id) {
+            return null;
+        }
+        if (isset($base) && !$base->hasEditPermission()) {
+            Checker::error();
+            return null;
+        }
+
+        $custom_view = isset($base) ? $base->replicate() : new CustomView();
+        if (isset($base)) {
+            // replicate() drops the keys, and the renderer reads both
+            $custom_view->id = $base->id;
+            $custom_view->suuid = $base->suuid;
+            $custom_view->exists = true;
+        }
+        $custom_view->custom_table_id = $this->custom_table->id;
+
+        // let the edit form itself read the request: every field knows how to
+        // turn its own input back into a value, and several of them (the
+        // json tables above all) are not the plain strings they look like
+        $model = $this->form($id)->getModelByInputs(null, $custom_view);
+        if (!($model instanceof CustomView)) {
+            return null;
+        }
+
+        // ...except the table. The form carries custom_table_id as a hidden
+        // field, and getModelByInputs() writes back every posted key that
+        // has a field, so the request would otherwise decide which table the
+        // grid reads - while every permission above was checked on the table
+        // in the url. The row scope does not filter the user, organization
+        // and document tables, so naming one of those here listed all of
+        // its records.
+        $model->custom_table_id = $this->custom_table->id;
+
+        $this->setViewRelationsFromRequest($request, $model);
+
+        return $model;
+    }
+
+    /**
+     * Put the posted rows on the view as its children.
+     *
+     * The saved rows are still in the database under this view's id, so they
+     * have to be replaced rather than added to - otherwise a row deleted on
+     * screen would come back in its own preview.
+     *
+     * @param Request $request
+     * @param CustomView $custom_view
+     * @return void
+     */
+    protected function setViewRelationsFromRequest(Request $request, CustomView $custom_view)
+    {
+        $relations = [
+            'custom_view_columns' => [CustomViewColumn::class, 'order'],
+            'custom_view_filters' => [CustomViewFilter::class, null],
+            'custom_view_sorts' => [CustomViewSort::class, 'priority'],
+        ];
+
+        foreach ($relations as $name => list($classname, $sort_key)) {
+            $items = collect();
+
+            foreach ((array) $request->get($name) as $row) {
+                if (!is_array($row) || boolval(array_get($row, Form::REMOVE_FLAG_NAME))) {
+                    continue;
+                }
+
+                $item = new $classname();
+                // the view first: a column target is stored as an id pair, and
+                // working out which table it belongs to needs the view it is on
+                $item->custom_view_id = $custom_view->id;
+                $item->setRelation('custom_view', $custom_view);
+                $item->fill(array_filter($row, function ($key) {
+                    return $key != Form::REMOVE_FLAG_NAME;
+                }, ARRAY_FILTER_USE_KEY));
+
+                if (!$this->isPreviewReady($item)) {
+                    $this->preview_skipped++;
+                    continue;
+                }
+
+                $items->push($item);
+            }
+
+            if (isset($sort_key)) {
+                // the saved rows arrive in this order from the database, so the
+                // preview has to sort them the same way to match
+                $items = $items->sortBy(function ($item) use ($sort_key) {
+                    return intval($item->{$sort_key});
+                })->values();
+            }
+
+            $custom_view->setRelation($name, $items);
+        }
+    }
+
+    /**
+     * Whether this posted row is finished enough to be drawn.
+     *
+     * The edit screen validates its rows when it saves; the preview is
+     * handed them exactly as they stand on screen, the half-filled ones
+     * included. A row with no column chosen - or, for a filter, no
+     * comparison - reaches the renderer looking like a real one and takes
+     * the whole page down with it, so it is left out and counted instead.
+     *
+     * @param CustomViewColumn|CustomViewFilter|CustomViewSort $item
+     * @return bool
+     */
+    protected function isPreviewReady($item): bool
+    {
+        if (is_nullorempty($item->view_column_target)) {
+            return false;
+        }
+
+        // the column, or the table it belongs to, may have been deleted
+        // while this screen was open
+        if ($item->view_column_type == Enums\ConditionType::COLUMN) {
+            $custom_column = $item->custom_column;
+            if (!($custom_column instanceof \Exceedone\Exment\Model\CustomColumn)) {
+                return false;
+            }
+            // A column row names its table and its column separately, and
+            // the form only ever offers pairs that agree. A pair that does
+            // not was made up, and would draw the column through a table it
+            // is not part of.
+            if ($custom_column->custom_table_id != $item->view_column_table_id) {
+                return false;
+            }
+        } elseif (!isset($item->custom_table_cache)) {
+            return false;
+        }
+
+        if (!isset($item->column_item)) {
+            return false;
+        }
+
+        // which comparisons a filter may use depends on its column, so
+        // picking a different column empties the one already chosen
+        if ($item instanceof CustomViewFilter) {
+            return !is_null(ViewFilterBase::make($item->view_filter_condition, $item->column_item));
+        }
+
+        return true;
+    }
+
+    /**
      * Create interface.
      *
-     * @return Content
+     * @param Request $request
+     * @param Content $content
+     * @return Content|void
      */
     public function create(Request $request, Content $content)
     {
@@ -115,6 +375,9 @@ class CustomViewController extends AdminControllerTableBase
         $grid->column('view_kind_type', exmtrans("custom_view.view_kind_type"))->sortable()->display(function ($view_kind_type) {
             return ViewKindType::getEnum($view_kind_type)->transKey("custom_view.custom_view_kind_type_options");
         });
+        if (config('exment.sort_custom_view_options', 0) > 0) {
+            $grid->column('order', exmtrans("custom_view.order"))->sortable()->editable();
+        }
 
         $grid->model()->where('custom_table_id', $this->custom_table->id);
         $custom_table = $this->custom_table;
@@ -126,16 +389,17 @@ class CustomViewController extends AdminControllerTableBase
                 if (boolval($actions->row->disabled_delete)) {
                     $actions->disableDelete();
                 }
-                if (intval($actions->row->view_kind_type) === Enums\ViewKindType::AGGREGATE ||
-                    intval($actions->row->view_kind_type) === Enums\ViewKindType::CALENDAR) {
-                    $actions->disableEdit();
-
-                    $linker = (new Linker())
-                        ->url(admin_urls('view', $table_name, $actions->getKey(), 'edit').'?view_kind_type='.$actions->row->view_kind_type)
-                        ->icon('fa-edit')
-                        ->tooltip(trans('admin.edit'));
-                    $actions->prepend($linker);
-                }
+                // unreachable statement
+//                if (intval($actions->row->view_kind_type) === Enums\ViewKindType::AGGREGATE ||
+//                    intval($actions->row->view_kind_type) === Enums\ViewKindType::CALENDAR) {
+//                    $actions->disableEdit();
+//
+//                    $linker = (new Linker())
+//                        ->url(admin_urls('view', $table_name, $actions->getKey(), 'edit').'?view_kind_type='.$actions->row->view_kind_type)
+//                        ->icon('fa-edit')
+//                        ->tooltip(trans('admin.edit'));
+//                    $actions->prepend($linker);
+//                }
             } else {
                 $actions->disableEdit();
                 $actions->disableDelete();
@@ -162,7 +426,9 @@ class CustomViewController extends AdminControllerTableBase
 
         $grid->disableCreateButton();
         $grid->tools(function (Grid\Tools $tools) {
+            /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomViewMenuButton given */
             $tools->append(new Tools\CustomViewMenuButton($this->custom_table, null, false));
+            /** @phpstan-ignore-next-line expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
             $tools->append(new Tools\CustomTableMenuButton('view', $this->custom_table));
         });
 
@@ -186,6 +452,7 @@ class CustomViewController extends AdminControllerTableBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null, $copy_id = null)
     {
         // get request
@@ -233,6 +500,7 @@ class CustomViewController extends AdminControllerTableBase
         if ($request->has('plugin')) {
             $plugin = $request->get('plugin');
         } elseif (isset($model) && $view_kind_type == ViewKindType::PLUGIN) {
+            // @phpstan-ignore-next-line
             $plugin = Plugin::find($model->getOption('plugin_id'))->uuid;
         }
 
@@ -272,21 +540,55 @@ class CustomViewController extends AdminControllerTableBase
             $form->switchbool('default_flg', exmtrans("common.default"))->default(false);
         }
 
+        if (config('exment.sort_custom_view_options', 0) > 0) {
+            $form->number('order', exmtrans("custom_view.order"))->rules("integer")
+                ->addElementClass(['order', 'view_order'])
+                ->help(sprintf(exmtrans("custom_view.help.order")));
+        }
+
         // set column' s form
         $classname = ViewKindType::getGridItemClassName($view_kind_type);
         $classname::setViewForm($view_kind_type, $form, $this->custom_table, [
             'plugin' => $plugin,
+            // the view whose values this form will show: the one being edited,
+            // or the one a copy is taken from. A grid uses it to decide which
+            // parts of the form to open on arrival.
+            'custom_view' => $model ?? $copy_custom_view,
         ]);
 
         $custom_table = $this->custom_table;
 
         // append model for getting from options
         $form->editing(function ($form) {
-            $form->model()->append(['use_view_infobox', 'view_infobox_title', 'view_infobox', 'pager_count', 'condition_join', 'header_align']);
+            $form->model()->append(['use_view_infobox', 'view_infobox_title', 'view_infobox', 'pager_count', 'condition_join', 'condition_reverse', 'header_align',
+                'kanban_group_column_id', 'kanban_swimlane_column_id', 'kanban_editable', 'kanban_max_count',
+                'kanban_title_column_id', 'kanban_assignee_column_id', 'kanban_limit_column_id', 'kanban_age_column_id',
+                'kanban_ai_column_id', 'kanban_source', 'kanban_wips', 'kanban_done_keys',
+                'kanban_wip_column_id', 'kanban_limit_warn', 'kanban_age_steps',
+                'kanban_kpi', 'kanban_quickadd', 'kanban_bulk', 'kanban_editform', 'kanban_drawer',
+                'kanban_cover_column_id', 'kanban_cover_fit', 'kanban_labels_column_id',
+                'kanban_labels_style', 'kanban_badge_column_id',
+                'kanban_sum_column_id', 'kanban_col_age', 'kanban_history',
+                'kanban_progress_column_id', 'kanban_progress_max',
+                'kanban_hide_keys', 'kanban_col_count',
+                'kanban_blocked_keys', 'kanban_expedite_keys',
+                'kanban_wip_enforce', 'kanban_policies',
+                'kanban_filter_column_ids', 'kanban_mine_column_id',
+                'gantt_start_column_id', 'gantt_end_column_id', 'gantt_color_column_id',
+                'gantt_progress_column_id', 'gantt_group_column_id', 'gantt_parent_column_id',
+                'gantt_assignee_column_id', 'gantt_max_count']);
         });
 
         // check filters and sorts count before save
         $form->saving(function (Form $form) {
+            // The table and the kind of view come as hidden inputs; the server
+            // decides them. A view for everyone (system view) needs the
+            // permission of system views on this table.
+            $form->input('custom_table_id', $this->custom_table->id);
+            if (!$this->custom_table->hasSystemViewPermission()) {
+                $form->input('view_type', Enums\ViewType::USER);
+            }
+
             if (!is_null($form->custom_view_filters)) {
                 $cnt = collect($form->custom_view_filters)->filter(function ($value) {
                     return $value[Form::REMOVE_FLAG_NAME] != 1;
@@ -309,6 +611,7 @@ class CustomViewController extends AdminControllerTableBase
             if (request()->has('plugin') && !is_null($plugin = request()->get('plugin'))) {
                 $plugin = Plugin::getPluginByUUID($plugin);
                 if (isset($plugin)) {
+                    // @phpstan-ignore-next-line
                     $form->model()->setOption('plugin_id', $plugin->id);
                 }
             }
@@ -330,6 +633,7 @@ class CustomViewController extends AdminControllerTableBase
         });
 
         $form->tools(function (Form\Tools $tools) use ($id, $suuid, $custom_table, $view_type, $view_kind_type) {
+            // @phpstan-ignore-next-line
             $tools->add((new Tools\CustomTableMenuButton('view', $custom_table)));
 
             if ($view_type == Enums\ViewType::USER) {
@@ -347,6 +651,32 @@ class CustomViewController extends AdminControllerTableBase
                     'btn_class' => 'btn-purple',
                 ]));
             }
+
+            // Preview. [data-preview] is picked up by the shared handler that
+            // already runs on every admin page: it posts this very form to the
+            // url below in a second window, so the settings are shown as they
+            // stand rather than as they were last saved.
+            if (in_array(intval($view_kind_type), [
+                Enums\ViewKindType::DEFAULT,
+                Enums\ViewKindType::ALLDATA,
+                Enums\ViewKindType::KANBAN,
+                Enums\ViewKindType::GANTT,
+            ])) {
+                $tools->append(view('exment::tools.button', [
+                    'href' => 'javascript:void(0);',
+                    'label' => exmtrans('common.preview'),
+                    'icon' => 'fa-eye',
+                    'btn_class' => 'btn-warning',
+                    'attributes' => [
+                        'data-preview' => true,
+                        'data-preview-url' => isset($id)
+                            ? admin_urls('view', $custom_table->table_name, $id, 'preview')
+                            : admin_urls('view', $custom_table->table_name, 'preview'),
+                        'data-preview-error-title' => '',
+                        'data-preview-error-text' => '',
+                    ],
+                ]));
+            }
         });
         $form->disableEditingCheck(false);
 
@@ -357,6 +687,7 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getSummaryCondition(Request $request)
     {
         $view_column_target = $request->get('q');
@@ -380,6 +711,7 @@ class CustomViewController extends AdminControllerTableBase
         });
     }
 
+    // @phpstan-ignore-next-line
     public function getGroupCondition(Request $request)
     {
         return DataGrid\SummaryGrid::getGroupCondition($request->get('q'));
@@ -389,6 +721,7 @@ class CustomViewController extends AdminControllerTableBase
      * validation table
      * @param mixed $table id or customtable
      */
+    // @phpstan-ignore-next-line
     protected function validateTable($table, $role_name)
     {
         if (!$this->custom_table->hasViewPermission()) {
@@ -401,6 +734,7 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * get filter condition
      */
+    // @phpstan-ignore-next-line
     public function getFilterCondition(Request $request)
     {
         $item = $this->getConditionItem($request, $request->get('q'));
@@ -410,6 +744,7 @@ class CustomViewController extends AdminControllerTableBase
         return $item->getFilterCondition();
     }
 
+    // @phpstan-ignore-next-line
     protected function getConditionItem(Request $request, $target)
     {
         $item = ConditionItemBase::getItemByRequest($this->custom_table, $target);
@@ -429,10 +764,16 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * create share form
      */
+    // @phpstan-ignore-next-line
     public function shareClick(Request $request, $tableKey, $id)
     {
         // get custom view
-        $custom_view = CustomView::getEloquent($id);
+        $custom_view = $this->viewOfTable($tableKey, $id);
+        // the dialog, like its save (sendShares), is for whoever may edit the view: the button
+        // is shown to them alone, the request itself is open to anyone who may view it
+        if (!isset($custom_view) || !$custom_view->hasEditPermission()) {
+            return getAjaxResponse(['result' => false, 'toastr' => trans('admin.deny')]);
+        }
 
         $form = DataShareAuthoritable::getShareDialogForm($custom_view, $tableKey);
 
@@ -446,19 +787,53 @@ class CustomViewController extends AdminControllerTableBase
     /**
      * set share users organizations
      */
+    // @phpstan-ignore-next-line
     public function sendShares(Request $request, $tableKey, $id)
     {
         // get custom view
-        $custom_view = CustomView::getEloquent($id);
+        $custom_view = $this->viewOfTable($tableKey, $id);
+        if (!isset($custom_view)) {
+            return getAjaxResponse(['result' => false, 'toastr' => trans('admin.deny')]);
+        }
         return DataShareAuthoritable::saveShareDialogForm($custom_view);
+    }
+
+    /**
+     * The view $id of the table $tableKey names in the URL, or null: a view of another table
+     * (a cross-table id) is not this table's to share.
+     *
+     * @param mixed $tableKey
+     * @param mixed $id
+     */
+    private function viewOfTable($tableKey, $id): ?CustomView
+    {
+        $custom_view = CustomView::getEloquent($id);
+        if (!$custom_view instanceof CustomView || !isset($custom_view->custom_table)
+            || (CustomTable::getEloquent($tableKey)?->id ?? null) != $custom_view->custom_table_id) {
+            return null;
+        }
+        return $custom_view;
     }
 
     /**
      * validate before delete.
      * @param int|string $id
      */
+    // @phpstan-ignore-next-line
     protected function validateDestroy($id)
     {
         return CustomView::validateDestroy($id);
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\CustomView::class, \Exceedone\Exment\Enums\Permission::AVAILABLE_VIEW_CUSTOM_VALUE, function ($view) {
+            return $view->hasEditPermission();
+        }];
     }
 }

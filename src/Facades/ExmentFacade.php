@@ -10,7 +10,10 @@ use Illuminate\Support\Facades\Facade;
  */
 class ExmentFacade extends Facade
 {
-    protected static function getFacadeAccessor()
+    /**
+     * @return string
+     */
+    protected static function getFacadeAccessor(): string
     {
         return \Exceedone\Exment\Exment::class;
     }

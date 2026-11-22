@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Enums\FilterKind;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Model\CustomFormPriority;
@@ -25,6 +25,11 @@ class CustomFormPriorityController extends AdminControllerTableBase
         $this->setPageInfo($title, $title, exmtrans("custom_form_priority.description"), 'fa-keyboard-o');
     }
 
+    /**
+     * @param Request $request
+     * @param Content $content
+     * @return Content|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     */
     public function index(Request $request, Content $content)
     {
         return redirect(admin_urls('form', $this->custom_table->table_name));
@@ -35,6 +40,7 @@ class CustomFormPriorityController extends AdminControllerTableBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         $form = new Form(new CustomFormPriority());
@@ -75,7 +81,11 @@ class CustomFormPriorityController extends AdminControllerTableBase
             ->options(exmtrans("condition.condition_join_options"))
             ->default('and');
 
+        $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
+            ->option(exmtrans("condition.condition_reverse_options"));
+
         $form->tools(function (Form\Tools $tools) use ($custom_table) {
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('form', $custom_table));
             $tools->setListPath(admin_urls('form', $custom_table->table_name));
         });
@@ -88,5 +98,15 @@ class CustomFormPriorityController extends AdminControllerTableBase
         });
 
         return $form;
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\CustomFormPriority::class, \Exceedone\Exment\Enums\Permission::EDIT_CUSTOM_FORM];
     }
 }

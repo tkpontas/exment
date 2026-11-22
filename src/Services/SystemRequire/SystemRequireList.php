@@ -11,8 +11,10 @@ use Illuminate\Support\Collection;
  */
 class SystemRequireList
 {
+    // @phpstan-ignore-next-line
     protected $items = [];
 
+    // @phpstan-ignore-next-line
     protected static $requireClassesCommand = [
         MemorySize::class,
         MaxInputVars::class,
@@ -23,6 +25,7 @@ class SystemRequireList
         BackupRestore::class,
     ];
 
+    // @phpstan-ignore-next-line
     protected static $requireClassesWeb = [
         MemorySize::class,
         MaxInputVars::class,
@@ -33,6 +36,7 @@ class SystemRequireList
         BackupRestore::class,
     ];
 
+    // @phpstan-ignore-next-line
     protected static $requireClassesInstallWeb = [
         MemorySize::class,
         MaxInputVars::class,
@@ -44,6 +48,27 @@ class SystemRequireList
     ];
 
 
+    /**
+     * The tuning advice (ISS00414). Shown on the tuning page, on the install screen
+     * and by exment:checkrequire, apart from the requirements: it never blocks the install.
+     *
+     * @var array<class-string>
+     */
+    protected static $tuningClasses = [
+        Tuning\OpcacheTuning::class,
+        Tuning\PhpVersionTuning::class,
+        Tuning\AppDebugTuning::class,
+        Tuning\ConfigCacheTuning::class,
+        Tuning\ComposerAutoloadTuning::class,
+        Tuning\ExmentCacheTuning::class,
+        Tuning\CacheDriverTuning::class,
+        Tuning\QueueTuning::class,
+        Tuning\DebugLogTuning::class,
+        Tuning\SearchIndexTuning::class,
+        Tuning\DashboardCacheTuning::class,
+    ];
+
+    // @phpstan-ignore-next-line
     protected static function getRequireClasses(string $systemRequireCalledType)
     {
         switch ($systemRequireCalledType) {
@@ -53,12 +78,15 @@ class SystemRequireList
                 return static::$requireClassesInstallWeb;
             case SystemRequireCalledType::WEB:
                 return static::$requireClassesWeb;
+            case SystemRequireCalledType::TUNING:
+                return static::$tuningClasses;
         }
 
         return static::$requireClassesCommand;
     }
 
 
+    // @phpstan-ignore-next-line
     public function setItem($item)
     {
         $this->items[] = $item;
@@ -66,6 +94,7 @@ class SystemRequireList
     }
 
 
+    // @phpstan-ignore-next-line
     public function getItems()
     {
         return $this->items;
@@ -85,11 +114,11 @@ class SystemRequireList
         });
     }
 
-
     /**
      * Get require objects.
      *
-     * @return Collection
+     * @param string $systemRequireCalledType
+     * @return SystemRequireList
      */
     public static function make(string $systemRequireCalledType): SystemRequireList
     {
@@ -98,6 +127,7 @@ class SystemRequireList
         $classes = static::getRequireClasses($systemRequireCalledType);
         foreach ($classes as $className) {
             $obj = new $className();
+            // @phpstan-ignore-next-line
             $obj->systemRequireCalledType($systemRequireCalledType);
 
             $result->setItem($obj);

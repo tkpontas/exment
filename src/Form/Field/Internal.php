@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Form\Field;
 
-use Encore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Form\Field;
 
 /**
  * Internal value. not set html, and set database using prepare value
@@ -31,6 +31,6 @@ class Internal extends Field
      */
     public function render()
     {
-        return null;
+        return '';
     }
 }

@@ -43,6 +43,44 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tuning: server-wide buttons
+    |--------------------------------------------------------------------------
+    |
+    | Whether the tuning page (Admin Setting > Tuning) may change a setting of the
+    | whole server from its buttons (make or remove the config cache).
+    | Set false where several sites share the code (a multi-tenant server).
+    |
+    */
+    'tuning_server_actions' => env('EXMENT_TUNING_SERVER_ACTIONS', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chart of a list view: max rows
+    |--------------------------------------------------------------------------
+    |
+    | A chart of a list view draws one point per row. It reads at most this many
+    | rows (0 = no limit, the default: an update does not change what a chart
+    | draws). A site with large tables may set it, as 1000; a chart of a large
+    | table is better made with a summary view.
+    |
+    */
+    'chart_list_max_rows' => env('EXMENT_CHART_LIST_MAX_ROWS', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard aggregation cache
+    |--------------------------------------------------------------------------
+    |
+    | Keep the rows a chart of a summary view aggregates for this many seconds
+    | (0 = off: aggregate on every load). Each viewer has their own. Saving or
+    | deleting a row aggregates again; a change the models do not see (a share,
+    | a membership, a direct SQL) shows when the rows expire.
+    |
+    */
+    'dashboard_cache_seconds' => env('EXMENT_DASHBOARD_CACHE_SECONDS', 0),
+
+    /*
+    |--------------------------------------------------------------------------
     | Directory
     |--------------------------------------------------------------------------
     |
@@ -160,6 +198,19 @@ return [
             'template' => env('SFTP_ROOT_TEMPLATE'),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | file download temporary url minutes
+    |--------------------------------------------------------------------------
+    |
+    | How long the signed url used to download a file from a cloud storage stays valid.
+    | The storage checks it when the download starts, so a download already running is not
+    | cut when the url expires. But a download interrupted by a network problem is restarted
+    | with the same url, and that fails once the url has expired.
+    |
+    */
+    'file_download_temporary_url_minutes' => env('EXMENT_FILE_DOWNLOAD_TEMPORARY_URL_MINUTES', 15),
 
     /*
     |--------------------------------------------------------------------------
@@ -360,6 +411,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Workflow task navbar
+    |--------------------------------------------------------------------------
+    |
+    | Show the un-actioned workflow task navbar icon
+    |
+    */
+    'workflow_task_navbar' => env('EXMENT_WORKFLOW_TASK_NAVBAR', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Workflow task navbar interval
+    |--------------------------------------------------------------------------
+    |
+    | How often (SECONDS) the browser re-fetches the workflow task badge.
+    | Default 300 (5 minutes). Values below 30 are raised to 30: this endpoint scans
+    | every pending record of every workflow table, once per logged-in browser.
+    |
+    */
+    'workflow_task_navbar_interval' => env('EXMENT_WORKFLOW_TASK_NAVBAR_INTERVAL', 300),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Same organization workflow notify
+    |--------------------------------------------------------------------------
+    |
+    | When a member of an assigned organization executes a workflow action, also
+    | notify the other members of that organization. The notification body contains
+    | the record label, so set false to keep it off other members' navbar.
+    |
+    */
+    'same_org_workflow_notify' => env('EXMENT_SAME_ORG_WORKFLOW_NOTIFY', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Chart BackgroundColor
     |--------------------------------------------------------------------------
     |
@@ -422,6 +507,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Kanban Max size Count
+    |--------------------------------------------------------------------------
+    |
+    | Default max records drawn on a kanban board (for performance).
+    | Each view can override it with its own "kanban_max_count" setting.
+    |
+    */
+    'kanban_max_size_count' => env('EXMENT_KANBAN_MAX_SIZE_COUNT', 300),
+
+    /*
+    |--------------------------------------------------------------------------
     | Calendar Data get value
     |--------------------------------------------------------------------------
     |
@@ -459,6 +555,69 @@ return [
     |
     */
     'mail_setting_env_force' => env('EXMENT_MAIL_SETTING_ENV_FORCE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Demo mode
+    |--------------------------------------------------------------------------
+    |
+    | For a public demo site that publishes its login. If true, operations that run code
+    | on the server, change the server, send anything outside or show secrets are refused,
+    | even for the system administrator: plugin upload and code editing, backup, template
+    | import, mail / login / API settings, password changes and so on.
+    | Mail is written to the log only, and Slack, Teams and LINE messages are not sent.
+    | Console commands (ex. a nightly restore by cron) are not limited.
+    | See Exceedone\Exment\Services\DemoMode for the full list.
+    |
+    */
+    'demo_mode' => env('EXMENT_DEMO_MODE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | features locked
+    |--------------------------------------------------------------------------
+    |
+    | The features the server keeps off, whatever the administrators of the
+    | site choose in Admin setting → Feature management (a comma list of
+    | keys, as "file_server,studio"). For a SaaS that does not offer them.
+    |
+    */
+    'features_locked' => env('EXMENT_FEATURES_LOCKED', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | maintenance mode: the operator's file
+    |--------------------------------------------------------------------------
+    |
+    | The file of the operator's maintenance (`php artisan exment:maintenance
+    | on --operator`). The screens of the site cannot change it. Empty:
+    | storage/framework/exment-maintenance.json. A comma list is read in
+    | order (as a file of the site, then one of all the sites of the server);
+    | the command writes the first. Keep them where only the server's
+    | operator may write.
+    |
+    */
+    'maintenance_operator_file' => env('EXMENT_MAINTENANCE_OPERATOR_FILE', ''),
+
+    // the paths (exact, GET and HEAD) a maintenance does not stop: the health
+    // check of a load balancer. "/" only sends on to the login.
+    'maintenance_exempt_paths' => env('EXMENT_MAINTENANCE_EXEMPT_PATHS', '/,/up'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | the plugins bundled with Exment, the id of the site
+    |--------------------------------------------------------------------------
+    |
+    | bundled_plugins_path: the folder of the signed releases of the free
+    | official plugins (default: "releases" of exceedone/exment-plugins-release).
+    | site_id: the id of the site, when it is given from outside (a SaaS: the
+    | uuid of the tenant). Without it, the one made once by Exment is used.
+    |
+    */
+    'bundled_plugins_path' => env('EXMENT_BUNDLED_PLUGINS_PATH'),
+    // false: no "use this version" / "back to the version before" (a SaaS keeps the versions to itself)
+    'bundled_plugins_updates' => env('EXMENT_BUNDLED_PLUGINS_UPDATES', true),
+    'site_id' => env('EXMENT_SITE_ID'),
 
     /*
     |--------------------------------------------------------------------------
@@ -529,6 +688,17 @@ return [
     |
     */
     'char_length_limit' => env('EXMENT_CHAR_LENGTH_LIMIT_COUNT', 63999),
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMMENT IMAGE MAX SIZE
+    |--------------------------------------------------------------------------
+    |
+    | The largest image (PNG, JPEG, GIF, WebP) that can be pasted or dropped into
+    | the comment box of a data, in kilobytes.
+    |
+    */
+    'comment_image_max_size_kb' => env('EXMENT_COMMENT_IMAGE_MAX_SIZE_KB', 10240),
 
     /*
     |--------------------------------------------------------------------------
@@ -650,6 +820,33 @@ return [
     |
     */
     'gridrow_select_disabled' => env('EXMENT_GRIDROW_SELECT_DISABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Show copy button on customvalue grid page
+    |--------------------------------------------------------------------------
+    |
+    | Show copy button on customvalue grid page
+    |
+    */
+    'gridrow_show_copy_button' => env('EXMENT_GRIDROW_SHOW_COPY_BUTTON', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Screen design
+    |--------------------------------------------------------------------------
+    |
+    | Which screen design is used: "modern" or "classic".
+    | "modern" loads the stylesheet vendor/exment/css/modern.css on top of
+    | the theme; "classic" is the look Exment had before.
+    |
+    | Not set (default): the "Screen design" item on the system setting page
+    | decides. Its default is "modern".
+    | "modern" / "classic": the server decides. The value here wins over the
+    | system setting, and the system setting page shows it read-only.
+    |
+    */
+    'ui_design' => env('EXMENT_UI_DESIGN'),
 
     /*
     |--------------------------------------------------------------------------
@@ -881,6 +1078,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Older versions kept of an attachment
+    |--------------------------------------------------------------------------
+    |
+    | When an attachment is replaced, the file it had is kept as an older
+    | version. At most this many older versions are kept per attachment (the
+    | oldest are deleted, files too). 0 keeps none.
+    |
+    */
+    'document_version_limit' => env('EXMENT_DOCUMENT_VERSION_LIMIT', 10),
+
+    /*
+    |--------------------------------------------------------------------------
     | Disabled show datalist table button for all user
     |--------------------------------------------------------------------------
     |
@@ -1010,6 +1219,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Google reCAPTCHA v3 score threshold
+    |--------------------------------------------------------------------------
+    |
+    | reCAPTCHA v3 does not ask the visitor anything: it returns a score from
+    | 0.0 (almost certainly a bot) to 1.0 (almost certainly a human), and this
+    | is the value below which a submission is rejected. 0.5 is Google's own
+    | recommended starting point. Raise it if spam still gets through, lower it
+    | if real visitors are being blocked. Only used when the system settings
+    | screen selects v3; v2 answers pass or fail and ignores this.
+    | Values outside 0..1 are ignored and 0.5 is used instead.
+    |
+    */
+    'recaptcha_v3_score_threshold' => env('EXMENT_RECAPTCHA_V3_SCORE_THRESHOLD', 0.5),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google reCAPTCHA skip ips
+    |--------------------------------------------------------------------------
+    |
+    | Ip addresses that are never asked to pass reCAPTCHA, e.g. an office
+    | address used for testing the public form. Leave empty in production: an
+    | entry here disables the check completely for that address.
+    |
+    */
+    'recaptcha_skip_ips' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Show disable field readonly
     |--------------------------------------------------------------------------
     |
@@ -1045,6 +1282,41 @@ return [
     | *This config doesn't want to copy backup restore, so set key is ADMIN_, not EXMENT_.*
     */
     'trust_proxy_headers' => env('ADMIN_TRUST_PROXY_HEADERS', null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Client certificates of the API keys of the users
+    |--------------------------------------------------------------------------
+    |
+    | The header in which the front server (nginx, ALB) gives the client certificate it checked:
+    | its sha256 fingerprint, or the certificate (PEM, URL-encoded, as X-Amzn-Mtls-Clientcert).
+    | It is read only from a trusted proxy (ADMIN_TRUST_PROXY_IPS). The front server MUST always
+    | set (overwrite) this header, empty when it did not check a certificate: Exment cannot tell a
+    | header the proxy wrote from one the client sent through it. With ADMIN_TRUST_PROXY_IPS=*
+    | every request counts as from the proxy, so only use it when nothing reaches Exment directly.
+    | ADMIN_API_KEY_REQUIRE_CLIENT_CERT=true: no API key works without a client certificate.
+    | *Not copied by a backup restore: the keys are ADMIN_.*
+    */
+    'api_client_cert_header' => env('ADMIN_API_CLIENT_CERT_HEADER', null),
+    'api_key_require_client_cert' => env('ADMIN_API_KEY_REQUIRE_CLIENT_CERT', false),
+
+    /*
+    | The API keys of the users: the most days of a key (at most 365), of a key made by a login of
+    | SSO (shorter: Exment does not hear when the IdP stops the user), and the keys a user has at once.
+    */
+    'api_key_max_days' => env('EXMENT_API_KEY_MAX_DAYS', 365),
+    'api_key_max_days_sso' => env('EXMENT_API_KEY_MAX_DAYS_SSO', 30),
+    'api_key_max_per_user' => env('EXMENT_API_KEY_MAX_PER_USER', 10),
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP server (api/mcp)
+    |--------------------------------------------------------------------------
+    |
+    | The most records one tool call returns (at most 100), and the calls a user makes per minute.
+    */
+    'mcp_max_rows' => env('EXMENT_MCP_MAX_ROWS', 50),
+    'mcp_calls_per_minute' => env('EXMENT_MCP_CALLS_PER_MINUTE', 60),
 
     /*
     |--------------------------------------------------------------------------
@@ -1089,6 +1361,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | class type of default show page 
+    |--------------------------------------------------------------------------
+    |
+    | set class for container of default show page.
+    | 1. only option boxes(default).
+    | 2. only show form.
+    | 3. both option boxes and show form.
+    |
+    */
+    'show_page_class_type' => env('EXMENT_SHOW_PAGE_CLASS_TYPE', 1),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maximum length of strings to display in the grid
     |--------------------------------------------------------------------------
     |
@@ -1102,4 +1387,317 @@ return [
     |
     */
     'max_child_expand_count' => env('EXMENT_MAX_CHILD_EXPAND_COUNT', 10),
+  
+    /*
+    |--------------------------------------------------------------------------
+    | Specify custom view sorting options
+    |--------------------------------------------------------------------------
+    |
+    | 0(default):view_type > view_kind_type > id.
+    | 1:view_type > view_kind_type > order.
+    | 2:view_type > order.
+    |
+    */
+    'sort_custom_view_options' => env('EXMENT_SORT_CUSTOM_VIEW_OPTIONS', 0),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Maintain default view with freeword search for each table
+    |--------------------------------------------------------------------------
+    |
+    */
+    'search_keep_default_view' => env('EXMENT_SEARCH_KEEP_DEFAULT_VIEW', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default english text for qr code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_qr_button_en' => env('EXMENT_TEXT_QR_BUTTON_EN', '2D barcode'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default japanese text for qr code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_qr_button_ja' => env('EXMENT_TEXT_QR_BUTTON_JA', '二次元バーコード'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | show import export button on role group view
+    |--------------------------------------------------------------------------
+    |
+    */
+    'role_group_import_export' => env('ROLE_GROUP_IMPORT_EXPORT', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notify webhook: deny private networks
+    |--------------------------------------------------------------------------
+    |
+    | Slack / Teams webhooks are never sent to the server itself or to the
+    | link-local range. With true, private networks (10/8, 172.16/12,
+    | 192.168/16, fc00::/7) are refused too, as on a shared service.
+    |
+    */
+    'notify_webhook_deny_private' => env('EXMENT_NOTIFY_WEBHOOK_DENY_PRIVATE', false),
+
+    // hosts webhooks may be sent to although the address is refused above
+    // (comma separated), e.g. "localhost,chat.internal"
+    'notify_webhook_allow_hosts' => env('EXMENT_NOTIFY_WEBHOOK_ALLOW_HOSTS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | X-Frame-Options of the admin pages
+    |--------------------------------------------------------------------------
+    |
+    | SAMEORIGIN: other sites may not show the admin pages in a frame.
+    | DENY: no frame at all. Empty: the header is not sent.
+    | (Public forms do not get it, so they can be embedded.)
+    |
+    */
+    'x_frame_options' => env('EXMENT_X_FRAME_OPTIONS', 'SAMEORIGIN'),
+    /*
+    |--------------------------------------------------------------------------
+    | Unavailable user view ( for tables )
+    |--------------------------------------------------------------------------
+    |
+    | Even if 'userview_disabled' is false
+    */
+    'userview_unavailable_table' => env('EXMENT_USERVIEW_UNAVAILABLE_TABLE', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default english text for SCAN code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_scan_button_en' => env('EXMENT_TEXT_SCAN_BUTTON_EN', '2D barcode／JANcode'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default japanese text for SCAN code button
+    |--------------------------------------------------------------------------
+    |
+    */
+    'text_scan_button_ja' => env('EXMENT_TEXT_SCAN_BUTTON_JA', '二次元／JANバーコード'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | allow the deletion of attachments even when deletion from form is restricted.
+    |--------------------------------------------------------------------------
+    |
+    */
+    'allow_delete_attachment' => env('EXMENT_ALLOW_DELETE_ATTACHMENT', false),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | API rate limit per minute
+    |--------------------------------------------------------------------------
+    |
+    */
+    'api_max_rate_limit' => env('EXMENT_API_MAX_RATE_LIMIT', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mask targets for the operation log
+    |--------------------------------------------------------------------------
+    |
+    | Request keys and url segments replaced with "***" when writing the
+    | operation log (admin_operation_log). Add or remove a mask target here,
+    | without touching the source.
+    |
+    | WHEN UPGRADING: re-check this block. config/exment.php is published once
+    | per install and "exment:update" does not refresh it, and Laravel's
+    | mergeConfigFrom() merges top-level keys only - so once an install has its
+    | own "operation_log" block, that copy wins as a whole and mask targets
+    | added by a later Exment release do NOT reach that install.
+    |
+    | Because of that, the credentials that authenticate a user or a session
+    | (password / password_confirmation / current_password / _token /
+    | verify_code / access_token / refresh_token) are not listed below at all:
+    | they are owned by requiredHideColumns() in
+    | Exceedone\Exment\Middleware\LogOperation and stay masked on every install
+    | whatever this file says. Every other mask target - including the
+    | auth/reset url - is owned by this file, and lives in exactly one place.
+    |
+    */
+    'operation_log' => [
+
+        /*
+         * Keys masked on EVERY screen. Only names that are sensitive wherever
+         * they appear belong here: a name listed here is masked even when it is
+         * a business column of a user-defined table. Keys that are credentials
+         * only on a specific screen go to "mask_columns_by_uri" instead.
+         *
+         * The session credentials (password / password_confirmation /
+         * current_password / _token / token / verify_code / access_token /
+         * refresh_token) are NOT repeated here: they are owned by
+         * LogOperation::requiredHideColumns() and always masked. Do not add them
+         * back - a name in both places could be edited here and look disabled
+         * while the class keeps masking it.
+         */
+        'mask_columns' => [
+            // SSO (OAuth / SAML) secrets
+            'oauth_client_id',
+            'oauth_client_secret',
+            'saml_sp_privatekey',
+            // System config secrets (admin/system): reCAPTCHA secret, SMTP password
+            'recaptcha_secret_key',
+            'system_mail_password',
+            // Meilisearch API key (admin/system)
+            'meili_key',
+            // LINE Messaging API channel credentials (admin/system?advanced=1)
+            'system_line_channel_token',
+            'system_line_channel_secret',
+            // Plugin DB connection password
+            'custom_password',
+            // Plugin CRUD page auth (key / id+password)
+            'crud_auth_key',
+            'crud_auth_password',
+        ],
+
+        /*
+         * "uri pattern below the admin prefix" => keys masked only when the
+         * request path matches ("*" is a wildcard, Str::is). Use this for names
+         * that are credentials on one screen but plain business data elsewhere,
+         * which therefore must not go into "mask_columns".
+         */
+        'mask_columns_by_uri' => [
+            // API client setting screens (admin/api_setting*). "id" IS the oauth
+            // client_id and "secret" the client secret (posted by the edit form /
+            // grid filter). "client_api_key" is the real api key, posted nested as
+            // client_api_key[key] only by this form's save. None may be masked
+            // globally - a business table can legitimately own id/secret columns.
+            'api_setting*' => ['id', 'secret', 'client_api_key'],
+            // OAuth token endpoints (admin/oauth/*): client_id / client_secret /
+            // api_key are posted as credentials here (grant_type: api_key /
+            // client_credentials / password). They are plain business data on
+            // user-defined tables, so they are masked only on this URI.
+            'oauth/*' => ['client_id', 'api_key', 'client_secret'],
+            // Password reset form (admin/auth/reset/{token}) posts the raw reset
+            // token back as a hidden field named "token" (see auth/reset.blade.php
+            // and ResetPasswordController::rules()). "token" is far too generic to
+            // mask globally - a user-defined table may well own a "token" column -
+            // and this is the only screen that posts it as a credential.
+            'auth/reset*' => ['token'],
+        ],
+
+        /*
+         * "uri prefix below the admin prefix" => whether to keep the first 8
+         * characters of the path segment that follows it. Use true for record
+         * ids, so the record can still be traced (the prefix is kept only when
+         * the segment is longer than 12 characters, e.g. a uuid), and false for
+         * bearer credentials, which are masked whole.
+         *
+         * This list is the only source: nothing here is hard-coded as a fallback,
+         * so removing an entry really does stop masking that url.
+         */
+        'mask_path_prefixes' => [
+            'api_setting' => true,
+            // Passport client management API: oauth/clients/{client_id}
+            'oauth/clients' => true,
+            // Password reset url: auth/reset/{token}. Both GET (mail link) and
+            // POST (reset form action) carry the raw token in the path, and that
+            // route group includes admin.log, so the token reaches the logged
+            // path. It is a bearer credential, hence false: masked whole, with no
+            // traceability prefix kept. DO NOT remove or set to true.
+            'auth/reset' => false,
+        ],
+    ],
+
+    'line' => [
+        'channel_access_token' => env('LINE_CHANNEL_ACCESS_TOKEN'),
+        'channel_secret'       => env('LINE_CHANNEL_SECRET'),
+        'oa_basic_id'          => env('LINE_OA_BASIC_ID'),
+        'api_base'             => env('LINE_API_BASE', 'https://api.line.me'),
+        'timeout'              => env('LINE_HTTP_TIMEOUT', 10),
+        'dedupe_minutes'       => env('LINE_DEDUPE_MINUTES', 0),
+        'link_code_ttl_minutes'      => env('LINE_LINK_CODE_TTL_MINUTES', 10),
+        'link_max_attempts'          => env('LINE_LINK_MAX_ATTEMPTS', 5),
+        'link_attempt_decay_minutes' => env('LINE_LINK_ATTEMPT_DECAY_MINUTES', 10),
+    ],
+
+    'safety_check' => [
+        'feed_url'   => env('EXMENT_SAFETY_CHECK_FEED_URL', 'https://api.p2pquake.net/v2/history'),
+        'feed_limit' => env('EXMENT_SAFETY_CHECK_FEED_LIMIT', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | File server (ISS00293)
+    |--------------------------------------------------------------------------
+    | file_server_workspace_create: who may make a workspace. "admin" (system permission; the default) or "all".
+    |   A new feature is not open to all users until an administrator says so.
+    | file_server_max_file_size: the largest file, in bytes (default 2 GB; 0: no limit but the space of the workspace).
+    | file_server_max_uploads: the uploads in parts a user may have not finished at the same time.
+    | file_server_max_upload_bytes: the bytes those uploads may say they will send, all together (default 10 GB; 0: no limit).
+    | file_server_soffice_prefix: a command put before LibreOffice, to run it without the network
+    |   (e.g. "unshare -rn" or "firejail --net=none --quiet"). Office files may link to the outside:
+    |   run LibreOffice where it cannot reach the network (ISS00433).
+    | file_server_soffice_path: LibreOffice (soffice) to make the PDF preview of Office files. Empty: no preview.
+    | file_server_soffice_url: a converter of its own on the inner network instead (Gotenberg with LibreOffice,
+    |   e.g. http://office:3000; docker-exment's docker-compose.office.yml). Used before soffice_path (ISS01704).
+    |   Put the converter on a network that cannot go out (an Office file may fetch linked pictures or objects):
+    |   no port to the outside, no Internet, no cloud metadata, no database; and start Gotenberg with
+    |   --libreoffice-deny-private-ips --libreoffice-deny-public-ips --api-disable-download-from --webhook-disable.
+    |   With Basic auth on Gotenberg: http://user:password@office:3000 (sent as a header, not in the address).
+    |   Not followed to another address (no redirect). file_server_soffice_max_pdf_bytes: the largest PDF taken.
+    */
+    'file_server_workspace_create' => env('EXMENT_FILE_SERVER_WORKSPACE_CREATE', 'admin'),
+    'file_server_max_file_size' => env('EXMENT_FILE_SERVER_MAX_FILE_SIZE', 2147483648),
+    'file_server_max_uploads' => env('EXMENT_FILE_SERVER_MAX_UPLOADS', 20),
+    'file_server_max_upload_bytes' => env('EXMENT_FILE_SERVER_MAX_UPLOAD_BYTES', 10737418240),
+    'file_server_soffice_prefix' => env('EXMENT_FILE_SERVER_SOFFICE_PREFIX'),
+    // the shortest password of a share link; whether /share/{token} takes the IP filter of the web too
+    // (read when the routes are made: run "php artisan route:cache" again after changing it, when the routes are cached)
+    'file_server_share_password_min' => env('EXMENT_FILE_SERVER_SHARE_PASSWORD_MIN', 8),
+    'file_server_share_web_ip_filter' => env('EXMENT_FILE_SERVER_SHARE_WEB_IP_FILTER', false),
+    'file_server_soffice_path' => env('EXMENT_FILE_SERVER_SOFFICE_PATH'),
+    'file_server_soffice_url' => env('EXMENT_FILE_SERVER_SOFFICE_URL'),
+    'file_server_soffice_max_pdf_bytes' => env('EXMENT_FILE_SERVER_SOFFICE_MAX_PDF_BYTES', 209715200),
+    'file_server_soffice_timeout' => env('EXMENT_FILE_SERVER_SOFFICE_TIMEOUT', 120),
+    // share links for people outside (phase 3): false stops them; max_days > 0 makes an end date needed
+    'file_server_external_share' => env('EXMENT_FILE_SERVER_EXTERNAL_SHARE', true),
+    'file_server_share_max_days' => env('EXMENT_FILE_SERVER_SHARE_MAX_DAYS', 0),
+    'file_server_share_path' => env('EXMENT_FILE_SERVER_SHARE_PATH', 'share'),
+    // the limits of each request link (0: none), and the types it does not take (ISS00410)
+    'file_server_request_max_files' => env('EXMENT_FILE_SERVER_REQUEST_MAX_FILES', 100),
+    'file_server_request_max_bytes' => env('EXMENT_FILE_SERVER_REQUEST_MAX_BYTES', 1073741824),
+    'file_server_request_max_file_size' => env('EXMENT_FILE_SERVER_REQUEST_MAX_FILE_SIZE', 104857600),
+    // empty: the list of ShareLinks::DEFAULT_DENIED_EXTENSIONS. allow: only these types (empty: all but the denied)
+    'file_server_request_deny_extensions' => env('EXMENT_FILE_SERVER_REQUEST_DENY_EXTENSIONS', ''),
+    'file_server_request_allow_extensions' => env('EXMENT_FILE_SERVER_REQUEST_ALLOW_EXTENSIONS', ''),
+    // the largest folder downloaded as a zip, in bytes (0: no limit); the largest image a thumbnail is made of, in pixels
+    'file_server_zip_max_bytes' => env('EXMENT_FILE_SERVER_ZIP_MAX_BYTES', 2147483648),
+    // 0: no limit. About 4 bytes a pixel are used, so the default fits a memory_limit of 128M
+    'file_server_preview_max_pixels' => env('EXMENT_FILE_SERVER_PREVIEW_MAX_PIXELS', 20000000),
+    // the largest file made into a preview by Imagick or LibreOffice, in bytes (0: no limit)
+    'file_server_preview_max_bytes' => env('EXMENT_FILE_SERVER_PREVIEW_MAX_BYTES', 104857600),
+    // the search (phase 4): the text of the files. PDF needs pdftotext (poppler-utils; found in /usr/bin when empty);
+    // OCR of images and scanned PDF needs tesseract (only when its path is set) and its languages
+    'file_server_text_max_chars' => env('EXMENT_FILE_SERVER_TEXT_MAX_CHARS', 1000000),
+    'file_server_text_timeout' => env('EXMENT_FILE_SERVER_TEXT_TIMEOUT', 120),
+    'file_server_pdftotext_path' => env('EXMENT_FILE_SERVER_PDFTOTEXT_PATH'),
+    'file_server_ocr_path' => env('EXMENT_FILE_SERVER_OCR_PATH'),
+    'file_server_ocr_lang' => env('EXMENT_FILE_SERVER_OCR_LANG', 'jpn+eng'),
+    'file_server_ocr_max_pages' => env('EXMENT_FILE_SERVER_OCR_MAX_PAGES', 10),
+    // true: search in Meilisearch (the host of config/meilisearch.php); the database when it cannot be reached.
+    // After it is turned on: php artisan exment:file-server-index
+    'file_server_meili' => env('EXMENT_FILE_SERVER_MEILI', false),
+    'file_server_meili_index' => env('EXMENT_FILE_SERVER_MEILI_INDEX', 'exment_files'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | File server, phase 5 (ISS00379)
+    |--------------------------------------------------------------------------
+    | audit: write who did what. audit_days: remove the older lines (0: keep all).
+    | notify: tell the followers (the bell); notify_mail: and send mails.
+    */
+    'file_server_audit' => env('EXMENT_FILE_SERVER_AUDIT', true),
+    'file_server_audit_days' => env('EXMENT_FILE_SERVER_AUDIT_DAYS', 0),
+    'file_server_notify' => env('EXMENT_FILE_SERVER_NOTIFY', true),
+    'file_server_notify_mail' => env('EXMENT_FILE_SERVER_NOTIFY_MAIL', true),
 ];

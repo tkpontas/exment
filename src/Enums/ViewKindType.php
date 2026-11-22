@@ -14,8 +14,23 @@ class ViewKindType extends EnumBase
     public const CALENDAR = "2";
     public const FILTER = "3";
     public const PLUGIN = "4";
-    public const EXPANSION = "5";
+    public const EXPANSION = "7";
+    public const KANBAN = "5";
+    public const GANTT = "6";
     public const ALLDATA = "9";
+
+    /**
+     * Whether this view kind can be rendered as a plain data list.
+     * Calendar and kanban draw their own layout, so places that expect a
+     * table-like list (dashboard list box, chart box...) must exclude them.
+     *
+     * @param string $view_kind_type
+     * @return bool
+     */
+    public static function isListable($view_kind_type)
+    {
+        return !in_array($view_kind_type, [static::CALENDAR, static::KANBAN, static::GANTT]);
+    }
 
     /**
      * Accept view kind type for datalist
@@ -39,6 +54,7 @@ class ViewKindType extends EnumBase
         return static::acceptApi($view_kind_type, [static::DEFAULT, static::ALLDATA]);
     }
 
+    // @phpstan-ignore-next-line
     protected static function acceptApi($view_kind_type, array $acceptTypes)
     {
         $enum = static::getEnum($view_kind_type);
@@ -50,6 +66,7 @@ class ViewKindType extends EnumBase
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getGridItemClassName($view_kind_type)
     {
         switch ($view_kind_type) {
@@ -57,6 +74,10 @@ class ViewKindType extends EnumBase
                 return GridItem\SummaryGrid::class;
             case static::CALENDAR:
                 return GridItem\CalendarGrid::class;
+            case static::KANBAN:
+                return GridItem\KanbanGrid::class;
+            case static::GANTT:
+                return GridItem\GanttGrid::class;
             case static::ALLDATA:
                 return GridItem\AllDataGrid::class;
             case static::FILTER:

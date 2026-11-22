@@ -2,9 +2,9 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Widgets\Box;
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 use Exceedone\Exment\Enums;
 use Exceedone\Exment\Enums\CustomValueAutoShare;
 use Exceedone\Exment\Enums\FilterSearchType;
@@ -14,6 +14,7 @@ use Exceedone\Exment\Enums\ShowPositionType;
 use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\SystemVersion;
 use Exceedone\Exment\Enums\SystemColumn;
+use Exceedone\Exment\Exceptions\InvalidZipEntryException;
 use Exceedone\Exment\Exment;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Model\CustomTable;
@@ -21,6 +22,7 @@ use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Services\Update\UpdateService;
 use Exceedone\Exment\Services\Installer\InitializeFormTrait;
+use Exceedone\Exment\Services\DemoMode;
 use Exceedone\Exment\Services\NotifyService;
 use Exceedone\Exment\Services\SystemRequire;
 use Exceedone\Exment\Services\SystemRequire\SystemRequireList;
@@ -33,6 +35,19 @@ use Validator;
 
 class SystemController extends AdminControllerBase
 {
+    /** Flashed when the skin or the screen design changed: the next system page loads the whole page. */
+    public const SESSION_KEY_RELOAD_PAGE = 'exment_system_reload_page';
+
+    /**
+     * What the page frame looks like: the skin and the screen design.
+     *
+     * @return array<int, mixed>
+     */
+    protected static function screenLook(): array
+    {
+        return [System::site_skin(), \Exment::isModernUi()];
+    }
+
     use InitializeFormTrait;
 
     public function __construct()
@@ -47,6 +62,14 @@ class SystemController extends AdminControllerBase
      */
     public function index(Request $request, Content $content)
     {
+        // The skin is a class of <body> and the screen design adds a stylesheet to <head>,
+        // both outside the part of the page that pjax replaces. After either changed,
+        // load the whole page once (the "saved" message is kept for that load).
+        if (session()->pull(static::SESSION_KEY_RELOAD_PAGE)) {
+            session()->keep(['toastr']);
+            \Admin::script('window.location.reload();');
+        }
+
         if ($request->has('advanced')) {
             return $this->formAdvancedBox($request, $content);
         }
@@ -63,7 +86,6 @@ class SystemController extends AdminControllerBase
     {
         $this->AdminContent($content);
         $form = $this->formBasic($request);
-
         $box = new Box(exmtrans('common.basic_setting'), $form);
         $box->tools(new Tools\SystemChangePageMenu());
 
@@ -85,7 +107,8 @@ class SystemController extends AdminControllerBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @param Request $request
+     * @return WidgetForm
      */
     protected function formBasic(Request $request): WidgetForm
     {
@@ -94,7 +117,7 @@ class SystemController extends AdminControllerBase
 
         $admin_users = System::system_admin_users();
         $form->multipleSelect('system_admin_users', exmtrans('system.system_admin_users'))
-            ->help(exmtrans('system.help.system_admin_users'))
+            ->help(DemoMode::keepsSystemAdmins() ? exmtrans('demo_mode.message_system_admin') : exmtrans('system.help.system_admin_users'))
             ->required()
             ->ajax(CustomTable::getEloquent(SystemTableName::USER)->getOptionAjaxUrl())
             ->options(function ($option) use ($admin_users) {
@@ -126,37 +149,45 @@ class SystemController extends AdminControllerBase
         $this->AdminContent($content);
 
         $form = $this->formAdvanced($request);
-
         $box = new Box(exmtrans('common.detail_setting'), $form);
 
         $box->tools(new Tools\SystemChangePageMenu());
 
         $content->row($box);
 
-        // sendmail test
-        $content->row($this->getsendmailTestBox());
+        // sendmail test. demo mode sends no mail.
+        if (!DemoMode::enabled()) {
+            $content->row($this->getsendmailTestBox());
+        }
 
         return $content;
     }
-
 
     /**
      * index advanced setting
      *
      * @param Request $request
-     * @param Content $content
-     * @return Content
+     * @return WidgetForm
      */
     protected function formAdvanced(Request $request): WidgetForm
     {
-        $form = new WidgetForm(System::get_system_values(['advanced', 'notify']));
+        $form = new WidgetForm(DemoMode::maskSystemValues(System::get_system_values(['advanced', 'notify'])));
         $form->disableReset();
         $form->action(admin_url('system'));
 
+        if (DemoMode::enabled()) {
+            $form->descriptionHtml(esc_html(exmtrans('demo_mode.message_system_setting')));
+        }
+
         $form->progressTracker()->options($this->getProgressInfo(true));
+
+        // table of contents for the sections below
+        $form->sectionNav();
 
         $form->hidden('advanced')->default(1);
         $form->ignore('advanced');
+
+        $form->exmheader(exmtrans('system.display_header'))->hr();
 
         $grid_per_pages = stringToArray(config('exment.grid_per_pages'));
         if (empty($grid_per_pages)) {
@@ -307,6 +338,27 @@ class SystemController extends AdminControllerBase
         // use mail setting
         $this->setNotifyForm($form);
 
+        // full-text search setting
+        $form->exmheader(exmtrans('system.meili'))->hr();
+        $form->text('meili_host', exmtrans('system.meili_host'))->help(exmtrans('system.help.meili_host'));
+        $form->password('meili_key', exmtrans('system.meili_key'))->help(exmtrans('system.help.meili_key'));
+        $form->text('meili_index', exmtrans('system.meili_index'))->help(exmtrans('system.help.meili_index'));
+        $form->switchbool('meili_global_search', exmtrans('system.meili_global_search'))->help(exmtrans('system.help.meili_global_search'));
+        $form->switchbool('meili_realtime_sync', exmtrans('system.meili_realtime_sync'))->help(exmtrans('system.help.meili_realtime_sync'));
+        $form->number('meili_batch_size', exmtrans('system.meili_batch_size'))
+            ->min(1)
+            ->rules(['nullable', 'integer', 'min:1'])
+            ->help(exmtrans('system.help.meili_batch_size'));
+        $form->switchbool('meili_repair_enabled', exmtrans('system.meili_repair_enabled'))->help(exmtrans('system.help.meili_repair_enabled'));
+        $form->text('meili_repair_at', exmtrans('system.meili_repair_at'))
+            ->rules(['nullable', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'])
+            ->help(exmtrans('system.help.meili_repair_at'));
+        $form->select('meili_filter_mode', exmtrans('system.meili_filter_mode'))
+            ->options(['override' => exmtrans('system.meili_filter_mode_options.override'), 'manual' => exmtrans('system.meili_filter_mode_options.manual')])
+            ->default('override')
+            ->disableClear()
+            ->help(exmtrans('system.help.meili_filter_mode'));
+
         $form->exmheader(exmtrans('system.ip_filter'))->hr();
         $form->descriptionHtml(exmtrans("system.help.ip_filter"));
 
@@ -316,11 +368,10 @@ class SystemController extends AdminControllerBase
         return $form;
     }
 
-
     /**
      * get exment version infoBox.
      *
-     * @return Content
+     * @return WidgetForm
      */
     protected function getVersionBox()
     {
@@ -429,11 +480,10 @@ class SystemController extends AdminControllerBase
     //         ->confirm_error(exmtrans('custom_table.help.delete_confirm_error'));
     // }
 
-
     /**
      * get system require box.
      *
-     * @return Content
+     * @return bool|\Illuminate\Auth\Access\Response|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|mixed
      */
     protected function getSystemRequireBox()
     {
@@ -444,14 +494,17 @@ class SystemController extends AdminControllerBase
         return $view;
     }
 
-
     /**
      * Send data
+     *
      * @param Request $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector|true
+     * @throws \Throwable
      */
     public function post(Request $request)
     {
         $advanced = $request->has('advanced');
+        $lookBefore = static::screenLook();
 
         // validation
         $form = $advanced ? $this->formAdvanced($request) : $this->formBasic($request);
@@ -463,11 +516,14 @@ class SystemController extends AdminControllerBase
         try {
             $result = $this->postInitializeForm($request, ($advanced ? ['advanced', 'notify'] : ['initialize', 'system']), false, !$advanced);
             if ($result instanceof \Illuminate\Http\RedirectResponse) {
+                // close the transaction before leaving, so nothing else in this request
+                // (a database session write, for one) runs inside an open transaction
+                DB::rollback();
                 return $result;
             }
 
-            // Set Role
-            if (!$advanced) {
+            // Set Role. demo mode keeps the system administrators, so the published login stays one.
+            if (!$advanced && !DemoMode::keepsSystemAdmins()) {
                 System::system_admin_users($request->get('system_admin_users'));
             }
 
@@ -475,7 +531,17 @@ class SystemController extends AdminControllerBase
 
             admin_toastr(trans('admin.save_succeeded'));
 
+            System::clearCache();
+            if (static::screenLook() !== $lookBefore) {
+                session()->flash(static::SESSION_KEY_RELOAD_PAGE, true);
+            }
+
             return redirect(admin_url('system') . ($advanced ? '?advanced=1' : ''));
+        } catch (InvalidZipEntryException $exception) {
+            // a refused template zip is a bad upload, not a crash. roll back here, where
+            // the transaction was opened, then show the reason under the file field.
+            DB::rollback();
+            return back()->withInput()->withErrors(['upload_template' => $exception->getMessage()]);
         } catch (\Exception $exception) {
             //TODO:error handling
             DB::rollback();
@@ -486,7 +552,8 @@ class SystemController extends AdminControllerBase
     /**
      * send test mail
      *
-     * @return void
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function sendTestMail(Request $request)
     {
@@ -528,11 +595,11 @@ class SystemController extends AdminControllerBase
         }
     }
 
-
     /**
      * call update
      *
-     * @return void
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\Response
      */
     public function callUpdate(Request $request)
     {

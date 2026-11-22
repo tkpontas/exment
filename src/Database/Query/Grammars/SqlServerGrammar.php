@@ -30,7 +30,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      * @param \Illuminate\Database\Query\Builder $builder
      * @param string $tableName database table name
      * @param string $column target table name
-     * @param array $values
+     * @param mixed $values one value, or a list of them (array or Collection)
      * @return \Illuminate\Database\Query\Builder
      */
     public function whereInArrayString($builder, string $tableName, string $column, $values, bool $isOr = false, bool $isNot = false)
@@ -95,20 +95,20 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
 
         return $builder;
 
-
-        $index = $this->wrap($column);
-        $baseColumnIndex = $this->wrap($baseColumn);
-
-        if ($isNot) {
-            $queryStr = "NOT FIND_IN_SET({$baseColumnIndex}, IFNULL(REPLACE(REPLACE(REPLACE(REPLACE($index, '[', ''), ' ', ''), ']', ''), '\\\"', ''), ''))";
-        } else {
-            $queryStr = "FIND_IN_SET({$baseColumnIndex}, REPLACE(REPLACE(REPLACE(REPLACE($index, '[', ''), ' ', ''), ']', ''), '\\\"', ''))";
-        }
-
-        $func = $isOr ? 'orWhereRaw' : 'whereRaw';
-        $builder->{$func}($queryStr);
-
-        return $builder;
+//        TODO: unreachable statement
+//        $index = $this->wrap($column);
+//        $baseColumnIndex = $this->wrap($baseColumn);
+//
+//        if ($isNot) {
+//            $queryStr = "NOT FIND_IN_SET({$baseColumnIndex}, IFNULL(REPLACE(REPLACE(REPLACE(REPLACE($index, '[', ''), ' ', ''), ']', ''), '\\\"', ''), ''))";
+//        } else {
+//            $queryStr = "FIND_IN_SET({$baseColumnIndex}, REPLACE(REPLACE(REPLACE(REPLACE($index, '[', ''), ' ', ''), ']', ''), '\\\"', ''))";
+//        }
+//
+//        $func = $isOr ? 'orWhereRaw' : 'whereRaw';
+//        $builder->{$func}($queryStr);
+//
+//        return $builder;
     }
 
 
@@ -120,8 +120,10 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getCastColumn($type, $column, $options = [])
     {
+        // @phpstan-ignore-next-line
         $cast = $this->getCastString($type, $column, $options);
 
         $column = $this->wrap($column);
@@ -134,6 +136,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getColumnTypeString($type)
     {
         switch ($type) {
@@ -164,6 +167,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      * @param array $options
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function getCastString($type, $addOption = false, $options = [])
     {
         $cast = '';
@@ -216,8 +220,9 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      * @param GroupCondition $groupCondition Y, YM, YMD, ...
      * @param string $column column name
      * @param bool $groupBy if group by query, return true
-     * @return void
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     public function getDateFormatString($groupCondition, $column, $groupBy = false, $wrap = true)
     {
         if ($wrap) {
@@ -255,7 +260,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      * @param GroupCondition $groupCondition Y, YM, YMD, ...
      * @param \Carbon\Carbon $carbon
      *
-     * @return string
+     * @return string|null
      */
     public function convertCarbonDateFormat($groupCondition, $carbon)
     {
@@ -285,6 +290,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      *
      * @return string
      */
+    // @phpstan-ignore-next-line
     protected function getWeekdayCaseWhenQuery($str)
     {
         $queries = [];
@@ -302,6 +308,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
         return "(case {$str} {$when} end)";
     }
 
+    // @phpstan-ignore-next-line
     protected function getWeekdayNolist()
     {
         // fixed mysql server
@@ -324,6 +331,7 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
      * @param  string  $sequence
      * @return string
      */
+    // @phpstan-ignore-next-line
     public function compileInsertGetId(Builder $query, $values, $sequence)
     {
         if (strtoupper($sequence) == 'ID' && array_has($values, $sequence) && isset($values[$sequence])) {
@@ -365,5 +373,17 @@ class SqlServerGrammar extends BaseGrammar implements GrammarInterface
     public function wrapJsonUnquote($value, $prefixAlias = false)
     {
         return $this->wrap($value, $prefixAlias);
+    }
+
+    /**
+     * Wrap and add json_extract if needs
+     *
+     * @param mixed $column
+     * @param string $path
+     * @return string
+     */
+    public function wrapJsonExtract($column, $path = '$')
+    {
+        return $this->wrap($column);
     }
 }

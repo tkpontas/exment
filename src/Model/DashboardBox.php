@@ -10,12 +10,14 @@ use Exceedone\Exment\Enums\ViewKindType;
 
 /**
  * @phpstan-consistent-constructor
+ * @property mixed $suuid
  * @property mixed $row_no
  * @property mixed $dashboard_box_view_name
  * @property mixed $dashboard_box_type
  * @property mixed $column_no
+ * @property mixed $options
  * @method static \Illuminate\Database\Query\Builder whereNotNull($columns, $boolean = 'and')
- * @method static \Illuminate\Database\Query\Builder count($columns = '*')
+ * @method static int count($columns = '*')
  * @method static \Illuminate\Database\Query\Builder orderBy($column, $direction = 'asc')
  */
 class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInterface
@@ -28,6 +30,8 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
     protected $guarded = ['id'];
     protected $casts = ['options' => 'json'];
 
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => ['suuid'],
         'langs' => [
@@ -101,17 +105,54 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
                 'uniqueKeyFunction' => 'getUniqueKeyValues',
                 'uniqueKeyFunctionArgs' => ['options.chart_axisy'],
             ],
+            // series column of a multi-series chart: a view column reference like the axes
+            [
+                'replaceNames' => [
+                    [
+                        'replacedName' => [
+                            'table_name' => 'options.chart_series_table_name',
+                            'column_name' => 'options.chart_series_column_name',
+                            'view_column_type' => 'options.chart_series_view_column_type',
+                            'view_kind_type' => 'options.chart_series_type',
+                        ]
+                    ]
+                ],
+                'uniqueKeyFunction' => 'getUniqueKeyValues',
+                'uniqueKeyFunctionArgs' => ['options.chart_series'],
+            ],
         ],
     ];
 
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Dashboard, $this>
+     */
     public function dashboard()
     {
         return $this->belongsTo(Dashboard::class, 'dashboard_id');
     }
 
+    /**
+     * The box's place on its dashboard, "{row}-{column}": what a template names it by
+     * (Dashboard::getTemplateExportItems / resolveFilterBarTargets), since the suuid is not
+     * carried over, and how the filter bar setting form labels it.
+     */
+    public function positionKey(): string
+    {
+        return $this->row_no . '-' . $this->column_no;
+    }
+
+
+    // @phpstan-ignore-next-line
     public function getDashboardBoxItemAttribute()
     {
-        $enum_class = DashboardBoxType::getEnum($this->dashboard_box_type)->getDashboardBoxItemClass();
+        // an unknown box type (a removed plugin) has no enum: null lets one stray box
+        // degrade instead of taking the whole dashboard down
+        $enum = DashboardBoxType::getEnum($this->dashboard_box_type);
+        if (is_null($enum)) {
+            return null;
+        }
+        $enum_class = $enum->getDashboardBoxItemClass();
         return $enum_class::getItem($this) ?? null;
     }
 
@@ -119,6 +160,8 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
      * get eloquent using request settion.
      * now only support only id.
      */
+
+    // @phpstan-ignore-next-line
     public static function getEloquent($id, $withs = [])
     {
         return static::getEloquentDefault($id, $withs);
@@ -129,6 +172,8 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
      *
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function getBoxHtmlAttr(): array
     {
         $attributes = [
@@ -137,17 +182,25 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
             'dashboard_box_view_name' => $this->dashboard_box_view_name,
             'dashboard_box_type' => $this->dashboard_box_type,
         ];
-        $attributes = array_merge($this->dashboard_box_item->attributes(), $attributes);
+        $item = $this->dashboard_box_item;
+        $attributes = array_merge($item ? $item->attributes() : [], $attributes);
 
         return collect($attributes)->mapWithKeys(function ($attr, $key) {
             return ["data-$key" => $attr];
         })->toArray();
     }
 
+
+    // @phpstan-ignore-next-line
     protected function getUniqueKeyValues($key)
     {
         if (is_array($key) && count($key) > 0) {
             $key = $key[0];
+        }
+
+        // an option the box does not carry (chart_series on a single-series chart) is not exported
+        if (is_nullorempty(array_get($this, $key))) {
+            return null;
         }
 
         // get dashboard value
@@ -180,6 +233,8 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
         ];
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function importReplaceJson(&$json, $options = [])
     {
         // switch dashboard_box_type
@@ -207,8 +262,11 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
         // replace chartx and y
         static::importReplaceJsonCustomColumn('chart_axisx', $json);
         static::importReplaceJsonCustomColumn('chart_axisy', $json);
+        static::importReplaceJsonCustomColumn('chart_series', $json);
     }
 
+
+    // @phpstan-ignore-next-line
     protected static function importReplaceJsonCustomColumn($key, &$json)
     {
         $custom_column_key = "options.{$key}_column_name";
@@ -237,13 +295,16 @@ class DashboardBox extends ModelBase implements Interfaces\TemplateImporterInter
                 break;
         }
 
+        /** @var mixed $id */
         if (isset($id) && \is_numeric($id)) {
             $table_type = array_get($json, $table_type_key);
             if ($table_type == ViewKindType::AGGREGATE) {
+                /** @var CustomViewColumn|null $view_column */
                 $view_column = CustomViewSummary::where('custom_view_id', array_get($json, 'options.target_view_id'))
                     ->where('view_column_type', $view_column_type)
                     ->where('view_column_target_id', $id)->first();
             } else {
+                /** @var CustomViewColumn|null $view_column */
                 $view_column = CustomViewColumn::where('custom_view_id', array_get($json, 'options.target_view_id'))
                     ->where('view_column_type', $view_column_type)
                     ->where('view_column_target_id', $id)->first();

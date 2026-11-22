@@ -11,8 +11,12 @@ use Illuminate\Contracts\Validation\Rule;
  */
 class SelectValTextRule implements Rule
 {
+    /** @var mixed */
     protected $keys;
 
+    /**
+     * @param mixed $parameters
+     */
     public function __construct($parameters)
     {
         $this->keys = $parameters;
@@ -38,17 +42,13 @@ class SelectValTextRule implements Rule
         $value = stringToArray($value);
         $value = array_filter($value);
 
-        if (is_array($value)) {
-            foreach ($value as $v) {
-                if (!in_array($v, $this->keys) && !array_key_exists($v, $this->keys)) {
-                    return false;
-                }
+        foreach ($value as $v) {
+            if (!in_array($v, $this->keys) && !array_key_exists($v, $this->keys)) {
+                return false;
             }
-
-            return true;
         }
 
-        return false;
+        return true;
     }
 
     /**

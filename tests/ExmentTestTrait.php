@@ -10,6 +10,10 @@ use Exceedone\Exment\Middleware\Morph;
 trait ExmentTestTrait
 {
     use DatabaseMigrations;
+
+    /**
+     * @var bool $databaseSetup
+     */
     public static $databaseSetup = false;
 
     /**
@@ -26,6 +30,9 @@ trait ExmentTestTrait
         return $app;
     }
 
+    /**
+     * @return void
+     */
     protected function setUpExment()
     {
         \App::setLocale('en');
@@ -63,12 +70,17 @@ trait ExmentTestTrait
         }
     }
 
+    /**
+     * @return void
+     */
     protected function dropAllTables()
     {
         \Artisan::call('migrate:reset');
-        $tables = \DB::connection()->getDoctrineSchemaManager()->listTableNames();
-        foreach ($tables as $table_name) {
-            \Schema::dropIfExists($table_name);
+        $tables = \DB::select('SHOW TABLES');
+        $tableKey = array_key_first((array) $tables[0]);
+        foreach ($tables as $table) {
+            $tableName = $table->$tableKey;
+            \Schema::dropIfExists($tableName);
         }
     }
 }

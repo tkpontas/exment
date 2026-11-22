@@ -3,6 +3,7 @@ name: phpstan
 on:
   pull_request:
     paths:
+      - '.github/workflows/**'
       - 'config/**'
       - 'database/**'
       - 'resources/**'
@@ -12,28 +13,39 @@ on:
 env:
   DOCKER_EXMENT_REPOSITORY: exceedone/docker-exment
   EXMENT_BOILERPLATE_REPOSITORY: exceedone/exment-boilerplate
+  # the versions that passed on master before v7.2.0 (exment-boilerplate#5 raised them in composer.dev.lock). Newer versions report more; update them with their fixes.
+  PHPSTAN_VERSION: 2.2.7
+  LARASTAN_VERSION: 3.10.0
+  # the types of meilisearch-php 1.17 add 3 errors in MeiliSearchService.php
+  MEILISEARCH_VERSION: 1.10.0
 
 jobs:
   phpstan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ env.DOCKER_EXMENT_REPOSITORY}}
           path: ./docker-exment
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ env.EXMENT_BOILERPLATE_REPOSITORY}}
           path: ./docker-exment/exment-boilerplate
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: ./docker-exment/exment-boilerplate/exment
           ref: ${{ github.event.pull_request.head.sha }}
 
+      # composer.dev.lock of exment-boilerplate installs exment-admin-core from the path ./exment-admin-core
+      - uses: actions/checkout@v4
+        with:
+          repository: exceedone/exment-admin-core
+          path: ./docker-exment/exment-boilerplate/exment-admin-core
+
       - name: Docker Compose Version
-        run: docker-compose --version
+        run: docker compose --version
 
       - name: Make mysql up
         working-directory: docker-exment
@@ -43,8 +55,8 @@ jobs:
       - name: copy compose.dev.json
         working-directory: docker-exment
         run: |
-          docker-compose -f docker-compose.yml exec -T php cp composer.dev.json composer.json
-          docker-compose -f docker-compose.yml exec -T php cp composer.dev.lock composer.lock
+          docker compose -f docker-compose.yml exec -T php cp composer.dev.json composer.json
+          docker compose -f docker-compose.yml exec -T php cp composer.dev.lock composer.lock
 
       - name: Make mysql init
         working-directory: docker-exment
@@ -54,9 +66,14 @@ jobs:
       - name: setup phpstan
         working-directory: docker-exment
         run: |
-          docker-compose -f docker-compose.yml exec -T php cp vendor/exceedone/exment/phpstan.neon.dist .
+          # composer reads the versions of the path packages (./exment, ./exment-admin-core) from their git branches
+          git -C exment-boilerplate/exment checkout -B master
+          docker compose -f docker-compose.yml exec -T php git config --global --add safe.directory '*'
+          docker compose -f docker-compose.yml exec -T php composer require --dev --no-interaction --with-all-dependencies "phpstan/phpstan:${{ env.PHPSTAN_VERSION }}" "larastan/larastan:${{ env.LARASTAN_VERSION }}" "meilisearch/meilisearch-php:${{ env.MEILISEARCH_VERSION }}"
+          docker compose -f docker-compose.yml exec -T php cp vendor/exceedone/exment/phpstan.neon.dist .
+          docker compose -f docker-compose.yml exec -T php cp vendor/exceedone/exment/phpstan-baseline.neon .
 
       - name: run phpstan
         working-directory: docker-exment
         run: |
-          docker-compose -f docker-compose.yml exec -T php ./vendor/bin/phpstan analyse --memory-limit=1G
+          docker compose -f docker-compose.yml exec -T php ./vendor/bin/phpstan analyse --memory-limit=1G

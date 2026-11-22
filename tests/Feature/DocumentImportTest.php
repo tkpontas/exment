@@ -81,6 +81,7 @@ class DocumentImportTest extends FileImportTestBase
                 // get documents
                 $documents = $custom_value->getDocuments()
                     ->map(function ($document) {
+                        /** @var Model\File $document */
                         return array_get($document->value, 'file_uuid');
                     });
                 $this->assertTrue(!is_nullorempty($documents));
@@ -103,6 +104,6 @@ class DocumentImportTest extends FileImportTestBase
             }
         }
 
-        $this->assertTrue(false, 'Not matched file path');
+        $this->fail('Not matched file path');
     }
 }

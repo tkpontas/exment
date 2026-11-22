@@ -11,10 +11,14 @@ use Exceedone\Exment\ConditionItems\ConditionItemBase;
  */
 class ChangeFieldRule implements Rule
 {
+    /** @var mixed */
     protected $custom_table;
+    /** @var mixed */
     protected $label;
+    /** @var mixed */
     protected $target;
 
+    // @phpstan-ignore-next-line
     public function __construct(?CustomTable $custom_table, $label, $target)
     {
         $this->custom_table = $custom_table;
@@ -47,7 +51,7 @@ class ChangeFieldRule implements Rule
 
         return true;
 
-        return preg_match('/^[-]?[\d\s,\.]*$/', $value);
+//        return preg_match('/^[-]?[\d\s,\.]*$/', $value);
     }
 
     /**

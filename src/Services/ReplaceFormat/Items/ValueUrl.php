@@ -10,6 +10,7 @@ class ValueUrl extends ItemBase
     /**
      * Replace value from format. ex. ${value:user_name} to user_name's value
      */
+    // @phpstan-ignore-next-line
     public function replace($format, $options = [])
     {
         if (!isset($this->custom_value)) {
@@ -18,12 +19,14 @@ class ValueUrl extends ItemBase
 
         //else, getting url
         $tag = array_key_value_exists('link', $this->matchOptions);
-        $str = $this->custom_value->getUrl(['tag' => $tag, 'modal' => false]) ?? '';
+        // a mail opens the record where people work on it: the plugin's screen, when one shows the table
+        $str = $this->custom_value->getUrl(['tag' => $tag, 'modal' => false, 'record_url' => true]) ?? '';
         array_forget($this->matchOptions, 'link');
 
         return $str;
     }
 
+    // @phpstan-ignore-next-line
     public function getLink($str)
     {
         return $str;

@@ -2,9 +2,10 @@
 
 namespace Exceedone\Exment\Controllers;
 
-use Encore\Admin\Form;
-use Encore\Admin\Form\Field;
-use Encore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Form;
+use Exceedone\Exment\Services\DemoMode;
+use ExmentAdminCore\Admin\Form\Field;
+use ExmentAdminCore\Admin\Layout\Content;
 use Exceedone\Exment\Auth\Permission as Checker;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Model\PublicForm;
@@ -23,8 +24,10 @@ use Exceedone\Exment\Form\PublicContent;
 use Exceedone\Exment\Form\Widgets\ModalForm;
 use Exceedone\Exment\Services\NotifyService;
 use Exceedone\Exment\Services\TemplateImportExport;
+use Exceedone\Exment\Exceptions\InvalidZipEntryException;
 use Exceedone\Exment\Exceptions\PublicFormNotFoundException;
 use Illuminate\Http\Request;
+use Symfony\Component\Console\Input\Input;
 
 /**
  * Custom Form public
@@ -34,6 +37,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     use HasResourceTableActions;
     use NotifyTrait;
 
+    // @phpstan-ignore-next-line
     protected $mailTemplates = [];
 
     public function __construct(?CustomTable $custom_table, Request $request)
@@ -44,6 +48,11 @@ class CustomFormPublicController extends AdminControllerTableBase
         $this->setPageInfo($title, $title, exmtrans("custom_form_public.description"), 'fa-share-alt');
     }
 
+    /**
+     * @param Request $request
+     * @param Content $content
+     * @return Content|\Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     */
     public function index(Request $request, Content $content)
     {
         return redirect(admin_urls('form', $this->custom_table->table_name));
@@ -54,6 +63,7 @@ class CustomFormPublicController extends AdminControllerTableBase
      *
      * @return Form
      */
+    // @phpstan-ignore-next-line
     protected function form($id = null)
     {
         if (!isset($id) && request()->has('template')) {
@@ -78,11 +88,17 @@ class CustomFormPublicController extends AdminControllerTableBase
     /**
      * Make a form builder.
      *
-     * @return Form
+     * @return Form|void
      */
+    // @phpstan-ignore-next-line
     protected function basicForm($id = null)
     {
         if (!$this->validateTable($this->custom_table, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            return;
+        }
+
+        // the edit screen of a public form of this table only
+        if (isset($id) && !$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
             return;
         }
 
@@ -98,10 +114,12 @@ class CustomFormPublicController extends AdminControllerTableBase
             $form->descriptionHtml(exmtrans('common.help.more_help'));
 
             if (isset($public_form)) {
+                // @phpstan-ignore-next-line
                 if ($public_form->active_flg) {
                     $form->url('share_url', exmtrans('custom_form_public.share_url'))
                         ->attribute(['copyScript' => 1])
                         ->help(exmtrans('custom_form_public.help.share_url'))
+                        // @phpstan-ignore-next-line
                         ->default($public_form->getUrl())
                         ->readonly();
                     $form->ignore('share_url');
@@ -165,7 +183,8 @@ class CustomFormPublicController extends AdminControllerTableBase
                     })
                     ->caption(function ($caption) {
                         $file = ExmentFile::getData($caption);
-                        return $file->filename ?? basename($caption);
+                        // the upload widget inserts the caption into the page as html, so escape the file name
+                        return esc_html($file->filename ?? basename($caption));
                     })
                     ->attribute(['data-filter' => json_encode(['key' => 'design_setting_use_header', 'value' => '1'])])
                 ;
@@ -373,18 +392,25 @@ class CustomFormPublicController extends AdminControllerTableBase
             $form->exmheader(exmtrans("custom_form_public.css_js_setting"))->hr();
 
             $form->embeds("css_js_setting", exmtrans("common.css_js_setting"), function ($form) {
-                $form->textarea('custom_css', exmtrans("custom_form_public.custom_css"))
-                    ->help(exmtrans("custom_form_public.help.custom_css"))
-                ;
+                // demo mode: custom CSS and JavaScript are not saved (DemoMode::keepPublicFormScripts())
+                if (DemoMode::enabled()) {
+                    $form->descriptionHtml(esc_html(exmtrans('demo_mode.message_public_form_script')));
+                } else {
+                    $form->textarea('custom_css', exmtrans("custom_form_public.custom_css"))
+                        ->help(exmtrans("custom_form_public.help.custom_css"))
+                    ;
+                }
                 $form->multipleSelect('plugin_css', exmtrans("custom_form_public.plugin_css"))
                     ->help(exmtrans("custom_form_public.help.plugin_css"))
                     ->options(function () {
                         return Plugin::getByPluginTypes(PluginType::STYLE)->pluck('plugin_view_name', 'id')->toArray();
                     })
                 ;
-                $form->textarea('custom_js', exmtrans("custom_form_public.custom_js"))
-                    ->help(exmtrans("custom_form_public.help.custom_js"))
-                ;
+                if (!DemoMode::enabled()) {
+                    $form->textarea('custom_js', exmtrans("custom_form_public.custom_js"))
+                        ->help(exmtrans("custom_form_public.help.custom_js"))
+                    ;
+                }
                 $form->multipleSelect('plugin_js', exmtrans("custom_form_public.plugin_js"))
                     ->help(exmtrans("custom_form_public.help.plugin_js"))
                     ->options(function () {
@@ -431,7 +457,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     /**
      * Make a form builder, for import.
      *
-     * @return Form
+     * @return Form|void
      */
     protected function importForm()
     {
@@ -480,6 +506,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function setFormInfo($form, $id, $public_form, $preview = true)
     {
         $custom_table = $this->custom_table;
@@ -503,6 +530,7 @@ class CustomFormPublicController extends AdminControllerTableBase
         $form->disableEditingCheck(false);
 
         $form->tools(function (Form\Tools $tools) use ($custom_table, $id, $public_form, $preview) {
+            // @phpstan-ignore-next-line
             $tools->add(new Tools\CustomTableMenuButton('form', $custom_table));
             $tools->setListPath(admin_urls('form', $custom_table->table_name));
 
@@ -566,9 +594,7 @@ class CustomFormPublicController extends AdminControllerTableBase
                         'label' => exmtrans('template.header_export'),
                         'icon' => 'fa-clone',
                         'btn_class' => 'btn-warning',
-                        'attributes' => [
-                            'target' => '_blank',
-                        ],
+                        'target' => '_blank',
                     ])->render());
                 }
             }
@@ -586,6 +612,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected function setNotifyMailTemplate($form, string $field_name, ?string $notify_mail_template, string $filter_key_name)
     {
         if (\is_nullorempty($this->mailTemplates)) {
@@ -618,7 +645,12 @@ class CustomFormPublicController extends AdminControllerTableBase
         // get json from zip
         $importer = new TemplateImportExport\TemplateImporter();
         $file = $request->file('upload_template');
-        $json = $importer->getJsonFromZip($file);
+        try {
+            $json = $importer->getJsonFromZip($file);
+        } catch (InvalidZipEntryException $ex) {
+            // show the reason under the file field, like validateRedirect() above does
+            return back()->withInput()->withErrors(['upload_template' => $ex->getMessage()]);
+        }
 
         $public_form = null;
         \ExmentDB::transaction(function () use (&$public_form, $json, $request) {
@@ -637,23 +669,33 @@ class CustomFormPublicController extends AdminControllerTableBase
             $public_form->setPluginImported(array_get($json, 'public_form'));
         });
 
-        return $form->setModel($public_form)->redirectAfterStore();
+        /** @var Form $model */
+        $model = $form->setModel($public_form);
+        return $model->redirectAfterStore();
     }
-
 
     /**
      * Showing preview
      *
      * @param Request $request
+     * @param $tableKey
      * @param string|int|null $id If already saved model, set id
-     * @return void
+     * @return PublicContent
+     * @throws PublicFormNotFoundException
      */
+    // @phpstan-ignore-next-line
     public function preview(Request $request, $tableKey, $id = null)
     {
+        if (isset($id) && !$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            // Checker::error() has already ended the request
+            // @phpstan-ignore-next-line
+            return;
+        }
         $original_public_form = PublicForm::find($id);
         // get this form's info
         $form = $this->form();
 
+        /** @var PublicForm $model */
         $model = $form->getModelByInputs(null, $original_public_form);
 
         // Now, cannot set header logo by getModelByInputs.
@@ -688,6 +730,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     /**
      * file delete. Now only header_logo, If other file, todo refactor.
      */
+    // @phpstan-ignore-next-line
     public function filedelete(Request $request, $tableKey, $id)
     {
         // If not id, sot saving, so return nothing doing.
@@ -698,12 +741,16 @@ class CustomFormPublicController extends AdminControllerTableBase
         if (!$id) {
             return $trueResult;
         }
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            return;
+        }
 
         $original_public_form = PublicForm::find($id);
         if (!$original_public_form) {
             return $trueResult;
         }
 
+        // @phpstan-ignore-next-line
         $uri = $original_public_form->getOption('header_logo');
         if (!$uri) {
             return $trueResult;
@@ -711,6 +758,7 @@ class CustomFormPublicController extends AdminControllerTableBase
 
         ExmentFile::deleteFileInfo($uri);
 
+        // @phpstan-ignore-next-line
         $original_public_form->forgetOption('header_logo')
             ->save();
 
@@ -725,8 +773,12 @@ class CustomFormPublicController extends AdminControllerTableBase
     /**
      * get copy modal
      */
+    // @phpstan-ignore-next-line
     public function activeModal(Request $request, $tableKey, $id)
     {
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            return;
+        }
         $public_form = PublicForm::find($id);
         if (!isset($public_form)) {
             abort(404);
@@ -734,6 +786,7 @@ class CustomFormPublicController extends AdminControllerTableBase
 
         // create form fields
         $form = new ModalForm();
+        // @phpstan-ignore-next-line
         $form->action(admin_urls("formpublic", $this->custom_table->table_name, $public_form->id, "activate"));
         $form->method('POST');
 
@@ -742,6 +795,7 @@ class CustomFormPublicController extends AdminControllerTableBase
             ->displayText(exmtrans('custom_form_public.help.activate_modal_header'))
             ->escape(false);
 
+        // @phpstan-ignore-next-line
         $tableUseds = $public_form->getListOfTablesUsed();
         $html = "<ul>" . $tableUseds->map(function ($tableUsed) {
             return "<li>" . esc_html($tableUsed->table_view_name) . "</li>";
@@ -768,6 +822,7 @@ class CustomFormPublicController extends AdminControllerTableBase
      * @param string|int|null $id
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function activate(Request $request, $tableKey, $id)
     {
         return $this->toggleActivate($request, $id, true);
@@ -780,54 +835,66 @@ class CustomFormPublicController extends AdminControllerTableBase
      * @param string|int|null $id
      * @return \Symfony\Component\HttpFoundation\Response
      */
+    // @phpstan-ignore-next-line
     public function deactivate(Request $request, $tableKey, $id)
     {
         return $this->toggleActivate($request, $id, false);
     }
 
-
     /**
      * export
      *
      * @param Request $request
-     * @param string|int|null $id
-     * @return void
+     * @param $tableKey
+     * @param $id
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
+    // @phpstan-ignore-next-line
     public function export(Request $request, $tableKey, $id)
     {
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+            // Checker::error() has already ended the request
+            // @phpstan-ignore-next-line
+            return;
+        }
         $public_form = PublicForm::find($id);
 
         // execute export
         return TemplateImportExport\TemplateExporter::exportTemplate(
             make_uuid(),
+            // @phpstan-ignore-next-line
             $public_form->public_form_view_name,
             null,
             null,
             [
                 'export_target' => [TemplateExportTarget::PUBLIC_FORM],
+                // @phpstan-ignore-next-line
                 'public_form_uuid' => $public_form->uuid,
+                // @phpstan-ignore-next-line
                 'zip_name' => $public_form->public_form_view_name,
             ]
         );
     }
 
-
     /**
      * Toggle activate and deactivate
      *
      * @param Request $request
-     * @param string $id
-     * @param boolean $active_flg
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @param $id
+     * @param bool $active_flg
+     * @return \Symfony\Component\HttpFoundation\Response|void
      */
+    // @phpstan-ignore-next-line
     protected function toggleActivate(Request $request, $id, bool $active_flg)
     {
-        if (!$this->validateTable($this->custom_table, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
+        if (!$this->validateRowsOfTable(PublicForm::class, $id, Permission::EDIT_CUSTOM_FORM_PUBLIC)) {
             return;
         }
 
         $public_form = PublicForm::find($id);
+        // @phpstan-ignore-next-line
         $public_form->active_flg = $active_flg;
+        // @phpstan-ignore-next-line
         $public_form->save();
 
         return getAjaxResponse([
@@ -837,6 +904,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     public function notify_action_target(Request $request)
     {
         $options = NotifyService::getNotifyTargetColumns($this->custom_table, $request->get('q'), [
@@ -850,6 +918,7 @@ class CustomFormPublicController extends AdminControllerTableBase
     }
 
 
+    // @phpstan-ignore-next-line
     protected static function getFileOptions($custom_table, $id)
     {
         return array_merge(
@@ -871,6 +940,7 @@ class CustomFormPublicController extends AdminControllerTableBase
      * validation table
      * @param mixed $table id or customtable
      */
+    // @phpstan-ignore-next-line
     protected function validateTable($table, $role_name)
     {
         $table = CustomTable::getEloquent($table);
@@ -883,5 +953,15 @@ class CustomFormPublicController extends AdminControllerTableBase
             return false;
         }
         return parent::validateTable($table, $role_name);
+    }
+
+    /**
+     * The rows update() and destroy() check to be of this table.
+     *
+     * @return array<mixed>
+     */
+    protected function resourceRowRule(): ?array
+    {
+        return [\Exceedone\Exment\Model\PublicForm::class, \Exceedone\Exment\Enums\Permission::EDIT_CUSTOM_FORM_PUBLIC];
     }
 }

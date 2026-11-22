@@ -16,11 +16,13 @@ class PluginApiBase
     use ApiTrait;
     use PluginBase;
 
+    // @phpstan-ignore-next-line
     public function _plugin()
     {
         return $this->plugin;
     }
 
+    // @phpstan-ignore-next-line
     public function __construct($plugin)
     {
         $this->plugin = $plugin;
@@ -29,8 +31,9 @@ class PluginApiBase
     /**
      * Get route uri for page
      *
-     * @return string
+     * @return string|null
      */
+    // @phpstan-ignore-next-line
     public function getRouteUri($endpoint = null)
     {
         if (!isset($this->plugin)) {
@@ -43,7 +46,7 @@ class PluginApiBase
     /**
      * override method.
      *
-     * @return void
+     * @return null
      */
     public function _getLoadView()
     {

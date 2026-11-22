@@ -6,20 +6,25 @@ use Exceedone\Exment\Auth\HasPermissions;
 use Exceedone\Exment\Providers\LoginUserProvider;
 use Exceedone\Exment\Enums\SystemColumn;
 use Exceedone\Exment\Enums\SystemTableName;
-use Encore\Admin\Traits\AdminBuilder;
+use ExmentAdminCore\Admin\Traits\AdminBuilder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 use Exceedone\Exment\Notifications\MailSender;
 use Exceedone\Exment\Enums\MailKeyName;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * @phpstan-consistent-constructor
  * @property mixed $password
  * @property mixed $login_provider
+ * @property mixed $password_reset_flg
  * @property mixed $base_user_id
  * @property mixed $avatar
+ * @property mixed $base_user
+ * @property mixed $created_at
+ * @property mixed $updated_at
  * @method static \Illuminate\Database\Query\Builder whereNull($columns, $boolean = 'and', $not = false)
  */
 class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenticatable, \Illuminate\Contracts\Auth\CanResetPassword
@@ -35,34 +40,48 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     /**
      * send password
      */
+
+    // @phpstan-ignore-next-line
     protected $send_password = null;
 
     /**
      * is change password
      */
+
+    // @phpstan-ignore-next-line
     protected $changePassword = false;
 
     /**
      * taale "user"
      */
+
+    // @phpstan-ignore-next-line
     public function base_user(): BelongsTo
     {
         return $this->belongsTo(getModelName(SystemTableName::USER), 'base_user_id');
     }
 
+
+    // @phpstan-ignore-next-line
     public function getUserNameAttribute()
     {
         return $this->base_user->value['user_name'] ?? null;
     }
+
+    // @phpstan-ignore-next-line
     public function getUserCodeAttribute()
     {
         return $this->base_user->value['user_code'] ?? null;
     }
+
+    // @phpstan-ignore-next-line
     public function getEmailAttribute()
     {
         return $this->base_user->value['email'] ?? null;
     }
 
+
+    // @phpstan-ignore-next-line
     public function getNameAttribute()
     {
         return $this->base_user->value['user_name'] ?? null;
@@ -75,20 +94,34 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
      */
     public function getHeaderInfo()
     {
+        // The base user record can be missing while the login account is still usable:
+        // it is soft-deleted from another session, or it was never linked (ex. sso provisioning).
+        // This partial is rendered on every admin screen, so dereferencing it here would take
+        // the whole back office down with a 500 instead of only hiding the header info.
+        $base_user = $this->base_user;
+        if (!isset($base_user)) {
+            return '';
+        }
+
         $headers = [];
         foreach (System::header_user_info() as $field) {
             if ($field == SystemColumn::CREATED_AT) {
                 $title = exmtrans('common.created_at');
-                $value = $this->base_user->created_at;
+                $value = $base_user->created_at;
             } else {
+                /** @var CustomColumn|null $column */
                 $column = CustomColumn::find($field);
                 if (!isset($column)) {
                     continue;
                 }
                 $title = $column->column_view_name;
-                $value = $this->base_user->getValue($column->column_name, true);
+                $value = $base_user->getValue($column->column_name, true);
             }
-            $headers[] = exmtrans('common.format_keyvalue', $title, $value);
+            if (is_array($value)) {
+                $value = implode(exmtrans('common.separate_word'), $value);
+            }
+            // the header prints this as HTML; the names and values are text a user may write
+            $headers[] = exmtrans('common.format_keyvalue', esc_html($title), esc_html($value));
         }
         return implode('<br />', $headers);
     }
@@ -111,9 +144,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
 
     /**
      * Get organizations user joined.
-     * * ONLY JOIN. not contains upper and downer.
-     *
-     * @return void
+     * ONLY JOIN. not contains upper and downer.
+     * @return mixed
      */
     public function belong_organizations()
     {
@@ -121,16 +153,22 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     }
 
 
+
+    // @phpstan-ignore-next-line
     public function isLoginProvider()
     {
         return !is_nullorempty($this->login_provider);
     }
 
+
+    // @phpstan-ignore-next-line
     public function findForPassport($username, ?array $credentials = [])
     {
         return LoginUserProvider::RetrieveByCredential(array_merge(['username' => $username], $credentials));
     }
 
+
+    // @phpstan-ignore-next-line
     public function validateForPassportPasswordGrant($password, ?array $credentials = [])
     {
         return LoginUserProvider::ValidateCredential($this, array_merge(['password' => $password], $credentials));
@@ -139,6 +177,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     /**
      * set sendPassword param
      */
+
+    // @phpstan-ignore-next-line
     public function sendPassword($sendPassword)
     {
         $this->send_password = $sendPassword;
@@ -181,6 +221,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
     /**
      * get value from user setting table
      */
+
+    // @phpstan-ignore-next-line
     public function getSettingValue($key, $default = null)
     {
         if (is_null($this->base_user_id)) {
@@ -204,21 +246,24 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
         // return array_get($settings, $key) ?? $default;
     }
 
+
+    // @phpstan-ignore-next-line
     public function setSettingValue($key, $value)
     {
         if (is_null($this->base_user)) {
             return null;
         }
         // set User Setting table
-        $usersetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
-        $settings = $usersetting->settings;
+        /** @var UserSetting $userSetting */
+        $userSetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
+        $settings = $userSetting->settings;
         if (!isset($settings)) {
             $settings = [];
         }
         // set value
         array_set($settings, $key, $value);
-        $usersetting->settings = $settings;
-        $usersetting->saveOrFail();
+        $userSetting->settings = $settings;
+        $userSetting->saveOrFail();
 
         // set settings from settion
         System::clearRequestSession("user_setting");
@@ -228,7 +273,8 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
      * Clear setting value
      *
      * @param string $key
-     * @return UserSetting
+     * @return UserSetting|null
+     * @throws \Throwable
      */
     public function forgetSettingValue($key)
     {
@@ -236,16 +282,19 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
             return null;
         }
         // set User Setting table
-        $usersetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
-        $usersetting->forgetSetting($key);
-        $usersetting->saveOrFail();
+        /** @var UserSetting $userSetting */
+        $userSetting = UserSetting::firstOrCreate(['base_user_id' => $this->getUserId()]);
+        $userSetting->forgetSetting($key);
+        $userSetting->saveOrFail();
 
         // set settings from settion
         System::clearRequestSession("user_setting");
 
-        return $usersetting;
+        return $userSetting;
     }
 
+
+    // @phpstan-ignore-next-line
     protected function setBcryptPassword()
     {
         $password = $this->password;
@@ -277,6 +326,12 @@ class LoginUser extends ModelBase implements \Illuminate\Contracts\Auth\Authenti
 
         static::saving(function ($model) {
             $model->setBcryptPassword();
+
+            // A "remember me" cookie is checked only against remember_token, not against the password.
+            // Renew the token when the password changes, so that the cookies issued before no longer sign in.
+            if ($model->exists && $model->isDirty('password')) {
+                $model->setRememberToken(Str::random(60));
+            }
         });
 
         static::saved(function ($model) {

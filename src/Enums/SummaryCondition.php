@@ -12,6 +12,11 @@ class SummaryCondition extends EnumBase
     public const MIN = "4";
     public const MAX = "5";
 
+    /**
+     * @var array[]
+     * We should use `const OPTIONS` instead of `protected static $options`.
+     */
+    // @phpstan-ignore-next-line
     protected static $options = [
         "1" => ['id' => "1", 'name' => 'sum', 'numeric' => true, 'countable' => true],
         //2 => ['id' => 2, 'name' => 'avg', 'numeric' => true],

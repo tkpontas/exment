@@ -2,16 +2,23 @@
 
 namespace Exceedone\Exment\Model;
 
+use Exceedone\Exment\Database\Query\Grammars\SqlServerGrammar;
 use Exceedone\Exment\Enums\DatabaseDataType;
 use Exceedone\Exment\Enums\MenuType;
 use Exceedone\Exment\Enums\TemplateImportResult;
-use Encore\Admin\Auth\Database\Menu as AdminMenu;
+use ExmentAdminCore\Admin\Auth\Database\Menu as AdminMenu;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Class Menu.
  *
  * @property int $id
+ * @property mixed $icon
+ * @property mixed $menu_name
+ * @property mixed $menu_type
+ * @property mixed $parent_id
+ * @property mixed $title
+ * @property mixed $uri
  *
  * @method where($parent_id, $id)
  * @phpstan-consistent-constructor
@@ -31,6 +38,20 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
     protected $appends = ['menu_target_view'];
     protected $casts = ['options' => 'json'];
 
+    /**
+     * The parent only declares the laravel-admin columns, so a Menu::create()
+     * would silently drop the columns that decide what the menu points at and
+     * leave an unusable row behind.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'parent_id', 'order', 'title', 'icon', 'uri', 'permission',
+        'menu_type', 'menu_name', 'menu_target', 'options',
+    ];
+
+
+    // @phpstan-ignore-next-line
     public static $templateItems = [
         'excepts' => [
             'import' => ['permission'],
@@ -74,29 +95,83 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
      *
      * @param array $attributes
      */
+
+    // @phpstan-ignore-next-line
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getMenuTargetViewAttribute()
     {
         return $this->getOption('menu_target_view', false);
     }
 
+
+    // @phpstan-ignore-next-line
     public function setMenuTargetViewAttribute($value)
     {
         return $this->setOption('menu_target_view', $value);
     }
 
+
+    // @phpstan-ignore-next-line
     public static function getTableName()
     {
         return (new static())->getTable();
     }
 
     /**
+     * The language of the site (APP_LOCALE), also when an update runs from
+     * the command line (where the locale of Laravel may be another one).
+     */
+    public static function siteLocale(): string
+    {
+        // exment.locale is APP_LOCALE (config/exment.php)
+        $locale = config('exment.locale');
+        return is_string($locale) && $locale !== '' ? $locale : strval(app()->getLocale());
+    }
+
+    /**
+     * The title of a system menu in the language of the site, for a menu an
+     * update adds.
+     */
+    public static function systemTitle(string $menuName): string
+    {
+        // a language without the name: the one of Laravel, then English, then the name of the menu
+        $key = 'exment::exment.menu.system_definitions.' . $menuName;
+        foreach (array_unique([static::siteLocale(), strval(app()->getLocale()), 'en']) as $locale) {
+            $title = trans($key, [], $locale);
+            if (is_string($title) && $title !== '' && !str_starts_with($title, 'exment::')) {
+                return $title;
+            }
+        }
+        return $menuName;
+    }
+
+    /**
+     * Whether the menus of the features not used are given too (marked
+     * "feature_hidden"): for editing the menus and exporting a template,
+     * not for the menu of the pages.
+     */
+    protected bool $withHidden = false;
+
+    /**
+     * @return $this
+     */
+    public function withHidden(bool $withHidden = true)
+    {
+        $this->withHidden = $withHidden;
+        return $this;
+    }
+
+    /**
      * @return array
      */
+
+    // @phpstan-ignore-next-line
     public function allNodes(): array
     {
         $grammar = DB::getQueryGrammar();
@@ -105,6 +180,7 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
         // get column
         // if SqlServer, needs cast
         if ($grammar instanceof \Illuminate\Database\Query\Grammars\SqlServerGrammar) {
+            /** @var SqlServerGrammar $grammar */
             $tableQuery = $grammar->getCastColumn(DatabaseDataType::TYPE_STRING, 'c.id');
             $pluginQuery = $grammar->getCastColumn(DatabaseDataType::TYPE_STRING, 'p.id');
         } else {
@@ -115,37 +191,40 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
         // get all menu, custom table, plugin table.
         $query = DB::table("{$this->getTable()} as m")
             // join table
-            ->leftJoin(CustomTable::getTableName()." as c", function ($join) use ($tableQuery) {
+            ->leftJoin(CustomTable::getTableName() . " as c", function ($join) use ($tableQuery) {
                 $join->where("m.menu_type", MenuType::TABLE);
-                $join->whereRaw("m.menu_target = ". $tableQuery);
+                $join->whereRaw("m.menu_target = " . $tableQuery);
             })
             // join plugin
-            ->leftJoin(Plugin::getTableName()." as p", function ($join) use ($pluginQuery) {
+            ->leftJoin(Plugin::getTableName() . " as p", function ($join) use ($pluginQuery) {
                 $join->where("m.menu_type", MenuType::PLUGIN);
-                $join->whereRaw("m.menu_target = ". $pluginQuery);
+                $join->whereRaw("m.menu_target = " . $pluginQuery);
             })
             ->orderByRaw("CASE WHEN m.$orderColumn = 0 THEN 1 ELSE 0 END")
             ->orderByRaw("m.$orderColumn");
 
-        //->map(function ($item, $key) {
-        //    return (array) $item;
-        //})
-        //->all();
+            //->map(function ($item, $key) {
+            //    return (array) $item;
+            //})
+            //->all();
         ;
-        $rows = $query->get(['m.*',
-                'c.id AS custom_table_id',
-                'c.table_name',
-                'c.table_view_name',
-                'c.options AS table_options',
-                'p.id AS plugin_id',
-                'p.plugin_name'])->map(function ($item, $key) {
-                    return (array) $item;
-                })
-        ->all();
+        $rows = $query->get([
+            'm.*',
+            'c.id AS custom_table_id',
+            'c.table_name',
+            'c.table_view_name',
+            'c.options AS table_options',
+            'p.id AS plugin_id',
+            'p.plugin_name'
+        ])->map(function ($item, $key) {
+            return (array) $item;
+        })
+            ->all();
 
         $results = [];
         foreach ($rows as &$row) {
             $result = true;
+            $hidden = false;
             if (isset($row['options'])) {
                 $row['options'] = json_decode_ex($row['options'], true);
             }
@@ -157,6 +236,10 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
                         break;
                     }
                     $row['uri'] = $plugin->getRouteUri();
+                    // its menu turned off (Admin setting → Feature management)
+                    if (\Exceedone\Exment\Services\Features::hidesPluginMenu($plugin->plugin_name)) {
+                        $hidden = true;
+                    }
                     break;
                 case MenuType::TABLE:
                     if (!isset($row['table_name'])) {
@@ -165,9 +248,11 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
                     }
                     if (is_nullorempty($row['icon'])) {
                         $table_options = json_decode_ex(array_get($row, 'table_options'), true);
+
+                        // @phpstan-ignore-next-line
                         $row['icon'] = array_get($table_options, 'icon');
                     }
-                    $row['uri'] = 'data/'.$row['table_name'];
+                    $row['uri'] = 'data/' . $row['table_name'];
 
                     if (!is_null($view_id = array_get($row, 'options.menu_target_view'))) {
                         $view = CustomView::getEloquent($view_id);
@@ -178,12 +263,20 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
                     }
                     break;
                 case MenuType::SYSTEM:
-                    $defines = array_get(Define::MENU_SYSTEM_DEFINITION, $row['menu_name']);
+                    $defines = array_get(Define::MENU_SYSTEM_DEFINITION, $row['menu_target']);
                     // if not set menu icon, set Define's default icon.
                     if (is_nullorempty($row['icon'])) {
                         $row['icon'] = array_get($defines, 'icon');
                     }
                     $row['uri'] = array_get($defines, "uri");
+                    // demo mode: the menu of a refused page
+                    if (\Exceedone\Exment\Services\DemoMode::hidesMenuUri($row['uri'])) {
+                        $result = false;
+                    }
+                    // a feature not used, or that the user may not use (Admin setting → Feature management)
+                    if (\Exceedone\Exment\Services\Features::hidesSystemMenu(strval($row['menu_target']))) {
+                        $hidden = true;
+                    }
                     break;
                 case MenuType::PARENT_NODE:
                     $row['uri'] = null;
@@ -194,6 +287,16 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
                     // database-row has icon column, set icon
             }
 
+            // a page of a feature the user may not use: its menu goes too, of
+            // any kind (a plugin's own feature, a custom menu to its URL)
+            if ($result && !$hidden && \Exceedone\Exment\Services\Features::hidesMenuUri(isset($row['uri']) ? strval($row['uri']) : null)) {
+                $hidden = true;
+            }
+            if ($hidden) {
+                // the menu of a feature not used: kept for editing and the templates
+                $row['feature_hidden'] = true;
+                $result = $result && $this->withHidden;
+            }
             if (!$result) {
                 continue;
             }
@@ -203,6 +306,8 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
         return $results;
     }
 
+
+    // @phpstan-ignore-next-line
     public static function importReplaceJson(&$json, $options = [])
     {
         // Create menu. --------------------------------------------------
@@ -267,7 +372,7 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
         if (!isset($json['icon'])) {
             switch ($json['menu_type']) {
                 case MenuType::SYSTEM:
-                    $json['icon'] = array_get(Define::MENU_SYSTEM_DEFINITION, $json['menu_name'].".icon");
+                    $json['icon'] = array_get(Define::MENU_SYSTEM_DEFINITION, $json['menu_name'] . ".icon");
                     break;
                 case MenuType::TABLE:
                     $json['icon'] = array_get(CustomTable::getEloquent($json['menu_name']), 'options.icon');
@@ -282,7 +387,7 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
         if (!isset($json['uri'])) {
             switch ($json['menu_type']) {
                 case MenuType::SYSTEM:
-                    $json['uri'] = array_get(Define::MENU_SYSTEM_DEFINITION, $json['menu_name'].".uri");
+                    $json['uri'] = array_get(Define::MENU_SYSTEM_DEFINITION, $json['menu_name'] . ".uri");
                     break;
                 case MenuType::TABLE:
                     $json['uri'] = $json['menu_name'];
@@ -304,6 +409,8 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
     /**
      * get Table And Column Name
      */
+
+    // @phpstan-ignore-next-line
     protected function getUniqueKeyValues()
     {
         // add item
@@ -313,7 +420,7 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
             $parent_name = null;
         } else {
             $parent_id = $this['parent_id'];
-            $menulist = (new Menu())->allNodes(); // allNodes:dimensional
+            $menulist = (new Menu())->withHidden()->allNodes(); // allNodes:dimensional
             $parent = collect($menulist)->first(function ($value, $key) use ($parent_id) {
                 return array_get($value, 'id') == $parent_id;
             });

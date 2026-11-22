@@ -24,9 +24,14 @@ use Illuminate\Support\Facades\Storage;
  * @property mixed $uuid
  * @property mixed $parent_type
  * @property mixed $parent_id
+ * @property mixed $value
  * @property mixed $local_filename
  * @property mixed $local_dirname
  * @property mixed $custom_column_id
+ * @property mixed $custom_form_column_id
+ * @property mixed $filename
+ * @property mixed $file_type
+ * @property mixed $created_user_id
  * @method static \Illuminate\Database\Query\Builder whereNull($columns, $boolean = 'and', $not = false)
  * @method static \Illuminate\Database\Query\Builder whereNotNull($columns, $boolean = 'and')
  */
@@ -43,11 +48,15 @@ class File extends ModelBase
     // increment disable
     public $incrementing = false;
 
+
+    // @phpstan-ignore-next-line
     public function getPathAttribute()
     {
         return path_join($this->local_dirname, $this->local_filename);
     }
 
+
+    // @phpstan-ignore-next-line
     public function getExtensionAttribute()
     {
         if (!isset($this->local_filename)) {
@@ -65,6 +74,8 @@ class File extends ModelBase
      * @param array|boolean|null $options (Old version, this args is boolean)
      * @return string|null
      */
+
+    // @phpstan-ignore-next-line
     public static function getUrl($path, $options = []): ?string
     {
         if ($options === true) {
@@ -77,17 +88,18 @@ class File extends ModelBase
                 'asApi' => false,
                 'asPublicForm' => false,
                 'publicFormKey' => null,
+                'dirName' => false,
             ],
             $options
         );
 
         $file = static::getData($path);
+
         if (is_null($file)) {
             return null;
         }
 
-        $name = $file->uuid . (!is_nullorempty($file->extension) ? ('.' . $file->extension) : '');
-        $name = "files/{$name}";
+        $name = 'files/'.($options['dirName'] ? $file->local_dirname.'/'.$file->local_filename  : $file->uuid);
 
         // append prefix
         if ($options['asApi']) {
@@ -120,6 +132,8 @@ class File extends ModelBase
     /**
      * save document model. Please call after save file
      */
+
+    // @phpstan-ignore-next-line
     public function saveDocumentModel($custom_value, $document_name)
     {
         // save Document Model
@@ -149,11 +163,15 @@ class File extends ModelBase
     public function saveCustomValue($custom_value_id, $custom_column = null, $custom_table = null)
     {
         if (!is_nullorempty($custom_column)) {
+
+            // @phpstan-ignore-next-line
             return $this->saveCustomValueAndColumn($custom_value_id, $custom_column, $custom_table);
         }
 
         if (!is_nullorempty($custom_value_id)) {
             $this->parent_id = $custom_value_id;
+
+            // @phpstan-ignore-next-line
             $this->parent_type = $custom_table->table_name;
         }
         $this->save();
@@ -211,6 +229,8 @@ class File extends ModelBase
      * @param string $dirname directory name
      * @return File
      */
+
+    // @phpstan-ignore-next-line
     public static function saveFileInfo(?string $file_type, string $dirname, array $options = []): File
     {
         $options = array_merge([
@@ -254,7 +274,7 @@ class File extends ModelBase
     /**
      * delete file info to database
      * @param string|File $file
-     * @return File|null
+     * @return File|null|void
      */
     public static function deleteFileInfo($file)
     {
@@ -277,6 +297,8 @@ class File extends ModelBase
     /**
      * Delete document model and file
      */
+
+    // @phpstan-ignore-next-line
     public static function deleteDocumentModel($file, bool $isDeleteFile = true)
     {
         if ($isDeleteFile) {
@@ -290,17 +312,26 @@ class File extends ModelBase
         }
 
         $column_name = CustomTable::getEloquent(SystemTableName::DOCUMENT)->getIndexColumnName('file_uuid');
+        $query = getModelName(SystemTableName::DOCUMENT)::where($column_name, $file->uuid);
+
+        // the older versions of the attachment (replaced files) go with it
+        if (\Exceedone\Exment\Services\DocumentVersionService::available()) {
+            // @phpstan-ignore-next-line the query of the document model
+            \Exceedone\Exment\Services\DocumentVersionService::deleteFor((clone $query)->pluck('id')->all());
+            // the file may be an older version itself
+            \Exceedone\Exment\Services\DocumentVersionService::forgetFile(strval($file->uuid));
+        }
 
         // delete document info
-        getModelName(SystemTableName::DOCUMENT)::where($column_name, $file->uuid)
-            ->delete();
+        $query->delete();
     }
+
     /**
      * Get file object(laravel)
      *
      * @param string $uuid
-     * @param \Closure $authCallback
-     * @return \Illuminate\Contracts\Filesystem\Filesystem
+     * @param \Closure|null $authCallback
+     * @return string|null
      */
     public static function getFile($uuid, \Closure $authCallback = null)
     {
@@ -324,6 +355,8 @@ class File extends ModelBase
     /**
      * get CustomValue from form. for saved CustomValue
      */
+
+    // @phpstan-ignore-next-line
     public function getCustomValueFromForm($custom_value, $uuidObj)
     {
         // replace $uuidObj[path] for windows
@@ -361,9 +394,11 @@ class File extends ModelBase
      *
      * @param string|null $file_type file type
      * @param  string  $path directory and file path(Please join.)
-     * @param  \Illuminate\Http\UploadedFile|\Symfony\Component\HttpFoundation\File\UploadedFile $content file content
+     * @param  \Illuminate\Http\UploadedFile|\Symfony\Component\HttpFoundation\File\UploadedFile|string|null $content file content
      * @return File
      */
+
+    // @phpstan-ignore-next-line
     public static function put(?string $file_type, $path, $content, array $options = [])
     {
         $file = static::saveFileInfo($file_type, $path, $options);
@@ -376,17 +411,18 @@ class File extends ModelBase
         return $file;
     }
 
-
     /**
      * Save file table on db and store the uploaded file on a filesystem disk.
      *
      * @param string|null $file_type file type
-     * @param  string|\Illuminate\Http\UploadedFile|\Symfony\Component\HttpFoundation\File\UploadedFile $content file content
-     * @param  string  $dirname directory path
-     * @param  string  $name file name. the name is shown by display
-     * @param  bool  $override if file already exists, override
+     * @param $content file content
+     * @param string $dirname directory path
+     * @param string $name file name. the name is shown by display
+     * @param array $options
      * @return File
      */
+
+    // @phpstan-ignore-next-line
     public static function storeAs(?string $file_type, $content, string $dirname, string $name, array $options = []): File
     {
         $options = array_merge([
@@ -409,9 +445,11 @@ class File extends ModelBase
     /**
      * Get file model using path or uuid
      *
-     * @param string|File $pathOrUuids
+     * @param string|File|array $pathOrUuids
      * @return File|null
      */
+
+    // @phpstan-ignore-next-line
     public static function getData($pathOrUuids)
     {
         if (is_nullorempty($pathOrUuids)) {
@@ -429,6 +467,12 @@ class File extends ModelBase
             return static::where('uuid', $pathOrUuid)->first();
         };
         $funcPath = function ($pathOrUuid) {
+            // read together beforehand by prefetch() (false: not in the database)
+            $key = static::prefetchKey($pathOrUuid);
+            if (System::hasRequestSession($key)) {
+                return System::requestSession($key) ?: null;
+            }
+
             // get by $dirname, $filename
             list($dirname, $filename) = static::getDirAndFileName($pathOrUuid);
             $file = static::where('local_dirname', $dirname)
@@ -437,6 +481,7 @@ class File extends ModelBase
             if (isset($file)) {
                 return $file;
             }
+            return null;
         };
 
         foreach (toArray($pathOrUuids) as $pathOrUuid) {
@@ -457,6 +502,8 @@ class File extends ModelBase
     /**
      * get unique file name
      */
+
+    // @phpstan-ignore-next-line
     public static function getUniqueFileName($dirname, $filename = null, $override = false)
     {
         if ($override) {
@@ -477,8 +524,74 @@ class File extends ModelBase
     }
 
     /**
+     * Read together the files of these paths ("dirname/filename", as a file column stores
+     * them), for getData() to answer from the request: a page of rows with file columns
+     * asked once per row and column, twice for a link (ISS00413).
+     *
+     * @param iterable<mixed> $paths
+     * @return void
+     */
+    public static function prefetch($paths)
+    {
+        $wanted = [];
+        foreach ($paths as $path) {
+            foreach (is_null($path) ? [] : (array) toArray($path) as $p) {
+                if (!is_string($p) || strpos($p, '/') === false || System::hasRequestSession(static::prefetchKey($p))) {
+                    continue;
+                }
+                list($dirname, $filename) = static::getDirAndFileName($p);
+                $wanted[$p] = [$dirname, $filename];
+            }
+        }
+        if (empty($wanted)) {
+            return;
+        }
+
+        $found = [];
+        foreach (array_chunk(array_unique(array_column($wanted, 1)), 500) as $filenames) {
+            foreach (static::whereIn('local_filename', $filenames)->get() as $file) {
+                $found[$file->local_dirname . '/' . $file->local_filename] = $file;
+            }
+        }
+        foreach ($wanted as $p => list($dirname, $filename)) {
+            System::requestSession(static::prefetchKey($p), $found[$dirname . '/' . $filename] ?? false);
+        }
+    }
+
+    /**
+     * The request session key of a prefetched path (hashed: a path has dots, which the
+     * request session reads as nesting).
+     */
+    protected static function prefetchKey(string $path): string
+    {
+        return 'file_prefetch_' . md5($path);
+    }
+
+    /**
+     * (booted, not boot: boot is the Uuids trait's, which gives the file its uuid)
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        // a saved or deleted file is read again, not from what prefetch() kept
+        $forget = function ($file) {
+            // the path it has, and the one it had (a moved file)
+            foreach ([[$file->local_dirname, $file->local_filename], [$file->getOriginal('local_dirname'), $file->getOriginal('local_filename')]] as list($dirname, $filename)) {
+                if (isset($dirname, $filename)) {
+                    System::clearRequestSession(static::prefetchKey($dirname . '/' . $filename));
+                }
+            }
+        };
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
+    /**
      * get directory and filename from path
      */
+
+    // @phpstan-ignore-next-line
     protected static function getDirAndFileName($path)
     {
         $pathinfo = pathinfo($path);

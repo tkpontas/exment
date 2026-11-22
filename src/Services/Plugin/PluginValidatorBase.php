@@ -32,12 +32,13 @@ class PluginValidatorBase
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     public $input_value;
 
     /**
      * Whether this validation is called.
      *
-     * @var string|ValidateCalledType
+     * @var mixed
      */
     public $called_type;
 
@@ -46,6 +47,7 @@ class PluginValidatorBase
      *
      * @var array
      */
+    // @phpstan-ignore-next-line
     protected $messages = [];
 
     /**
@@ -53,11 +55,11 @@ class PluginValidatorBase
      *
      * @param PluginModel $plugin
      * @param CustomTable|null $custom_table
-     * @param CustomValue|int $original_value
-     * @param array $input_value
+     * @param $original_value
      * @param array $options
      *      'called_type' => Whether this validation is called.
      */
+    // @phpstan-ignore-next-line
     public function __construct(PluginModel $plugin, ?CustomTable $custom_table, $original_value, array $options = [])
     {
         $this->plugin = $plugin;
@@ -72,10 +74,12 @@ class PluginValidatorBase
         }
     }
 
+    // @phpstan-ignore-next-line
     public function validate()
     {
     }
 
+    // @phpstan-ignore-next-line
     public function messages()
     {
         $messages = [];
@@ -91,5 +95,10 @@ class PluginValidatorBase
         }
 
         return $messages;
+    }
+    
+    // @phpstan-ignore-next-line
+    public function validateDestroy($model)
+    {
     }
 }

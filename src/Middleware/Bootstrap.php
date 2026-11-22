@@ -3,9 +3,10 @@
 namespace Exceedone\Exment\Middleware;
 
 use Illuminate\Http\Request;
-use Encore\Admin\Facades\Admin as Ad;
+use ExmentAdminCore\Admin\Facades\Admin as Ad;
 use Exceedone\Exment\Controllers;
 use Exceedone\Exment\Model\Plugin;
+use Exceedone\Exment\Services\DemoMode;
 
 /**
  * Middleware as Bootstrap.
@@ -15,6 +16,10 @@ class Bootstrap
 {
     use BootstrapTrait;
 
+    /**
+     * @param \Closure(Request): mixed $next
+     * @return mixed
+     */
     public function handle(Request $request, \Closure $next)
     {
         $this->setCssJs($request, $next);
@@ -35,35 +40,79 @@ class Bootstrap
             return;
         }
 
+        // A JSON response never renders a layout, so building the admin
+        // CSS/JS buckets for it is pure overhead.
+        if ($request->expectsJson()) {
+            return;
+        }
+
         if ($this->isStaticRequest($request)) {
             return;
         }
 
-        Ad::navbar(function (\Encore\Admin\Widgets\Navbar $navbar) {
+        Ad::navbar(function (\ExmentAdminCore\Admin\Widgets\Navbar $navbar) {
             $navbar->left(Controllers\SearchController::renderSearchHeader());
             $navbar->left(new \Exceedone\Exment\Form\Navbar\Hidden());
+            $navbar->right(new \Exceedone\Exment\Form\Navbar\WorkflowTaskNav());
             $navbar->right(new \Exceedone\Exment\Form\Navbar\HelpNav());
             $navbar->right(new \Exceedone\Exment\Form\Navbar\NotifyNav());
+            if (DemoMode::enabled()) {
+                $navbar->left(new \Exceedone\Exment\Form\Navbar\DemoModeNav());
+            }
+            // maintenance mode: in it, or planned
+            $maintenance = \Exceedone\Exment\Form\Navbar\MaintenanceNav::make();
+            if (isset($maintenance)) {
+                $navbar->left($maintenance);
+            }
         });
-        Ad::js(asset('lib/js/jquery-ui.min.js'));
-        Ad::css(asset('lib/css/jquery-ui.min.css'));
+        static::setCssJsList(['lib/js/jquery-ui.min.js'], false);
+        static::setCssJsList(['lib/css/jquery-ui.min.css'], true);
 
-        Ad::js(asset('lib/js/bignumber.min.js'));
+        static::setCssJsList(['lib/js/bignumber.min.js'], false);
 
         static::setCssJsList([
-            'vendor/exment/fullcalendar/core/main.min.css',
-            'vendor/exment/fullcalendar/daygrid/main.min.css',
-            'vendor/exment/fullcalendar/list/main.min.css',
-            'vendor/exment/fullcalendar/timegrid/main.min.css',
+            // iCheck is not decoration here. Grid\Displayers\RowSelector
+            // emits `$('.grid-row-checkbox').iCheck(...).on('ifChanged',
+            // ...)`, so without the plugin that call throws and the whole
+            // handler chain behind it - `$.admin.grid.select()`, the batch
+            // action button, the "N selected" counter - is never bound.
+            // The skin has to come with it: iCheck hides the real input
+            // and draws its own box, so the JS alone would leave every
+            // checkbox invisible.
+            'vendor/open-admin/AdminLTE/plugins/iCheck/minimal/blue.css',
             'vendor/exment/css/common.css',
             'vendor/exment/css/workflow.css',
+            'vendor/exment/css/workflow_task_navbar.css',
+            'vendor/exment/css/workflow_designer.css',
+            'vendor/exment/css/workflow_design_edit.css',
             'vendor/exment/css/customform.css',
+            'vendor/exment/css/dashboard.css',
             'vendor/exment/codemirror/codemirror.css',
             'vendor/exment/jstree/themes/default/style.min.css',
         ], true);
 
+        // The AdminLTE bundles are appended after everything above, so a
+        // stylesheet meant to override the theme's table rules has to go
+        // through csslast or it silently loses every specificity tie.
         static::setCssJsList([
-            'vendor/exment/validation/jquery.validate.js',
+            'vendor/exment/css/grid_tools.css',
+        ], true, true);
+
+        // The "modern" screen design (system setting "Screen design", or
+        // EXMENT_UI_DESIGN on the server). With "classic" the stylesheet is
+        // not even requested. It goes after grid_tools.css because it
+        // overrides that file's colors with the same selectors, and equal
+        // selectors are settled by order.
+        if (\Exment::isModernUi()) {
+            static::setCssJsList([
+                'vendor/exment/css/modern.css',
+            ], true, true);
+        }
+
+        static::setCssJsList([
+            // see the note on the stylesheet above
+            'vendor/open-admin/AdminLTE/plugins/iCheck/icheck.min.js',
+            'vendor/exment/validation/jquery.validate.min.js',
             'vendor/exment/chartjs/chart.min.js',
             'vendor/exment/codemirror/codemirror.js',
             'vendor/exment/codemirror/mode/htmlmixed/htmlmixed.js',
@@ -75,29 +124,41 @@ class Bootstrap
             'vendor/exment/jquery/jquery.color.min.js',
             'vendor/exment/mathjs/math.min.js',
             'vendor/exment/js/numberformat.js',
-            'vendor/exment/fullcalendar/core/main.min.js',
-            'vendor/exment/fullcalendar/core/locales-all.min.js',
-            'vendor/exment/fullcalendar/interaction/main.min.js',
-            'vendor/exment/fullcalendar/daygrid/main.min.js',
-            'vendor/exment/fullcalendar/list/main.min.js',
-            'vendor/exment/fullcalendar/timegrid/main.min.js',
+            'vendor/exment/fullcalendar/index.global.min.js',
+            'vendor/exment/fullcalendar/locales-all.global.min.js',
+            'vendor/exment/fullcalendar/UltraDate.min.js',
             'vendor/exment/jstree/jstree.min.js',
             'vendor/exment/js/common_all.js',
             'vendor/exment/js/common.js',
+            'vendor/exment/js/grid_tools.js',
+            'vendor/exment/js/cellstyle_preset.js',
+            'vendor/exment/js/dashboard.js',
+            'vendor/exment/js/file-required.js',
+            'vendor/exment/js/scroll-restore.js',
             'vendor/exment/js/search.js',
             'vendor/exment/js/calc.js',
             'vendor/exment/js/notify_navbar.js',
+            'vendor/exment/js/workflow_task_navbar.js',
             'vendor/exment/js/modal.js',
             'vendor/exment/js/workflow.js',
+            'vendor/exment/js/workflow_designer.js',
+            'vendor/exment/js/workflow_design_edit.js',
             'vendor/exment/js/changefield.js',
             'vendor/exment/js/customcolumn.js',
             'vendor/exment/js/customformitem.js',
             'vendor/exment/js/customform.js',
+            'vendor/exment/js/hasmanytable-validation.js',
             'vendor/exment/js/preview.js',
+            'vendor/exment/js/assign_me.js',
+            'vendor/exment/js/paste_attach.js',
+            'vendor/exment/js/quickadd.js',
+            'vendor/exment/js/mention.js',
+            'vendor/exment/js/comment_markdown.js',
             'vendor/exment/js/webapi.js',
             'vendor/exment/js/admin.webapi.js',
             'vendor/exment/js/getbox.js',
             'vendor/exment/js/admin.getbox.js',
+            'vendor/exment/js/zxing.js',
         ], false);
 
         // set scripts
@@ -111,21 +172,27 @@ class Bootstrap
         if (!isset($ver)) {
             $ver = date('YmdHis');
         }
+        // @phpstan-ignore-next-line
         Ad::jslast(asset('vendor/exment/js/customscript.js?ver='.$ver));
 
         // delete object
         $delete_confirm = trans('admin.delete_confirm');
         $confirm = trans('admin.confirm');
         $cancel = trans('admin.cancel');
+        // the label of the QR scanner's way back (zxing.js). It used to be set
+        // by the footer, which is gone; every admin page carries this script.
+        $back_button = json_encode(exmtrans('common.back_button'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
         $script = <<<EOT
+    window.backButton = $back_button;
+
     ///// delete click event
     $(document).off('click', '[data-exment-delete]').on('click', '[data-exment-delete]', {}, function(ev){
         ev.preventDefault();
 
         // get url
         let url = $(ev.target).closest('[data-exment-delete]').data('exment-delete');
-        
+
         Exment.CommonEvent.ShowSwal(url, {
             title: "$delete_confirm",
             confirm:"$confirm",

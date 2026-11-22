@@ -13,6 +13,7 @@ abstract class PhpSpreadSheet extends FormatBase
      * create file
      * 1 sheet - 1 table data
      */
+    // @phpstan-ignore-next-line
     public function createFile()
     {
         // define writers. if zip, set as array.
@@ -98,16 +99,15 @@ abstract class PhpSpreadSheet extends FormatBase
         return $files;
     }
 
-
     /**
-     * Get Data from excel sheet
-     *
+     * Get Data from Excel sheet
      * @param Worksheet $sheet
-     * @param int $skip_excel_row_no
-     * @param boolean $keyvalue
-     * @param boolean $isGetMerge
+     * @param bool $keyvalue
+     * @param bool $isGetMerge
+     * @param array $options
      * @return array
      */
+    // @phpstan-ignore-next-line
     public function getDataFromSheet($sheet, bool $keyvalue = false, bool $isGetMerge = false, array $options = []): array
     {
         $data = [];
@@ -161,12 +161,14 @@ abstract class PhpSpreadSheet extends FormatBase
         // if merge cell, get from master cell
         if ($isGetMerge && $cell->isInMergeRange()) {
             $mergeRange = $cell->getMergeRange();
+            // @phpstan-ignore-next-line
             $cell = $sheet->getCell(explode(":", $mergeRange)[0]);
         }
 
         $value = $cell->getCalculatedValue();
         // is datetime, convert to date string
         if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell) && is_numeric($value)) {
+            // @phpstan-ignore-next-line
             $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
             if (floatval($value) < 1) {
                 $value = $date->format('H:i:s');

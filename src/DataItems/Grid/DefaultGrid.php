@@ -2,8 +2,8 @@
 
 namespace Exceedone\Exment\DataItems\Grid;
 
-use Encore\Admin\Grid;
-use Encore\Admin\Grid\Linker;
+use ExmentAdminCore\Admin\Grid;
+use ExmentAdminCore\Admin\Grid\Linker;
 use Exceedone\Exment\Grid\Tools as GridTools;
 use Exceedone\Exment\Form\Tools;
 use Exceedone\Exment\Form\Widgets\SelectItemBox;
@@ -16,7 +16,6 @@ use Exceedone\Exment\Model\CustomView;
 use Exceedone\Exment\Model\CustomColumn;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\Workflow;
-use Exceedone\Exment\Services\DataImportExport;
 use Exceedone\Exment\ColumnItems;
 use Exceedone\Exment\Enums;
 use Exceedone\Exment\Enums\SystemColumn;
@@ -24,12 +23,26 @@ use Exceedone\Exment\Enums\SearchType;
 use Exceedone\Exment\Enums\PluginEventTrigger;
 use Exceedone\Exment\Services\PartialCrudService;
 use Illuminate\Http\Request;
-use Encore\Admin\Form;
+use ExmentAdminCore\Admin\Form;
 // todo 一覧ソートバグ対応用の追加です
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DefaultGrid extends GridBase
 {
+    /**
+     * Request key + column item of every filter the grid registered.
+     *
+     * Collected while the filters are being built because that is the
+     * only place both halves exist at once: the key is decided inside
+     * setAdminFilter, and the item is what can turn a stored value back
+     * into readable text. GridFilterChips needs the two together.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    protected $filterChipPairs = [];
+
+    // @phpstan-ignore-next-line
     public function __construct($custom_table, $custom_view)
     {
         $this->custom_table = $custom_table;
@@ -46,6 +59,10 @@ class DefaultGrid extends GridBase
         $classname = getModelName($this->custom_table);
         $grid = new Grid(new $classname());
 
+        if (!$this->modal && boolval($this->custom_table->getOption('lazy_grid_enabled'))) {
+            $grid->lazyLoad();
+        }
+
         // if modal, Change view model
         if ($this->modal) {
             $this->gridFilterForModal($grid, $this->callback);
@@ -53,6 +70,12 @@ class DefaultGrid extends GridBase
             $grid->model()->select("$db_table_name.*");
         } else {
             // filter
+            // A drill-down from a summary view shares this search service with
+            // the summary view on purpose (GridBase::getCallbackFilter()), so
+            // the joins its filter makes are not made a second time.
+            if (!isset($this->callback)) {
+                $this->custom_view->resetSearchService();
+            }
             $this->custom_view->filterSortModel($grid->model(), ['callback' => $this->callback]);
         }
 
@@ -77,6 +100,14 @@ class DefaultGrid extends GridBase
             $this->appendSelectItemButton($grid);
         }
 
+        // A preview has one page and no pager. The rows are still fetched a
+        // page at a time - a table of 100,000 rows must not be read whole to
+        // show what a view looks like - but every pager link is a GET back to
+        // the preview url, which no longer holds the unsaved settings.
+        if ($this->preview) {
+            $grid->option('show_pagination', false);
+        }
+
         return $grid;
     }
 
@@ -88,6 +119,7 @@ class DefaultGrid extends GridBase
      * @param array $options
      * @return \Illuminate\Database\Query\Builder|\Illuminate\Database\Schema\Builder
      */
+    // @phpstan-ignore-next-line
     public function getQuery($query, array $options = [])
     {
         // Now only execute filter Model
@@ -98,6 +130,7 @@ class DefaultGrid extends GridBase
     /**
      * set laravel-admin grid using custom_view
      */
+    // @phpstan-ignore-next-line
     public function setGrid($grid)
     {
         $custom_table = $this->custom_table;
@@ -105,6 +138,16 @@ class DefaultGrid extends GridBase
         $grid->setHeaderAttributes($this->custom_view->getHeaderOptions());
         // get view columns
         $custom_view_columns = $this->custom_view->custom_view_columns_cache;
+        // Whether the current user may inline-edit a row on this table. Read
+        // once so the per-column loop below does one array walk instead of
+        // one permission lookup per column, and so grid_tools.js only sees
+        // `.exm-editable` cells when the write path is actually open.
+        //
+        // The test lives in GridInlineEditor: the same call decides whether
+        // the JSON config is rendered at all, so the class here and that
+        // config can never disagree. It covers the edit permission, the
+        // "cannot change from display" form action, and the trashed scope.
+        $inlineEditAllowed = GridTools\GridInlineEditor::isEditableGrid($this->custom_table);
         foreach ($custom_view_columns as $custom_view_column) {
             $item = $custom_view_column->column_item;
             if (!isset($item)) {
@@ -117,10 +160,40 @@ class DefaultGrid extends GridBase
                     'view_pivot_column' => $custom_view_column->view_pivot_column_id ?? null,
                     'view_pivot_table' => $custom_view_column->view_pivot_table_id ?? null,
                     'header_align' => $this->custom_view->header_align ?? null,
+                    // The appearance this view asked for. Passed down rather
+                    // than looked up in the item because the same column can
+                    // wear a different preset in the next view.
+                    'grid_preset' => $custom_view_column->getOption('grid_preset'),
                 ]);
             //$name = $item->indexEnabled() ? $item->index() : $item->uniqueName();
             $className = 'column-' . $item->name();
-            $column = $grid->column($item->uniqueName(), $item->label())
+            $classes = [$className];
+            // The column TYPE as a class (exm-coltype-integer, -currency ...).
+            // `column-<name>` above is the column NAME, which says nothing
+            // about what the cell holds, so a stylesheet could not tell a
+            // number column from a text column. Markup only: nothing reads
+            // it but CSS (grid_tools.js copies it to the header cell).
+            if ($item instanceof ColumnItems\CustomItem) {
+                $columnType = $item->getCustomColumn()->column_type ?? null;
+                if (is_string($columnType) && preg_match('/^[a-z0-9_]+$/', $columnType)) {
+                    $classes[] = 'exm-coltype-' . $columnType;
+                }
+            }
+            // Mark cells the inline editor can edit. `.exm-editable` is what
+            // grid_tools.js listens to on double-click; the badge and colour
+            // are added elsewhere.
+            //
+            // The whole decision lives in GridInlineEditor so this class and
+            // the JSON config it renders can never disagree - a cell marked
+            // here but missing from the config would open nothing on double
+            // click. That includes refusing a column of a related table or a
+            // pivot column: the editor PUTs to this table's endpoint only.
+            $inlineEditable = $inlineEditAllowed
+                && GridTools\GridInlineEditor::isEditableColumn($custom_view_column, $this->custom_table);
+            if ($inlineEditable) {
+                $classes[] = 'exm-editable';
+            }
+            $grid->column($item->uniqueName(), $item->label())
                 ->sort($item->sortable())
                 ->sortName($item->getSortName())
                 //->cast($item->getCastName())
@@ -132,16 +205,51 @@ class DefaultGrid extends GridBase
                     $this->custom_view->getSearchService()->setQuery($query)->addSelect()->orderByCustomViewColumn($custom_view_column, (count($args) > 0 ? $args[0] : 'asc'));
                 })
                 ->style($item->gridStyle())
-                ->setClasses($className)
+                ->setClasses($classes)
                 ->setHeaderStyle($item->gridHeaderStyle())
-                ->display(function ($v) use ($item) {
+                ->display(function ($v) use ($item, $inlineEditable, $custom_table) {
+                    // @phpstan-ignore-next-line
                     if (is_null($this)) {
                         return '';
                     }
-                    return $item->setCustomValue($this)->html();
+                    $html = $item->setCustomValue($this)->html();
+                    if (!$inlineEditable) {
+                        return $html;
+                    }
+                    // The column is editable on some form of this table, but
+                    // the form of THIS record may show it view only, or not
+                    // at all - form priorities pick the form per record. The
+                    // marker drops the cell's editor on the client; the
+                    // server refuses the write either way. ($this is the
+                    // row's model here: the grid binds it to this closure.)
+                    // @phpstan-ignore-next-line
+                    if (!GridTools\GridInlineEditor::isFormEditableColumn($custom_table, $this, $item->getCustomColumn())) {
+                        return (string)$html . GridTools\GridInlineEditor::LOCKED_MARKER;
+                    }
+                    // A long value is shown shortened ('...'), a formatted
+                    // number rounded - either way the cell no longer says the
+                    // stored value, and the inline editor prefills from the
+                    // cell. The marker carries the value the editor must
+                    // start from, so what it saves is an edit of the data,
+                    // not of the display.
+                    return (string)$html . GridTools\GridInlineEditor::rawValueTag($item, (string)$html);
                 })->escape(false);
             
             $this->setGridColumn($column, $custom_view_column);
+        }
+
+        // The edit lock of each row, for the writes the list tools make
+        // (inline edit, bulk edit, "Set me as"). They send it back, so a
+        // record someone else saved after this page was drawn is refused
+        // with the message the edit form gives, instead of being overwritten
+        // without a word.
+        if ($inlineEditAllowed) {
+            $grid->rows(function ($row) {
+                $updated_at = $row->updated_at;
+                if (is_string($updated_at) && !is_nullorempty($updated_at)) {
+                    $row->setAttributes(['data-exm-updated-at' => $updated_at]);
+                }
+            });
         }
 
         // set parpage
@@ -167,6 +275,24 @@ class DefaultGrid extends GridBase
     protected function setGridColumn($column, $custom_view_column)
     {
     }
+     * The key the grid tools keep their browser-side state under: pinned
+     * columns and density (localStorage), the grouping, folded groups, the
+     * page filter and the refresh interval (sessionStorage).
+     *
+     * The user is part of it. Some of that state is data - the page filter
+     * holds a cell value, the folded groups hold group labels - and the
+     * browser keeps it across a logout. Keyed by table alone, the next person
+     * to sign in on the same tab had the previous one's filter applied, value
+     * shown in the chip.
+     *
+     * @param CustomTable $custom_table
+     * @return string
+     */
+    public static function gridStorageKey(CustomTable $custom_table): string
+    {
+        $user_id = \Exment::getUserId();
+        return $custom_table->table_name . (isset($user_id) ? '.u' . $user_id : '');
+    }
 
     /**
      * execute filter for modal
@@ -174,6 +300,7 @@ class DefaultGrid extends GridBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function gridFilterForModal($grid, $filter_func)
     {
         // set request session data url disabled;
@@ -239,6 +366,7 @@ class DefaultGrid extends GridBase
      *
      * @return array offset 0 : html, 1 : script
      */
+    // @phpstan-ignore-next-line
     public function getFilterHtml()
     {
         $classname = getModelName($this->custom_table);
@@ -258,12 +386,14 @@ class DefaultGrid extends GridBase
     /**
      * set grid filter
      */
+    // @phpstan-ignore-next-line
     protected function setCustomGridFilters($grid, $ajax = false)
     {
         $grid->quickSearch(function ($model, $input) {
             $eloquent = $model->eloquent();
             // Only call setSearchQueryOrWhere if exists. (If export, sometimes $eloquent is not Model.)
             if (method_exists($eloquent, 'setSearchQueryOrWhere')) {
+                // @phpstan-ignore-next-line
                 $eloquent->setSearchQueryOrWhere($model, $input, ['searchDocument' => true,]);
             }
         }, 'left');
@@ -286,18 +416,19 @@ class DefaultGrid extends GridBase
             // set filter item
             if (count($filterItems) <= 6) {
                 foreach ($filterItems as $filterItem) {
-                    $filterItem->setAdminFilter($filter);
+                    $this->setAdminFilterAndRemember($filterItem, $filter);
                 }
             } else {
                 $separate = floor(count($filterItems) /  2);
                 $filter->column(1/2, function ($filter) use ($filterItems, $separate) {
                     for ($i = 0; $i < $separate; $i++) {
-                        $filterItems[$i]->setAdminFilter($filter);
+                        $this->setAdminFilterAndRemember($filterItems[$i], $filter);
                     }
                 });
                 $filter->column(1/2, function ($filter) use ($filterItems, $separate) {
                     for ($i = $separate; $i < count($filterItems); $i++) {
-                        $filterItems[$i]->setAdminFilter($filter);
+                        /** @var int $i */
+                        $this->setAdminFilterAndRemember($filterItems[$i], $filter);
                     }
                 });
             }
@@ -306,10 +437,36 @@ class DefaultGrid extends GridBase
 
 
     /**
-     * Get filter showing columns
+     * Register one column item's filter and note which request key it took.
      *
-     * @return \Illuminate\Support\Collection
+     * The key is built inside setAdminFilter from state this class cannot
+     * read (`uniqueName` is protected, and calling the public
+     * `uniqueName()` would GENERATE one where none was set - a different
+     * string from the one the filter is already using). Reading it back
+     * off the filter that was just added is therefore the only way to get
+     * the two sides to agree.
+     *
+     * @param mixed $filterItem
+     * @param mixed $filter
+     * @return void
      */
+    protected function setAdminFilterAndRemember($filterItem, &$filter)
+    {
+        $before = count($filter->filters());
+        $filterItem->setAdminFilter($filter);
+
+        foreach (array_slice($filter->filters(), $before) as $added) {
+            $this->filterChipPairs[] = [
+                'key' => $added->getColumn(),
+                'item' => $filterItem,
+            ];
+        }
+    }
+
+    /**
+     * Get filter showing columns
+     */
+    // @phpstan-ignore-next-line
     protected function getFilterColumns($filter): \Illuminate\Support\Collection
     {
         $filterItems = [];
@@ -325,7 +482,10 @@ class DefaultGrid extends GridBase
                 $filterItems[] = $custom_view_grid_filter->column_item;
             }
 
-            return collect($filterItems);
+            /** @var Collection $collection */
+            // @phpstan-ignore-next-line
+            $collection =  collect($filterItems);
+            return $collection;
         }
 
         foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => true]) as $filterKey => $filterType) {
@@ -342,11 +502,28 @@ class DefaultGrid extends GridBase
         // filter workflow
         if (!is_null($workflow = Workflow::getWorkflowByTable($this->custom_table))) {
             foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => false]) as $filterKey => $filterType) {
+                if (!SystemColumn::isWorkflow($filterKey)) {
+                    continue;
+                }
                 if ($this->custom_table->gridFilterDisable($filterKey)) {
                     continue;
                 }
 
                 $filterItems[] = ColumnItems\WorkflowItem::getItem($this->custom_table, $filterKey);
+            }
+        }
+
+        // filter comment
+        if (boolval($this->custom_table->getOption('comment_flg')?? true)) {
+            foreach (SystemColumn::getOptions(['grid_filter' => true, 'grid_filter_system' => false]) as $filterKey => $filterType) {
+                if (!SystemColumn::isComment($filterKey)) {
+                    continue;
+                }
+                if ($this->custom_table->gridFilterDisable($filterKey)) {
+                    continue;
+                }
+
+                $filterItems[] = ColumnItems\CommentItem::getItem($this->custom_table);
             }
         }
 
@@ -363,6 +540,7 @@ class DefaultGrid extends GridBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setRelationFilter(&$filterItems)
     {
         // check relation
@@ -390,6 +568,7 @@ class DefaultGrid extends GridBase
      *
      * @return void
      */
+    // @phpstan-ignore-next-line
     protected function setColumnFilter(&$filterItems)
     {
         // if modal, skip
@@ -423,9 +602,10 @@ class DefaultGrid extends GridBase
      * Manage Grid Tool Button
      * And Manage Batch Action
      */
+    // @phpstan-ignore-next-line
     protected function manageMenuToolButton($grid)
     {
-        if ($this->modal) {
+        if ($this->modal || $this->preview) {
             $grid->disableRowSelector();
             $grid->disableCreateButton();
             $grid->disableExport();
@@ -443,32 +623,92 @@ class DefaultGrid extends GridBase
         $grid->tools(function (Grid\Tools $tools) use ($grid) {
             $listButtons = Plugin::pluginPreparingButton(PluginEventTrigger::GRID_MENUBUTTON, $this->custom_table);
 
+            // Display helpers. They only change how the current page looks,
+            // so they come first and stay out of the way of the buttons
+            // that actually do something (new, import/export, view menu).
+            //
+            // GridColumnVisibility replaces laravel-admin's own column
+            // selector, so make sure the stock one stays off here too
+            // instead of relying on the global Grid::init in
+            // Middleware\Initialize - two column buttons side by side
+            // would be worse than none.
+            $grid->disableColumnSelector();
+            // Reads what the request is filtering on and says so on the
+            // grid. Appended first so it renders above the button row.
+            $tools->append(new GridTools\GridFilterChips($this->custom_table, $this->filterChipPairs));
+            $tools->append(new GridTools\GridColumnVisibility($grid));
+            $storageKey = static::gridStorageKey($this->custom_table);
+            $tools->append(new GridTools\GridColumnPin($grid, $storageKey));
+            $tools->append(new GridTools\GridGroupBy($grid, $storageKey));
+            $tools->append(new GridTools\GridDensity());
+            $tools->append(new GridTools\GridKeyboard());
+            $tools->append(new GridTools\GridAutoRefresh($storageKey));
+
+            // Second entrance to the batch actions rendered further left.
+            // It is fixed to the bottom of the viewport, so it is appended
+            // here only to get it inside #pjax-container - a bar left over
+            // from the previous page would keep an obsolete selection
+            // count on screen. The custom_table and custom_view arguments
+            // let it decide whether to expose bulk-edit / bulk-export
+            // buttons alongside the actions copied from the stock batch
+            // dropdown - both features only make sense when the table
+            // permits them.
+            $tools->append(new GridTools\GridBulkBar($this->custom_table, $this->custom_view));
+
+            // Right-click menu carrier. The div is invisible until
+            // grid_tools.js positions it at the cursor - kept inside the
+            // toolbar (i.e. inside #pjax-container) so a page swap
+            // rebuilds it with the same current CSRF token instead of
+            // leaving one behind on <body>.
+            $tools->append(new GridTools\GridContextMenu($this->custom_table, $this->custom_view));
+
+            // JSON config for the inline editor. Renders no visible
+            // widget - just a `<script>` tag grid_tools.js reads on boot
+            // to learn which columns can be edited in place and how each
+            // one's picker should look. Skipped without edit permission.
+            $tools->append(new GridTools\GridInlineEditor($this->custom_table, $this->custom_view));
+
+            // The action buttons. gridTool() drops their classic float-end
+            // wrapper, so unlike the stock header they render in DOM order
+            // - which is why this block appends them in the order they have
+            // always appeared on screen (floats stacked them in reverse):
+            // plugins, view menu, table settings, create, import/export.
+            // Same look on the PC, and the phone flex layout (which never
+            // honored the floats) now reads in the same order instead of
+            // mirrored. It also gives every button the shared
+            // .exm-grid-tool spacing - the floats sat flush against the
+            // display tools above.
+
+            // add plugin button
+            if ($listButtons !== null && count($listButtons) > 0) {
+                foreach ($listButtons as $listButton) {
+                    $tools->append((new Tools\PluginMenuButton($listButton, $this->custom_table))->gridTool());
+                }
+            }
+
+            if ($this->custom_table->enableViewMenuButton()) {
+                /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomViewMenuButton given */
+                $tools->append((new Tools\CustomViewMenuButton($this->custom_table, $this->custom_view))->gridTool());
+            }
+
+            // add page change button(contains view seting)
+            if ($this->custom_table->enableTableMenuButton()) {
+                /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\CustomTableMenuButton given */
+                $tools->append((new Tools\CustomTableMenuButton('data', $this->custom_table))->gridTool());
+            }
+
+            if ($this->custom_table->enableCreate(true) === true) {
+                $tools->append(view('exment::custom-value.new-button', ['table_name' => $this->custom_table->table_name, 'grid_tool' => true]));
+            }
+
             // validate export and import
             $import = $this->custom_table->enableImport();
             $export = $this->custom_table->enableExport();
             if ($import === true || $export === true) {
                 // todo 通常ビューの場合のみプラグインエクスポートを有効にするための修正です
                 $button = new Tools\ExportImportButton(admin_urls('data', $this->custom_table->table_name), $grid, $export === true, $export === true, $import === true, $export === true);
-                $tools->append($button->setCustomTable($this->custom_table));
-            }
-
-            if ($this->custom_table->enableCreate(true) === true) {
-                $tools->append(view('exment::custom-value.new-button', ['table_name' => $this->custom_table->table_name]));
-            }
-
-            // add page change button(contains view seting)
-            if ($this->custom_table->enableTableMenuButton()) {
-                $tools->append(new Tools\CustomTableMenuButton('data', $this->custom_table));
-            }
-            if ($this->custom_table->enableViewMenuButton()) {
-                $tools->append(new Tools\CustomViewMenuButton($this->custom_table, $this->custom_view));
-            }
-
-            // add plugin button
-            if ($listButtons !== null && count($listButtons) > 0) {
-                foreach ($listButtons as $listButton) {
-                    $tools->append(new Tools\PluginMenuButton($listButton, $this->custom_table));
-                }
+                /** @phpstan-ignore-next-line append() expects ExmentAdminCore\Admin\Grid\Tools\AbstractTool|string, Exceedone\Exment\Form\Tools\ExportImportButton given */
+                $tools->append($button->setCustomTable($this->custom_table)->gridTool());
             }
 
             // manage batch --------------------------------------------------
@@ -480,7 +720,7 @@ class DefaultGrid extends GridBase
                         $batch->add(exmtrans('custom_value.hard_delete'), new GridTools\BatchHardDelete(exmtrans('custom_value.hard_delete')));
                     } else {
                         foreach ($this->custom_table->custom_operations as $custom_operation) {
-                            if ($custom_operation->matchOperationType(Enums\CustomOperationType::BULK_UPDATE)) {
+                            if ($custom_operation->active_flg && $custom_operation->matchOperationType(Enums\CustomOperationType::BULK_UPDATE)) {
                                 $title = $custom_operation->getOption('button_label') ?? $custom_operation->operation_name;
                                 $batch->add($title, new GridTools\BatchUpdate($custom_operation));
                             }
@@ -490,6 +730,12 @@ class DefaultGrid extends GridBase
                     // if cannot edit, disable delete and update operations
                     $batch->disableDelete();
                 }
+
+                // run a workflow action on the ticked rows (#1648). Not by the edit permission:
+                // the users who approve may only see the records.
+                if (request()->get('_scope_') != 'trashed' && !is_null(Workflow::getWorkflowByTable($this->custom_table))) {
+                    $batch->add(exmtrans('workflow.bulk.title'), new GridTools\BatchWorkflow());
+                }
             });
         });
     }
@@ -497,9 +743,10 @@ class DefaultGrid extends GridBase
     /**
      * Management row action
      */
+    // @phpstan-ignore-next-line
     protected function manageRowAction($grid)
     {
-        if ($this->modal) {
+        if ($this->modal || $this->preview) {
             $grid->disableActions();
             return;
         }
@@ -510,13 +757,15 @@ class DefaultGrid extends GridBase
             $relationTables = $custom_table->getRelationTables();
 
             $grid->actions(function (Grid\Displayers\Actions $actions) use ($custom_table, $relationTables) {
+                /** @var mixed $actions */
                 $custom_table->setGridAuthoritable($actions->grid->getOriginalCollection());
+                $enableCreate = true;
                 $enableEdit = true;
                 $enableDelete = true;
                 $enableHardDelete = false;
 
-                // if has relations, add link
-                if (count($relationTables) > 0) {
+                // if has relations, add link (not for trashed rows: relation search targets undeleted data only)
+                if (count($relationTables) > 0 && !$actions->row->trashed()) {
                     $linker = (new Linker())
                         ->url($actions->row->getRelationSearchUrl())
                         ->icon('fa-compress')
@@ -538,9 +787,22 @@ class DefaultGrid extends GridBase
                     $enableDelete = false;
                 }
 
-                if (!is_null($parent_value = $actions->row->getParentValue()) && $parent_value->enableEdit(true) !== true) {
-                    $enableEdit = false;
-                    $enableDelete = false;
+                if ($custom_table->enableCreate(true) !== true) {
+                    $enableCreate = false;
+                }
+
+                if (!is_null($parent_value = $actions->row->getParentValue(null, true))) {
+                    if (boolval($custom_table->getOption('editable_with_parent')??1)) {
+                        if ($parent_value->enableEdit(true, false) !== true) {
+                            $enableCreate = false;
+                            $enableEdit = false;
+                            $enableDelete = false;
+                        }
+                    } elseif ($parent_value->enableAccess() !== true)  {
+                        $enableCreate = false;
+                        $enableEdit = false;
+                        $enableDelete = false;
+                    }
                 }
 
                 if (!$enableEdit) {
@@ -555,21 +817,24 @@ class DefaultGrid extends GridBase
                     $actions->disableView();
                     $actions->disableDelete();
 
-                    // add restore link
-                    $restoreUrl = $actions->row->getUrl() . '/restoreClick';
-                    $linker = (new Linker())
-                        ->icon('fa-undo')
-                        ->script(true)
-                        ->linkattributes([
-                            'data-add-swal' => $restoreUrl,
-                            'data-add-swal-title' => exmtrans('custom_value.restore'),
-                            'data-add-swal-text' => exmtrans('custom_value.message.restore'),
-                            'data-add-swal-method' => 'get',
-                            'data-add-swal-confirm' => trans('admin.confirm'),
-                            'data-add-swal-cancel' => trans('admin.cancel'),
-                        ])
-                        ->tooltip(exmtrans('custom_value.restore'));
-                    $actions->append($linker);
+                    // if parent data does not exist or has not been deleted 
+                    if (!$parent_value || !$parent_value->trashed()) {
+                        // add restore link
+                        $restoreUrl = $actions->row->getUrl() . '/restoreClick';
+                        $linker = (new Linker())
+                            ->icon('fa-undo')
+                            ->script(true)
+                            ->linkattributes([
+                                'data-add-swal' => $restoreUrl,
+                                'data-add-swal-title' => exmtrans('custom_value.restore'),
+                                'data-add-swal-text' => exmtrans('custom_value.message.restore'),
+                                'data-add-swal-method' => 'get',
+                                'data-add-swal-confirm' => trans('admin.confirm'),
+                                'data-add-swal-cancel' => trans('admin.cancel'),
+                            ])
+                            ->tooltip(exmtrans('custom_value.restore'));
+                        $actions->append($linker);
+                    }
 
                     // append show url
                     $showUrl = $actions->row->getUrl() . '?trashed=1';
@@ -595,6 +860,26 @@ class DefaultGrid extends GridBase
                         ])
                         ->tooltip(exmtrans('custom_value.hard_delete'));
                     $actions->append($linker);
+
+                } elseif ($actions->row->trashed()) {
+                    $actions->disableView();
+                    $actions->disableDelete();
+                    // append show url
+                    $showUrl = $actions->row->getUrl() . '?trashed=1';
+                    // add new edit link
+                    $linker = (new Linker())
+                        ->url($showUrl)
+                        ->icon('fa-eye')
+                        ->tooltip(trans('admin.show'));
+                    $actions->append($linker);
+                }
+
+                if ($enableCreate && boolval(config('exment.gridrow_show_copy_button', false))) {
+                    $linker = (new Linker())
+                        ->url(admin_urls('data', $custom_table->table_name, "create?copy_id={$actions->row->id}"))
+                        ->icon('fa-copy')
+                        ->tooltip(exmtrans('common.copy_item', exmtrans('custom_value.custom_valule_button_label')));
+                    $actions->append($linker);
                 }
 
                 PartialCrudService::setGridRowAction($custom_table, $actions);
@@ -602,49 +887,7 @@ class DefaultGrid extends GridBase
         }
     }
 
-    /**
-     * @param Request $request
-     */
-    public function import(Request $request)
-    {
-        $service = $this->getImportExportService()
-            ->format($request->file('custom_table_file'))
-            ->filebasename($this->custom_table->table_name);
-        $result = $service->import($request);
-
-        return getAjaxResponse($result);
-    }
-
-    // create import and exporter
-    public function getImportExportService($grid = null)
-    {
-        $service = (new DataImportExport\DataImportExportService())
-            ->exportAction(new DataImportExport\Actions\Export\CustomTableAction(
-                [
-                    'custom_table' => $this->custom_table,
-                    'grid' => $grid,
-                ]
-            ))->viewExportAction(new DataImportExport\Actions\Export\ViewAction(
-                [
-                    'custom_table' => $this->custom_table,
-                    'custom_view' => $this->custom_view,
-                    'grid' => $grid,
-                ]
-            ))->pluginExportAction(new DataImportExport\Actions\Export\PluginAction(
-                [
-                    'custom_table' => $this->custom_table,
-                    'custom_view' => $this->custom_view,
-                    'grid' => $grid,
-                ]
-            ))->importAction(new DataImportExport\Actions\Import\CustomTableAction(
-                [
-                    'custom_table' => $this->custom_table,
-                    'primary_key' => app('request')->input('select_primary_key') ?? null,
-                ]
-            ));
-        return $service;
-    }
-
+    // @phpstan-ignore-next-line
     public function renderModalFrame()
     {
         // get target column id or class
@@ -685,6 +928,7 @@ class DefaultGrid extends GridBase
         ]);
     }
 
+    // @phpstan-ignore-next-line
     public function renderModal($grid)
     {
         return view('exment::widgets.partialindex', [
@@ -718,6 +962,7 @@ class DefaultGrid extends GridBase
      * @param CustomTable $custom_table
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function setViewForm($view_kind_type, $form, $custom_table, array $options = [])
     {
         if (in_array($view_kind_type, [Enums\ViewKindType::DEFAULT, Enums\ViewKindType::ALLDATA])) {
@@ -737,22 +982,28 @@ class DefaultGrid extends GridBase
             ;
         }
 
+        // the view this form shows the values of: the one being edited, or
+        // the one a copy is taken from. Passed to every target list so a row
+        // pointing at a column the list may no longer offer still has an
+        // entry to sit in.
+        $custom_view = array_get($options, 'custom_view');
+
         // column setting
         if ($view_kind_type != Enums\ViewKindType::FILTER) {
             static::setViewInfoboxFields($form);
 
-            static::setColumnFields($form, $custom_table);
+            static::setColumnFields($form, $custom_table, [], $custom_view);
         }
 
         // filter setting
         if ($view_kind_type != Enums\ViewKindType::ALLDATA) {
-            static::setFilterFields($form, $custom_table);
+            static::setFilterFields($form, $custom_table, false, $custom_view);
         }
 
-        static::setSortFields($form, $custom_table, true);
+        static::setSortFields($form, $custom_table, true, $custom_view);
 
         if (in_array($view_kind_type, [Enums\ViewKindType::DEFAULT, Enums\ViewKindType::ALLDATA])) {
-            static::setGridFilterFields($form, $custom_table);
+            static::setGridFilterFields($form, $custom_table, [], $custom_view);
         }
     }
 
@@ -763,15 +1014,18 @@ class DefaultGrid extends GridBase
      *
      * @param Form $form
      * @param CustomTable $custom_table
+     * @param array<string, mixed> $column_options
+     * @param CustomView|null $custom_view
      * @return void
      */
-    public static function setGridFilterFields(&$form, $custom_table, array $column_options = [])
+    public static function setGridFilterFields(&$form, $custom_table, array $column_options = [], $custom_view = null)
     {
         // columns setting
         $column_options = array_merge([
             'append_table' => true,
             'include_parent' => true,
             'include_workflow' => true,
+            'include_comment' => true,
             'index_enabled_only' => true,
             'only_system_grid_filter' => true,
             'ignore_many_to_many' => true,
@@ -780,8 +1034,12 @@ class DefaultGrid extends GridBase
 
         $manualUrl = getManualUrl('column?id='.exmtrans('custom_column.options.index_enabled'));
 
-        $form->hasManyTable('custom_view_grid_filters', exmtrans("custom_view.custom_view_grid_filters"), function ($form) use ($custom_table, $column_options) {
-            $targetOptions = $custom_table->getColumnsSelectOptions($column_options);
+        $form->hasManyTable('custom_view_grid_filters', exmtrans("custom_view.custom_view_grid_filters"), function ($form) use ($custom_table, $column_options, $custom_view) {
+            $targetOptions = static::appendStoredTargetOptions(
+                $custom_table->getColumnsSelectOptions($column_options),
+                $custom_view,
+                'custom_view_grid_filters'
+            );
 
             $field = $form->select('view_column_target', exmtrans("custom_view.view_column_target"))->required()
                 ->options($targetOptions);
@@ -795,5 +1053,22 @@ class DefaultGrid extends GridBase
         })->setTableColumnWidth(8, 4)
         ->rowUpDown('order', 10)
         ->descriptionHtml(exmtrans("custom_view.description_custom_view_grid_filters", $manualUrl));
+    }
+
+    /**
+     * Set filter fileds form
+     *
+     * @param Form $form
+     * @param CustomTable $custom_table
+     * @param boolean $is_aggregate
+     * @param CustomView|null $custom_view
+     * @return void
+     */
+    public static function setFilterFields(&$form, $custom_table, $is_aggregate = false, $custom_view = null)
+    {
+        parent::setFilterFields($form, $custom_table, $is_aggregate, $custom_view);
+
+        $form->checkboxone('condition_reverse', exmtrans("condition.condition_reverse"))
+            ->option(exmtrans("condition.condition_reverse_options"));
     }
 }

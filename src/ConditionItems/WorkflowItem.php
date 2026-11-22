@@ -11,6 +11,7 @@ use Exceedone\Exment\Model\CustomValue;
 
 class WorkflowItem extends SystemItem implements ConditionItemInterface
 {
+    // @phpstan-ignore-next-line
     public function getFilterOption()
     {
         $target = explode('?', $this->target)[0];
@@ -28,11 +29,11 @@ class WorkflowItem extends SystemItem implements ConditionItemInterface
         return $this->compareValue($condition, $custom_value);
     }
 
-
     /**
      * Get Condition Label
      *
-     * @return void
+     * @param Condition $condition
+     * @return array|bool|\Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Translation\Translator|mixed|string|void|null
      */
     public function getConditionLabel(Condition $condition)
     {

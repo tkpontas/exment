@@ -13,9 +13,13 @@ class LangForm
 {
     use EnvTrait;
 
+    // @phpstan-ignore-next-line
     public function index()
     {
-        \Artisan::call('exment:publish');
+        if (!session()->has('_exment_assets_published')) {
+            \Artisan::call('exment:publish');
+            session(['_exment_assets_published' => true]);
+        }
 
         return view('exment::install.lang', [
             'locale_options' => SystemLocale::getLocaleOptions(),
@@ -25,6 +29,7 @@ class LangForm
         ]);
     }
 
+    // @phpstan-ignore-next-line
     public function post()
     {
         $request = request();

@@ -2,13 +2,17 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Exceedone\Exment\Exceptions\InvalidZipEntryException;
 use Exceedone\Exment\Services\Installer\InitializeFormTrait;
+use Exceedone\Exment\Services\DemoMode;
 use Exceedone\Exment\Services\TemplateImportExport;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Define;
+use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Enums\TemplateExportTarget;
-use Encore\Admin\Layout\Content;
-use Encore\Admin\Widgets\Box;
+use ExmentAdminCore\Admin\Layout\Content;
+use ExmentAdminCore\Admin\Widgets\Box;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use GuzzleHttp\Client;
@@ -31,15 +35,26 @@ class TemplateController extends AdminControllerBase
     {
         $this->AdminContent($content);
         $this->exportBox($content);
-        $this->importBox($content);
+        // demo mode: export only
+        if (!DemoMode::enabled()) {
+            $this->importBox($content);
+        }
         return $content;
     }
 
     /**
      * search template
      */
+    // @phpstan-ignore-next-line
     public function searchTemplate(Request $request)
     {
+        if (System::initialized()) {
+            $login_user = \Exment::user();
+            if (!$login_user || !$login_user->hasPermission(Permission::SYSTEM)) {
+                abort(403);
+            }
+        }
+
         // search from exment api
         // $client = new Client();
 
@@ -89,6 +104,7 @@ class TemplateController extends AdminControllerBase
             if (is_null($array)) {
                 $array = [];
             }
+            // @phpstan-ignore-next-line
             $no_thumbnail_file = base64_encode(file_get_contents(exment_package_path('templates/noimage.png')));
 
             $datalist = [];
@@ -107,12 +123,16 @@ class TemplateController extends AdminControllerBase
                     $delete_url = null;
                 }
 
+                $thumbnailExt = strtolower(pathinfo(array_get($a, 'thumbnail', ''), PATHINFO_EXTENSION));
+                $mimeMap = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+                $mimeType = $mimeMap[$thumbnailExt] ?? 'image/png';
+
                 $datalist[] = [
                     'id' => json_encode(['template_type' => array_get($a, 'template_type'), 'template_name' => array_get($a, 'template_name')]),
                     'title' => array_get($a, 'template_view_name'),
                     'description' => array_get($a, 'description'),
                     'author' => array_get($a, 'author'),
-                    'thumbnail' => 'data:image/png;base64,'.$thumbnail_file,
+                    'thumbnail' => "data:{$mimeType};base64,{$thumbnail_file}",
                     'delete_url' => $delete_url,
                 ];
             }
@@ -152,6 +172,7 @@ class TemplateController extends AdminControllerBase
     /**
      * create export box
      */
+    // @phpstan-ignore-next-line
     protected function exportBox(Content $content)
     {
         $form = $this->exportBoxForm();
@@ -162,11 +183,11 @@ class TemplateController extends AdminControllerBase
     /**
      * create export box
      *
-     * @return \Encore\Admin\Widgets\Form
+     * @return \ExmentAdminCore\Admin\Widgets\Form
      */
     protected function exportBoxForm()
     {
-        $form = new \Encore\Admin\Widgets\Form();
+        $form = new \ExmentAdminCore\Admin\Widgets\Form();
         $form->disablePjax();
         $form->disableReset();
         $form->action(admin_url('template/export'));
@@ -213,22 +234,23 @@ class TemplateController extends AdminControllerBase
     /**
      * create import box
      */
+    // @phpstan-ignore-next-line
     protected function importBox(Content $content)
     {
-        $form = new \Encore\Admin\Widgets\Form();
+        $form = new \ExmentAdminCore\Admin\Widgets\Form();
         $form->disableReset();
         $form->action(admin_url('template/import'));
 
         $form->descriptionHtml(exmtrans('template.description_import'));
         $this->addTemplateTile($form);
         $form->hidden('_token')->default(csrf_token());
-
         $content->row((new Box(exmtrans('template.header_import'), $form))->style('info'));
     }
 
     /**
      * export
      */
+    // @phpstan-ignore-next-line
     public function export(Request $request)
     {
         // validation
@@ -254,12 +276,19 @@ class TemplateController extends AdminControllerBase
     /**
      * import
      */
+    // @phpstan-ignore-next-line
     public function import(Request $request)
     {
         \Exment::setTimeLimitLong();
 
         // upload template file and install
-        $this->uploadTemplate($request);
+        try {
+            $this->uploadTemplate($request);
+        } catch (InvalidZipEntryException $ex) {
+            // the message is already translated and carries no attacker controlled text
+            admin_toastr($ex->getMessage(), 'error');
+            return back();
+        }
 
         // install templates selected tiles.
         if ($request->has('template')) {
@@ -274,8 +303,18 @@ class TemplateController extends AdminControllerBase
     /**
      * delete template
      */
+    // @phpstan-ignore-next-line
     public function delete(Request $request)
     {
+        // Once the system is installed, deleting templates is a system-admin action.
+        // (Before initialization no login user exists yet; the install/initialize wizard runs anonymously.)
+        if (System::initialized()) {
+            $login_user = \Exment::user();
+            if (!$login_user || !$login_user->hasPermission(Permission::SYSTEM)) {
+                abort(403);
+            }
+        }
+
         // install templates selected tiles.
         if ($request->has('template')) {
             $importer = new TemplateImportExport\TemplateImporter();

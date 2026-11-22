@@ -10,10 +10,11 @@ use Exceedone\Exment\Enums\TemplateImportResult;
  *
  * @method static string|null|void importReplaceJson(&$json, $options = [])
  * @method static void exportReplaceJson(&$json)
- * @property array templateItems
  */
 trait TemplateTrait
 {
+
+    // @phpstan-ignore-next-line
     protected static $defaultExcepts = ['id', 'created_at', 'updated_at', 'created_user_id', 'updated_user_id', 'disabled_delete'];
 
     // Description for $templateItems.
@@ -55,7 +56,11 @@ trait TemplateTrait
 
     /**
      * search language data (by key matching).
+     *
+     * @param array<int|string, mixed>|null $lang the language items of this model (from lang.json)
      */
+
+    // @phpstan-ignore-next-line
     public static function searchLangData($json, $lang)
     {
         $keys = array_get(static::$templateItems, 'langs.keys', []);
@@ -85,6 +90,8 @@ trait TemplateTrait
      *
      * @return array is_lang whether for language file
      */
+
+    // @phpstan-ignore-next-line
     public function getTemplateExportItems($is_lang = false)
     {
         $array = $this->toArray();
@@ -99,6 +106,7 @@ trait TemplateTrait
         if (array_key_exists('uniqueKeyReplaces', $templateItems)) {
             foreach (array_get($templateItems, 'uniqueKeyReplaces', []) as $uniqueKeyReplace) {
                 // get replaced value
+                /** @var array<int, array<string, mixed>> $replaceNames */
                 $replaceNames = $uniqueKeyReplace['replaceNames'];
                 $replacedValue = null;
 
@@ -122,6 +130,8 @@ trait TemplateTrait
                     })->toArray();
 
                     // get enum
+
+                    // @phpstan-ignore-next-line
                     $enum = call_user_func_array([$uniqueKeyReplace['uniqueKeySystemEnum'], 'getEnum'], array_values($getEnumArgs));
                     if (isset($enum)) {
                         $replacedValue = $enum->option();
@@ -136,6 +146,8 @@ trait TemplateTrait
                     })->toArray();
 
                     // call eloquent function
+
+                    // @phpstan-ignore-next-line
                     $replacedEloquent = call_user_func_array([$uniqueKeyReplace['uniqueKeyClassName'], 'getEloquent'], array_values($eloquentArgs));
                     if (isset($replacedEloquent)) {
                         // get unique key names
@@ -211,8 +223,10 @@ trait TemplateTrait
     /**
      * set template Export Items.
      *
-     * @return \Illuminate\Database\Eloquent\Model template items
+     * @return \Illuminate\Database\Eloquent\Model|void template items
      */
+
+    // @phpstan-ignore-next-line
     public static function importTemplate($array, $is_update, $options = [])
     {
         //copy array for replacing items
@@ -300,6 +314,8 @@ trait TemplateTrait
         }
 
         // create model
+
+        // @phpstan-ignore-next-line
         $obj = static::firstOrNew($obj_keys);
 
         // if record is exists already skip process, when update
@@ -375,6 +391,8 @@ trait TemplateTrait
      *
      * @return array key is database column name, value is database name.
      */
+
+    // @phpstan-ignore-next-line
     public function getUniqueKeyNames()
     {
         if (!property_exists(get_called_class(), 'templateItems') || !array_has(static::$templateItems, 'uniqueKeys')) {

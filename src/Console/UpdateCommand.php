@@ -3,6 +3,7 @@
 namespace Exceedone\Exment\Console;
 
 use Illuminate\Console\Command;
+use Exceedone\Exment\Services\Installer\SkeletonMigrationReconciler;
 use Exceedone\Exment\Services\TemplateImportExport\TemplateImporter;
 
 class UpdateCommand extends Command
@@ -56,6 +57,16 @@ class UpdateCommand extends Command
 
         $this->initDatabase();
 
+        // the features the site has not decided on yet (they are off): told at the end
+        try {
+            $features = \Exceedone\Exment\Services\PluginDistribution\AdminNotices::newFeatures();
+            if (count($features) > 0) {
+                $this->warn(strval(exmtrans('plugin_distribution.notice_features', ['names' => implode(', ', $features)])));
+            }
+        } catch (\Throwable $e) {
+            // not told
+        }
+
         return 0;
     }
 
@@ -73,10 +84,34 @@ class UpdateCommand extends Command
             }
         }
 
+        $this->prepareSkeletonMigrations();
+
         $this->call('migrate');
 
         // Remove template import if update
         // $importer = new TemplateImporter;
         // $importer->importSystemTemplate(true);
+        // the table "System Performance Log" is made only where the log is on
+        // (otherwise it is made when someone turns the log on in the system setting)
+        TemplateImporter::importSystemLogsTemplateIfEnabled();
+
+    }
+
+    /**
+     * Run the Laravel 11+ skeleton migrations (0001_01_01_*) that find their tables already there,
+     * e.g. a v6 backup restored into a fresh v7 install, so that `migrate` does not stop on them.
+     *
+     * @return void
+     */
+    protected function prepareSkeletonMigrations()
+    {
+        /** @var \Illuminate\Database\Migrations\Migrator $migrator */
+        $migrator = $this->laravel->make('migrator');
+        $migrator->setOutput($this->output);
+        $reconciler = new SkeletonMigrationReconciler($migrator);
+
+        foreach ($reconciler->reconcile() as $migration => $created) {
+            $this->info("$migration: kept the existing tables" . (empty($created) ? '' : ', created ' . implode(', ', $created)));
+        }
     }
 }

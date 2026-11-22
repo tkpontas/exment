@@ -14,6 +14,7 @@ use Exceedone\Exment\Model\RelationTable;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\Workflow;
 use Exceedone\Exment\Enums\NotifyAction;
+use Exceedone\Exment\Enums\NotifyTrigger;
 use Exceedone\Exment\Enums\CustomOperationType;
 use Exceedone\Exment\Enums\ColumnType;
 use Exceedone\Exment\Enums\SearchType;
@@ -30,14 +31,24 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
  */
 class NotifyService
 {
+    /** @var Notify */
     protected $notify;
 
+    /** @var mixed */
     protected $targetid;
 
+    /** @var CustomTable|null */
     protected $custom_table;
 
+    /** @var CustomValue|null */
     protected $custom_value;
 
+    /**
+     * @param Notify $notify
+     * @param mixed $targetid
+     * @param mixed $tableKey
+     * @param mixed $id
+     */
     public function __construct(Notify $notify, $targetid, $tableKey, $id)
     {
         $this->notify = $notify;
@@ -107,6 +118,7 @@ class NotifyService
      * @param array|\Illuminate\Support\Collection $target_users
      * @return ModalForm
      */
+    // @phpstan-ignore-next-line
     public function getNotifyDialogFormMultiple($target_users)
     {
         $users = [];
@@ -117,14 +129,18 @@ class NotifyService
             }
         }
 
+        // @phpstan-ignore-next-line
         return $this->getSendForm($users, true);
     }
 
     /**
      * Get Send Form. if only one user, Replace format.
      *
-     * @return ModalForm
+     * @param $notifyTargets
+     * @param $isFlow
+     * @return ModalForm|false
      */
+    // @phpstan-ignore-next-line
     protected function getSendForm($notifyTargets, $isFlow = false)
     {
         $tableKey = $this->custom_table->table_name;
@@ -204,10 +220,14 @@ class NotifyService
     }
 
     /**
-     * send notfy mail
+     * send notify mail
      *
-     * @return void
+     * @param $custom_table
+     * @return \Symfony\Component\HttpFoundation\Response
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
+    // @phpstan-ignore-next-line
     public function sendNotifyMail($custom_table)
     {
         $request = request();
@@ -228,6 +248,17 @@ class NotifyService
         $errors = [];
 
         if (isset($title) && isset($message)) {
+            // The subject and the body are typed by the user and are filled with
+            // values when they are sent. Only the ${...} words of the mail template
+            // are filled; a word the user adds (${system:...}, ${notify:...}, ...)
+            // stays as it was typed.
+            $mail_template = $this->notify->getMailTemplate();
+            $allowed = static::getReplaceWords(isset($mail_template)
+                ? (array_get($mail_template->value, 'mail_subject') . "\n" . $mail_template->getJoinedBody())
+                : '');
+            $title = static::keepOnlyReplaceWords(str_replace("\x00", '', (string)$title), $allowed);
+            $message = static::keepOnlyReplaceWords(str_replace("\x00", '', (string)$message), $allowed);
+
             try {
                 $this->notify->notifyButtonClick($this->custom_value, $target_user_keys, $title, $message, $attachments);
             } catch (TransportExceptionInterface $ex) {
@@ -266,6 +297,7 @@ class NotifyService
      * @param \Illuminate\Support\Collection $values
      * @return boolean
      */
+    // @phpstan-ignore-next-line
     protected function hasNotifyUserByButton(\Illuminate\Support\Collection $values): bool
     {
         // Exists user, return true
@@ -290,6 +322,7 @@ class NotifyService
      * @param \Illuminate\Support\Collection $notifyTargets
      * @return string
      */
+    // @phpstan-ignore-next-line
     protected function getNotifyTargetLabel(\Illuminate\Support\Collection $notifyTargets): string
     {
         $targets = clone $notifyTargets;
@@ -317,7 +350,7 @@ class NotifyService
     /**
      * Execute Notify test
      *
-     * @param array $params
+     * @param array<mixed> $params
      * @return Notifications\SenderBase
      */
     public static function executeTestNotify($params = []): Notifications\SenderBase
@@ -359,6 +392,7 @@ class NotifyService
      * @param array $params
      * @return void
      */
+    // @phpstan-ignore-next-line
     public static function executeNotifyAction($notify, $params = [])
     {
         $params = array_merge(
@@ -421,6 +455,11 @@ class NotifyService
                     $params['webhook_url'] = array_get($action_setting, 'webhook_url');
                     static::notifyTeams($params);
                     break;
+
+                case NotifyAction::LINE:
+                    $params['flex_template_id'] = array_get($action_setting, 'flex_template_id');
+                    static::notifyLine($params);
+                    break;
             }
             // call notified trigger operations
             //CustomOperation::operationExecuteEvent(CustomOperationType::NOTIFIED, $custom_value, true);
@@ -434,11 +473,155 @@ class NotifyService
     }
 
     /**
+     * @param array<string, mixed> $params
+     * @return void
+     */
+    public static function notifyLine(array $params = [])
+    {
+        $user = array_get($params, 'user');
+        if (is_nullorempty($user)) {
+            return;
+        }
+
+        $userId = $user->getUserId();
+        if (is_nullorempty($userId)) {
+            return;
+        }
+        $lineUserId = \Exceedone\Exment\Model\LineAccountLink::where('user_id', $userId)->value('line_user_id');
+        // a target such as "created user" is read with trashed users, but a deleted user keeps its LINE link
+        if (is_nullorempty($lineUserId) || !\Exceedone\Exment\Services\Line\LineActingUser::userExists((int) $userId)) {
+            return;
+        }
+
+        $custom_value = array_get($params, 'custom_value');
+
+        $logContext = [
+            'user_id'     => $userId,
+            'line_user_id' => $lineUserId,
+            'parent_id'   => isset($custom_value) ? $custom_value->id : null,
+            'parent_type' => isset($custom_value) ? $custom_value->custom_table->table_name : null,
+            'save_body'   => !boolval(array_get($params, 'disableHistoryBody', false)),
+        ];
+
+        $dedupeMinutes = (int) config('exment.line.dedupe_minutes', 0);
+        $notify = array_get($params, 'notify');
+        if ($dedupeMinutes > 0
+            && isset($custom_value)
+            && !is_nullorempty($notify)
+            && $notify->notify_trigger == NotifyTrigger::TIME
+            && \Exceedone\Exment\Services\Line\LineSendLogger::recentlySent(
+                (int) $userId,
+                $custom_value->id,
+                $custom_value->custom_table->table_name,
+                $dedupeMinutes
+            )
+        ) {
+            \Log::info('LINE reminder skipped by dedupe', [
+                'user_id' => $userId,
+                'parent_id' => $custom_value->id,
+                'parent_type' => $custom_value->custom_table->table_name,
+            ]);
+            return;
+        }
+
+        $flexTemplateId = array_get($params, 'flex_template_id');
+        if (!is_nullorempty($flexTemplateId) && isset($custom_value)) {
+            // skip only the permission scope: a deleted template stays in the trash and must fall back to text
+            $tmpl = getModelName('line_flex_template')::withoutGlobalScope(\Exceedone\Exment\Model\CustomValueModelScope::class)->find($flexTemplateId);
+            if ($tmpl) {
+                $prms = array_get($params, 'prms', []);
+                $replaceOptions = array_get($params, 'replaceOptions', []);
+                $title = trim((string) static::replaceWord((string) $tmpl->getValue('title'), $custom_value, $prms, $replaceOptions));
+                if ($title === '') {
+                    $title = (string) $custom_value->getLabel();
+                }
+
+                $rows = [];
+
+                $manualItems = \Exceedone\Exment\Services\Line\LineFlexBuilder::parseBodyItems((string) $tmpl->getValue('body_items'));
+                if (!empty($manualItems)) {
+                    foreach ($manualItems as $item) {
+                        $value = trim((string) static::replaceWord($item['format'], $custom_value, $prms, $replaceOptions));
+                        if ($value === '') {
+                            continue;
+                        }
+                        $rows[] = ['label' => $item['label'], 'value' => $value];
+                    }
+                } elseif (!is_nullorempty(array_get($replaceOptions, 'workflow_action'))) {
+                    foreach (\Exceedone\Exment\Services\Line\LineFlexBuilder::workflowDetailFormats() as [$labelKey, $format]) {
+                        $value = trim((string) static::replaceWord($format, $custom_value, $prms, $replaceOptions));
+                        if ($value === '') {
+                            continue;
+                        }
+                        $rows[] = ['label' => exmtrans($labelKey), 'value' => $value];
+                    }
+                }
+
+                $tableKey = $custom_value->custom_table->table_name;
+                $recipientUser = getModelName(\Exceedone\Exment\Enums\SystemTableName::USER)::find($userId);
+                $buttons = [];
+                foreach ($custom_value->getWorkflowActions(false, false) as $wfAction) {
+                    if (!$recipientUser || !$wfAction->hasAuthority($custom_value, $recipientUser)) {
+                        continue;
+                    }
+                    if ($wfAction->comment_type === \Exceedone\Exment\Enums\WorkflowCommentType::REQUIRED) {
+                        continue;
+                    }
+                    // LINE refuses these taps (LineWorkflowAction::rejectReason), so do not offer them
+                    if (\Exceedone\Exment\Model\WorkflowValue::isAlreadyExecuted($wfAction->id, $custom_value, $recipientUser)
+                        || \Exceedone\Exment\Services\Line\LineWorkflowAction::nextStepNeedsSelection($wfAction, $custom_value)) {
+                        continue;
+                    }
+                    $buttons[] = [
+                        'label' => $wfAction->action_name,
+                        'data'  => \Exceedone\Exment\Services\Line\LineFlexBuilder::postbackData($tableKey, $custom_value->id, $wfAction->id),
+                    ];
+                }
+
+                $detailUrl = $custom_value->getUrl(['tag' => false, 'modal' => false, 'record_url' => true]);
+                if (is_string($detailUrl) && preg_match('#^https://#i', $detailUrl)) {
+                    $buttons[] = [
+                        'label' => exmtrans('notify.line_show_detail'),
+                        'uri'   => $detailUrl,
+                    ];
+                }
+
+                $bubble = \Exceedone\Exment\Services\Line\LineFlexBuilder::buildBubble($title, $rows, $buttons);
+                $message = \Exceedone\Exment\Services\Line\LineMessagingClient::flex($title, $bubble);
+                \Exceedone\Exment\Jobs\LineSendJob::dispatchAfterResponse($lineUserId, [$message], array_merge($logContext, [
+                    'message_type'     => \Exceedone\Exment\Services\Line\LineSendLogger::TYPE_FLEX,
+                    'flex_template_id' => $flexTemplateId,
+                    'subject'          => $title,
+                ]));
+                return;
+            }
+        }
+
+        static::replaceSubjectBody($params);
+
+        $subject = static::replaceWord(
+            array_get($params, 'subject'),
+            array_get($params, 'custom_value'),
+            array_get($params, 'prms', []),
+            array_get($params, 'replaceOptions', [])
+        );
+        $body = static::replaceWord(
+            array_get($params, 'body'),
+            array_get($params, 'custom_value'),
+            array_get($params, 'prms', []),
+            array_get($params, 'replaceOptions', [])
+        );
+
+        Notifications\LineSender::make($lineUserId, $subject, $body, $logContext)->send();
+    }
+
+    /**
      * Notify email
      *
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifyMail(array $params = [])
     {
         $params = array_merge(
@@ -455,6 +638,7 @@ class NotifyService
                 'attach_files' => null,
                 'disableHistoryBody' => false,
                 'replaceOptions' => [],
+                'final_user' => false,
             ],
             $params
         );
@@ -477,6 +661,7 @@ class NotifyService
                 ->bcc($params['bcc'])
                 ->attachments($params['attach_files'])
                 ->replaceOptions($params['replaceOptions'])
+                ->finalUser($params['final_user'])
                 ->send();
 
             return $sender;
@@ -494,6 +679,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifyNavbar(array $params = []): Notifications\SenderBase
     {
         $params = array_merge(
@@ -549,6 +735,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifySlack(array $params = [])
     {
         return static::notifyWebHook($params, Notifications\SlackSender::class);
@@ -561,6 +748,7 @@ class NotifyService
      * @param array $params
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     public static function notifyTeams(array $params = [])
     {
         return static::notifyWebHook($params, Notifications\MicrosoftTeamsSender::class);
@@ -574,6 +762,7 @@ class NotifyService
      * @param string $className
      * @return Notifications\SenderBase
      */
+    // @phpstan-ignore-next-line
     protected static function notifyWebHook(array $params, string $className): Notifications\SenderBase
     {
         $params = array_merge(
@@ -604,6 +793,12 @@ class NotifyService
         // send message
         $options = ['webhook_name' => $params['webhook_name'], 'webhook_icon' => $params['webhook_icon'], 'mention_here' => $params['mention_here'], 'mention_users' => $params['mention_users']];
         $sender = $className::make($webhook_url, $slack_subject, $slack_body, $options);
+        // the URL is checked when it is posted to, too (its name may point elsewhere by now)
+        if (!WebhookUrlGuard::isAllowed($webhook_url)) {
+            \Log::warning('Exment notify: the webhook URL is not allowed and nothing was sent: ' . parse_url((string)$webhook_url, PHP_URL_HOST)
+                . ' (the server itself and internal addresses are refused; to post to this host, add it to EXMENT_NOTIFY_WEBHOOK_ALLOW_HOSTS in .env)');
+            return $sender;
+        }
         $sender->send();
 
         return $sender;
@@ -614,6 +809,7 @@ class NotifyService
     /**
      * replace subject and body from mail template
      */
+    // @phpstan-ignore-next-line
     public static function replaceSubjectBody(&$params = [])
     {
         $params = array_merge(
@@ -665,6 +861,7 @@ class NotifyService
      * @param bool $isSelectTarget
      * @return array
      */
+    // @phpstan-ignore-next-line
     protected function getProgressInfo($isSelectTarget)
     {
         $steps[] = [
@@ -687,6 +884,41 @@ class NotifyService
     /**
      * replace subject or body words.
      */
+    /**
+     * The ${...} words in a text.
+     *
+     * @return array<string>
+     */
+    protected static function getReplaceWords(?string $text): array
+    {
+        if (is_nullorempty($text)) {
+            return [];
+        }
+        preg_match_all('/\$\{([^{}]*?)\}/', $text, $matches);
+        return array_values(array_unique($matches[0]));
+    }
+
+    /**
+     * Break the ${...} words of the text that are not in $allowed, so they are
+     * sent as typed and not filled with values.
+     *
+     * @param array<string> $allowed
+     */
+    protected static function keepOnlyReplaceWords(string $text, array $allowed): string
+    {
+        // The allowed words are put aside, every other "${" is broken (also one
+        // inside another, as "${${system:...}"), then the allowed words come back.
+        $marks = [];
+        foreach (array_values($allowed) as $index => $word) {
+            $mark = "\x00EXMWORD{$index}\x00";
+            $marks[$mark] = $word;
+            $text = str_replace($word, $mark, $text);
+        }
+        $text = str_replace('${', '$ {', $text);
+        return strtr($text, $marks);
+    }
+
+    // @phpstan-ignore-next-line
     public static function replaceWord($target, $custom_value = null, $prms = null, $replaceOptions = [])
     {
         $replaceOptions = array_merge([
@@ -709,6 +941,7 @@ class NotifyService
     }
 
 
+    // @phpstan-ignore-next-line
     public static function getNotifyTargetColumns($custom_table, $notify_action, array $options = [])
     {
         // get notify options by notify action
@@ -860,9 +1093,11 @@ class NotifyService
     /**
      * Get User Mail Address. Only single item.
      *
-     * @param string|array|CustomValue|NotifyTarget $user
-     * @return array
+     * @param $user
+     * @return string|null
+     * @throws \Exception
      */
+    // @phpstan-ignore-next-line
     public static function getAddress($user): ?string
     {
         $result = static::getAddresses($user);
@@ -875,6 +1110,7 @@ class NotifyService
      * @param string|array|CustomValue|NotifyTarget $users
      * @return array
      */
+    // @phpstan-ignore-next-line
     public static function getAddresses($users): array
     {
         // Convert "," string to array

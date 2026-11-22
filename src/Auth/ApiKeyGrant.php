@@ -34,7 +34,7 @@ class ApiKeyGrant extends AbstractGrant
         ServerRequestInterface $request,
         ResponseTypeInterface $responseType,
         \DateInterval $accessTokenTTL
-    ) {
+    ): ResponseTypeInterface {
         // Validate request
         $client = $this->validateClient($request);
         $scopes = $this->validateScopes($this->getRequestParameter('scope', $request));
@@ -54,14 +54,17 @@ class ApiKeyGrant extends AbstractGrant
         return $responseType;
     }
 
-    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client)
+    /**
+     * @return UserEntityInterface
+     */
+    protected function validateUser(ServerRequestInterface $request, ClientEntityInterface $client): UserEntityInterface
     {
         $api_key = $this->getRequestParameter('api_key', $request);
         if (is_null($api_key)) {
             throw OAuthServerException::invalidRequest('api_key');
         }
 
-        $login_user = $this->getUserEntityByUserCredentials($api_key);
+        $login_user = $this->getUserEntityByUserCredentials($api_key, $client);
 
         if ($login_user instanceof UserEntityInterface === false) {
             $this->getEmitter()->emit(new RequestEvent(RequestEvent::USER_AUTHENTICATION_FAILED, $request));
@@ -75,18 +78,27 @@ class ApiKeyGrant extends AbstractGrant
     /**
      * {@inheritdoc}
      */
-    public function getIdentifier()
+    public function getIdentifier(): string
     {
         return 'api_key';
     }
 
     /**
      * {@inheritdoc}
+     * @param string $api_key
+     * @return UserEntityInterface|null
      */
-    public function getUserEntityByUserCredentials($api_key)
+    public function getUserEntityByUserCredentials($api_key, ?ClientEntityInterface $client = null)
     {
+        /** @var ApiKey $api_key */
         $api_key = ApiKey::where('key', $api_key)->first();
+        // @phpstan-ignore-next-line
         if (is_null($api_key) || is_null($api_key->client)) {
+            throw OAuthServerException::invalidCredentials();
+        }
+        // the key is of the client that asks for the token (its id and secret
+        // were checked); a key of another client is not taken
+        if (isset($client) && !isMatchString($api_key->client_id, $client->getIdentifier())) {
             throw OAuthServerException::invalidCredentials();
         }
 

@@ -3,7 +3,7 @@
 namespace Exceedone\Exment\Services\FormSetting\FormColumn;
 
 use Exceedone\Exment\Services\FormSetting\FormBlock\BlockBase;
-use Encore\Admin\Widgets\Form as WidgetForm;
+use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 
 /**
  */
@@ -14,6 +14,7 @@ class Explain extends Header
      *
      * @return WidgetForm
      */
+    // @phpstan-ignore-next-line
     public function getSettingModalForm(BlockBase $block_item, array $parameters): WidgetForm
     {
         $form = new WidgetForm($parameters);

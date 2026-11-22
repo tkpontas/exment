@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Grid\Tools;
 
-use Encore\Admin\Grid\Tools\BatchAction;
+use ExmentAdminCore\Admin\Grid\Tools\BatchAction;
 
 class BatchRestore extends BatchAction
 {
@@ -14,7 +14,21 @@ class BatchRestore extends BatchAction
     }
 
     /**
+     * Prefix the restore label with an undo icon so it stands apart
+     * from delete / hard delete when the row appears in the copied
+     * bulk action bar as well as in the stock dropdown.
+     *
+     * @return string
+     */
+    public function render()
+    {
+        return '<i class="fa fa-undo"></i>&nbsp;' . e((string)$this->getTitle());
+    }
+
+    /**
      * Script of batch delete action.
+     *
+     * @return string
      */
     public function script()
     {
