@@ -24,7 +24,7 @@
             <a class="btn btn-sm btn-default" href="{{ $page_url }}"><i class="fa fa-folder-open" aria-hidden="true"></i> {{ exmtrans('file_server.open') }}</a>
         @endif
         @if ($can_download)
-            <a class="btn btn-sm btn-primary" href="{{ $node_url }}/download"><i class="fa fa-download" aria-hidden="true"></i> {{ exmtrans('file_server.download') }}</a>
+            <a data-nopjax download class="btn btn-sm btn-primary" href="{{ $node_url }}/download"><i class="fa fa-download" aria-hidden="true"></i> {{ exmtrans('file_server.download') }}</a>
         @endif
         @if ($can_edit_text && !$lockedByOther)
             <a class="btn btn-sm btn-primary" href="{{ $node_url }}/edit"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> {{ exmtrans('file_server.text_edit') }}</a>
@@ -167,7 +167,7 @@
                                             <td style="overflow-wrap:anywhere">{{ $v['comment'] }}</td>
                                             <td class="exm-fs-actions">
                                                 @if ($can_download)
-                                                    <a class="btn btn-xs btn-default" href="{{ $v['download_url'] }}" title="{{ exmtrans('file_server.download') }}"><i class="fa fa-download" aria-hidden="true"></i></a>
+                                                    <a data-nopjax download class="btn btn-xs btn-default" href="{{ $v['download_url'] }}" title="{{ exmtrans('file_server.download') }}"><i class="fa fa-download" aria-hidden="true"></i></a>
                                                 @endif
                                                 @if (!$v['current'] && $canEdit && !$lockedByOther)
                                                     <button type="button" class="btn btn-xs btn-default" data-fs-restore="{{ $v['restore_url'] }}" title="{{ exmtrans('file_server.restore_version') }}"><i class="fa fa-undo" aria-hidden="true"></i></button>
@@ -243,9 +243,10 @@
                             <div><strong>{{ $l['kind'] === 'request' ? exmtrans('file_server.share_kind_request') : exmtrans('file_server.share_kind_share') }}</strong>
                                 <span class="exm-fs-badge">{{ $l['state'] }}</span>
                                 @if ($l['password'])<span class="exm-fs-badge"><i class="fa fa-lock" aria-hidden="true"></i></span>@endif
+                                @if (!empty($l['no_expiry']) && $l['active'])<span class="exm-fs-badge" style="color:#c0392b">{{ exmtrans('file_server.share_no_end') }}</span>@endif
                                 @if ($l['kind'] === 'share' && !$l['allow_download'])<span class="exm-fs-badge">{{ exmtrans('file_server.share_preview_only') }}</span>@endif
                             </div>
-                            @if ($l['active'])
+                            @if ($l['active'] && !empty($l['url']))
                                 <div style="display:flex;gap:4px;margin:4px 0">
                                     <input type="text" class="form-control input-sm" readonly value="{{ $l['url'] }}" aria-label="URL">
                                     <button type="button" class="btn btn-sm btn-default" data-fs-copy="{{ $l['url'] }}" title="{{ exmtrans('file_server.copy') }}"><i class="fa fa-clipboard" aria-hidden="true"></i></button>
@@ -273,7 +274,8 @@
                             <div class="form-group" style="margin-bottom:6px">
                                 <label style="font-weight:normal;font-size:.85em">{{ exmtrans('file_server.share_expires') }}@if ($share_max_days > 0) ({{ exmtrans('file_server.share_max_days', ['days' => $share_max_days]) }})@endif</label>
                                 <input type="date" name="expires_at" class="form-control input-sm" min="{{ now()->format('Y-m-d') }}"
-                                       @if ($share_max_days > 0) required max="{{ now()->addDays($share_max_days)->format('Y-m-d') }}" value="{{ now()->addDays(min(7, $share_max_days))->format('Y-m-d') }}" @else value="{{ now()->addDays(7)->format('Y-m-d') }}" @endif>
+                                       @if ($share_max_days > 0) required max="{{ now()->addDays($share_max_days)->format('Y-m-d') }}" @endif
+                                       @if ($share_default_days > 0) value="{{ now()->addDays($share_default_days)->format('Y-m-d') }}" @endif>
                             </div>
                             <div class="form-group" style="margin-bottom:6px">
                                 <input type="password" name="password" class="form-control input-sm" autocomplete="new-password" placeholder="{{ exmtrans('file_server.share_password_placeholder') }}" aria-label="{{ exmtrans('file_server.share_password_placeholder') }}">

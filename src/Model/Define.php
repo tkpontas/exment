@@ -96,6 +96,8 @@ class Define
         'publicform_available' => ['type' => 'boolean', 'default' => false, 'group' => 'advanced'],
         // the features an administrator turns on (Services\Features; Admin setting → Feature management)
         'features' => ['type' => 'json', 'default' => []],
+        // the menu before "Arrange in the standard order" (Services\MenuArranger), for undoing it
+        'menu_arrange_backup' => ['type' => 'json', 'default' => []],
         // maintenance mode of the site (Services\MaintenanceMode)
         'maintenance' => ['type' => 'json', 'default' => []],
         // an exment:schedule skipped in a maintenance, to run after it
@@ -277,6 +279,9 @@ class Define
     public const SYSTEM_KEY_SESSION_IMPORT_KEY_VALUE_PREFIX = "import_key_value_";
     public const SYSTEM_KEY_SESSION_ORGANIZATION_TREE = "organization_tree";
     public const SYSTEM_KEY_SESSION_ORGANIZATION_PARENT_INDEX = "organization_parent_index";
+    // the row of the table systems that holds the generation of the cache (System::cacheGeneration)
+    public const SYSTEM_KEY_CACHE_GENERATION = "cache_generation";
+    public const SYSTEM_KEY_SESSION_ORGANIZATION_PARENT_IDS = "organization_parent_ids";
     public const SYSTEM_KEY_SESSION_GRID_AUTHORITABLE = "grid_authoritable_%s";
     public const SYSTEM_KEY_SESSION_ACCESSIBLE_TABLE = "accessible_table_%s_%s";
     public const SYSTEM_KEY_SESSION_DISABLE_DATA_URL_TAG = "disable_data_url_tag";
@@ -300,6 +305,24 @@ class Define
     /**
      * MENU SYSTEM DIFINITION
      */
+    /**
+     * The groups of the left menu (parent nodes), in the order of the feature
+     * map (exment.net/feature-map/): the first menu of a new site, the bundled
+     * templates and the official plugins put their menus under them
+     * (Menu::groupParentId()). The settings (admin_data, admin_user, admin)
+     * come at the end, after 90.
+     */
+    public const MENU_GROUP_DEFINITION = [
+        'groupware' => ['icon' => 'fa-comments', 'order' => 2],
+        'request' => ['icon' => 'fa-check-square-o', 'order' => 10],
+        'sales' => ['icon' => 'fa-briefcase', 'order' => 20],
+        'asset' => ['icon' => 'fa-archive', 'order' => 25],
+        'project' => ['icon' => 'fa-tasks', 'order' => 30],
+        'it_support' => ['icon' => 'fa-life-ring', 'order' => 40],
+        'hr' => ['icon' => 'fa-users', 'order' => 50],
+        'master' => ['icon' => 'fa-database', 'order' => 90],
+    ];
+
     public const MENU_SYSTEM_DEFINITION = [
         'home' => [
             'uri' => '/',
@@ -333,6 +356,10 @@ class Define
             'uri' => 'tuning',
             'icon' => 'fa-tachometer',
         ],
+        'security_check' => [
+            'uri' => 'security_check',
+            'icon' => 'fa-shield',
+        ],
         'maintenance' => [
             'uri' => 'maintenance',
             'icon' => 'fa-wrench',
@@ -360,6 +387,10 @@ class Define
         'workflow' => [
             'uri' => 'workflow',
             'icon' => 'fa-share-alt',
+        ],
+        'workflow_task' => [
+            'uri' => 'workflow_task',
+            'icon' => 'fa-check-square-o',
         ],
         'backup' => [
             'uri' => 'backup',
@@ -452,6 +483,8 @@ class Define
         ['name' => 'data', 'href' => 'data/:table_name', 'icon' => 'fa-database', 'roles' => Permission::AVAILABLE_VIEW_CUSTOM_VALUE, 'exmtrans' => 'change_page_menu.custom_value', 'description' => 'custom_value.description'],
         ['name' => 'qrcode', 'href' => 'table/:id/edit?qrcodesetting=1', 'icon' => 'fa-qrcode', 'roles' => Permission::CUSTOM_TABLE, 'exmtrans' => 'change_page_menu.qrcode', 'description' => 'qrcode.description'],
         ['name' => 'jancode', 'href' => 'table/:id/edit?jancodesetting=1', 'icon' => 'fa-barcode', 'roles' => Permission::CUSTOM_TABLE, 'exmtrans' => 'change_page_menu.jancode', 'description' => 'jancode.description'],
+        // only when the feature is used (Features::DATA_MAINTENANCE, #1829)
+        ['name' => 'data_maintenance', 'href' => 'data_maintenance/:table_name', 'icon' => 'fa-wrench', 'roles' => [Permission::CUSTOM_TABLE], 'exmtrans' => 'change_page_menu.data_maintenance', 'description' => 'data_maintenance.description', 'feature' => 'data_maintenance'],
     ];
 
     public const CUSTOM_VALUE_TRAITS = [
@@ -581,6 +614,7 @@ class Define
         ['uri'=> 'workflow', 'help_uri'=> 'workflow_setting'],
         ['uri'=> 'login_setting', 'help_uri'=> 'login_setting'],
         ['uri'=> 'tuning', 'help_uri'=> 'tuning'],
+        ['uri'=> 'security_check', 'help_uri'=> 'security_check'],
         ['uri'=> 'feature', 'help_uri'=> 'feature'],
         ['uri'=> '/', 'help_uri'=> 'dashboard'],
     ];

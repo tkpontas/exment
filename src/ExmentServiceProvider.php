@@ -74,9 +74,11 @@ class ExmentServiceProvider extends ServiceProvider
         \Exceedone\Exment\Console\MeiliSettingsCommand::class,
         \Exceedone\Exment\Console\MeiliHealthCommand::class,
         \Exceedone\Exment\Console\MeiliReconcileCommand::class,
+        \Exceedone\Exment\Console\MeiliSetupCommand::class,
         \Exceedone\Exment\Console\VersionCommand::class,
         \Exceedone\Exment\Console\InstallCommand::class,
         \Exceedone\Exment\Console\UpdateCommand::class,
+        \Exceedone\Exment\Console\CacheClearCommand::class,
         \Exceedone\Exment\Console\PublishCommand::class,
         \Exceedone\Exment\Console\ScheduleCommand::class,
         \Exceedone\Exment\Console\NotifyScheduleCommand::class,
@@ -90,6 +92,7 @@ class ExmentServiceProvider extends ServiceProvider
         \Exceedone\Exment\Console\InitTestCommand::class,
         \Exceedone\Exment\Console\CheckLangCommand::class,
         \Exceedone\Exment\Console\CheckRequireCommand::class,
+        \Exceedone\Exment\Console\TuningCommand::class,
         \Exceedone\Exment\Console\NotifyTestCommand::class,
         \Exceedone\Exment\Console\RefreshDataCommand::class,
         \Exceedone\Exment\Console\RefreshTableDataCommand::class,
@@ -315,6 +318,11 @@ class ExmentServiceProvider extends ServiceProvider
     {
         parent::boot();
 
+        // a site not installed yet without APP_KEY: made before the cookies need it
+        if (!$this->app->runningInConsole()) {
+            Services\Installer\AppKey::ensure();
+        }
+
         // Re-register route middleware aliases.
         // The auto-discovered AdminServiceProvider runs register() after this provider,
         // and re-aliases names like "admin.log" or "admin.auth" back to the core classes.
@@ -336,7 +344,11 @@ class ExmentServiceProvider extends ServiceProvider
             \Exceedone\Exment\Services\UserApiKeys::rememberSignIn($event->guard);
         });
 
-        $this->publish();
+        // Perf: publishes() only feeds the `vendor:publish` console command; running it on
+        // every web request is pure waste (matches open-admin-core's console-guarded publishing).
+        if ($this->app->runningInConsole()) {
+            $this->publish();
+        }
         $this->load();
 
         $this->registerPolicies();
@@ -553,7 +565,10 @@ class ExmentServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
             $schedule->command('exment:schedule')->hourly();
-            $schedule->command('exment:safetywatch')->everyMinute()->withoutOverlapping(10);
+            // only when the safety check watches the feed: otherwise it would start PHP every minute for nothing (ISS02823)
+            $schedule->command('exment:safetywatch')->cron(static::safetyWatchCron())->withoutOverlapping(10)->when(function () {
+                return static::safetyWatchUsed();
+            });
             // file server: empty the trash past the days of each workspace (ISS00293)
             $schedule->command('exment:file-server-purge')->dailyAt('03:30')->withoutOverlapping(60);
 
@@ -598,6 +613,49 @@ class ExmentServiceProvider extends ServiceProvider
             // Log debug
             \Exceedone\Exment\Middleware\ExmentDebug::logSchedule($schedule);
         });
+
+        // what the scheduler did, for the tuning page: whether cron runs it, and how long its tasks take (ISS02823)
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Console\Events\ScheduledTaskFinished::class, function ($event) {
+            try {
+                \Exceedone\Exment\Services\SystemRequire\Tuning\ScheduleStatus::record(
+                    \Exceedone\Exment\Services\SystemRequire\Tuning\ScheduleStatus::taskName($event->task),
+                    floatval($event->runtime)
+                );
+            } catch (\Throwable $ex) {
+                // never stop the scheduler for this
+            }
+        });
+    }
+
+    /**
+     * The cron expression of "exment:safetywatch" (config exment.safety_check.watch_interval).
+     * Impure: it reads the config, so two calls may answer differently.
+     *
+     * @phpstan-impure
+     */
+    public static function safetyWatchCron(): string
+    {
+        // config exment.safety_check.watch_interval: 1, 5, 10 or 15 minutes; anything else is 5
+        $minutes = intval(config('exment.safety_check.watch_interval', 5));
+        if (!in_array($minutes, [1, 5, 10, 15], true)) {
+            $minutes = 5;
+        }
+
+        return $minutes === 1 ? '* * * * *' : '*/' . $minutes . ' * * * *';
+    }
+
+    /**
+     * Whether "exment:safetywatch" has anything to do: the safety check is used and watches the earthquake feed.
+     */
+    public static function safetyWatchUsed(): bool
+    {
+        try {
+            return \Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::SAFETY_CHECK)
+                && boolval(\Exceedone\Exment\Model\System::safety_check_auto_enabled());
+        } catch (\Throwable $ex) {
+            // before the install: let the command decide
+            return true;
+        }
     }
 
     // @phpstan-ignore-next-line

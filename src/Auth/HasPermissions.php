@@ -18,6 +18,7 @@ use Exceedone\Exment\Enums\SystemTableName;
 use Exceedone\Exment\Enums\JoinedOrgFilterType;
 use Exceedone\Exment\Enums\PluginType;
 use Exceedone\Exment\Services\AuthUserOrgHelper;
+use Exceedone\Exment\Services\MenuVisibility;
 
 trait HasPermissions
 {
@@ -251,8 +252,8 @@ trait HasPermissions
     }
 
     /**
-     * If visible for permission_details.
-     * called form menu
+     * Whether the user sees a menu (a node of the menu tree, with its
+     * children) or a page (its uri). Services\MenuVisibility decides.
      *
      * @param array|string $item
      * @param array $target_tables output target tables. for template export. default nothing item
@@ -262,49 +263,18 @@ trait HasPermissions
     // @phpstan-ignore-next-line
     public function visible($item, $target_tables = []): bool
     {
-        if (is_string($item)) {
-            $item = [
-                'uri' => $item
-            ];
-        } elseif (empty($item)) {
-            return false;
-        }
+        return MenuVisibility::forUser($this)->isVisible($item, (array) $target_tables);
+    }
 
-        // if organization and not use org setting, return false
-        if (array_get($item, 'menu_type') == MenuType::TABLE
-            && array_get($item, 'table_name') == SystemTableName::ORGANIZATION
-            && !System::organization_available()) {
-            return false;
-        }
-
-        // if $item has children, get children's visible result.
-        // if children have true result, return true;
-        if (array_key_exists('children', $item)) {
-            $first = collect($item['children'])->first(function ($child) use ($target_tables) {
-                return $this->visible($child, $target_tables);
-            });
-            return !is_null($first);
-        }
-
-        // if has target tables.
-        if (count($target_tables) > 0) {
-            // if $item->menu_name is not contains $target_tables, return false
-            if (!collect($target_tables)->first(function ($target_table) use ($item) {
-                return array_get($item, 'table_name') == $target_table;
-            })) {
-                return false;
-            }
-        }
-
-        // get permission for target endpoint
-        $permissons = $this->allPermissions();
-
-        if (!$permissons->first(function ($permission) use ($item) {
-            return $permission->shouldPassEndpoint(array_get($item, 'uri'), $item);
-        })) {
-            return false;
-        }
-        return true;
+    /**
+     * Whether the user may see a parent menu: it has no role groups, or the
+     * user is a system administrator or a member of one of them.
+     *
+     * @param array<string, mixed> $item
+     */
+    protected function canSeeMenuGroup(array $item): bool
+    {
+        return MenuVisibility::forUser($this)->canSeeGroup($item);
     }
 
     /**

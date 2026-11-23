@@ -266,8 +266,10 @@ class Permission
             case "login_setting":
             case "database":
             case "auth/menu":
+            case "auth/menu_arrange":
             case "auth/logs":
             case "tuning":
+            case "security_check":
             case "api_keys":
             case "maintenance":
                 if ($this->role_type == RoleType::SYSTEM) {
@@ -327,6 +329,8 @@ class Permission
             case "relation":
             case "copy":
             case "operation":
+            // data maintenance of the table (#1829): the feature is checked by the middleware admin.feature
+            case "data_maintenance":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_key_exists('custom_table', $this->permission_details);
                 }

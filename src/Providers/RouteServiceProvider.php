@@ -60,6 +60,25 @@ class RouteServiceProvider extends ServiceProvider
         $this->mapExmentInstallWebRotes();
         $this->mapExmentApiRotes();
         $this->mapExmentAnonymousApiRotes();
+        $this->mapLegacyAdminRedirect();
+    }
+
+    /**
+     * A site without the admin prefix: the old "/admin/..." links go to the
+     * same page without "/admin" (GET only). Registered last, so every route
+     * of the site comes first.
+     *
+     * @return void
+     */
+    public function mapLegacyAdminRedirect()
+    {
+        if (!\Exceedone\Exment\Services\LegacyAdminRedirect::enabled()) {
+            return;
+        }
+        Route::get(\Exceedone\Exment\Services\LegacyAdminRedirect::SEGMENT . '/{legacy_admin_path?}', \Exceedone\Exment\Controllers\LegacyAdminRedirectController::class)
+            ->where('legacy_admin_path', '.*')
+            ->middleware('web')
+            ->name('exment.legacy_admin_redirect');
     }
 
     /**
@@ -150,6 +169,22 @@ class RouteServiceProvider extends ServiceProvider
             'middleware'    => ['adminweb', 'admin'],
         ], function (Router $router) {
             $router->get('/', 'DashboardController@home');
+
+            // When prefix is empty the admin lives at "/", which conflicts with
+            // routes/web.php's default welcome route. That file is loaded via
+            // Application::booting() — before service providers boot — so its
+            // Route::get('/') is registered first. We re-register this route
+            // inside app()->booted() (after ALL providers boot) so it is the
+            // last write to the route collection's associative-array slot for
+            // GET "/", guaranteeing the admin dashboard wins the match.
+            if (empty(config('admin.route.prefix'))) {
+                $namespace = $this->namespace;
+                app()->booted(function () use ($namespace) {
+                    Route::middleware(['adminweb', 'admin'])
+                        ->namespace($namespace)
+                        ->get('/', 'Exceedone\Exment\Controllers\DashboardController@home');
+                });
+            }
             $router->get('dashboardbox/html/{suuid}', 'DashboardBoxController@getHtml');
             $router->post('dashboardbox/chart_state/{suuid}', 'DashboardBoxController@chartState');
             $router->post('dashboardbox/chart_color/{suuid}', 'DashboardBoxController@chartColor');
@@ -167,6 +202,10 @@ class RouteServiceProvider extends ServiceProvider
 
             $router->resource('auth/logs', 'LogController', ['except' => ['create', 'edit']]);
             $router->post('auth/logs/setting', 'LogController@postSetting');
+            // a path of its own: exment-admin-core registers "auth/menu/{menu}" first, which would take "arrange" for an id
+            $router->get('auth/menu_arrange', 'MenuController@arrange');
+            $router->post('auth/menu_arrange', 'MenuController@arrangeRun');
+            $router->post('auth/menu_arrange/restore', 'MenuController@arrangeRestore');
             $router->resource('auth/menu', 'MenuController', ['except' => ['create']]);
             $router->put('auth/setting/filedelete', 'AuthController@filedelete');
             $router->get('auth/setting', 'AuthController@getSetting');
@@ -189,6 +228,9 @@ class RouteServiceProvider extends ServiceProvider
             // Tuning: what would make the site faster (ISS00414)
             $router->get('tuning', 'TuningController@index');
             $router->post('tuning/action', 'TuningController@action');
+            // the security check (ISS02833)
+            $router->get('security_check', 'SecurityCheckController@index');
+            $router->post('security_check/fix', 'SecurityCheckController@fix');
             $router->get('maintenance', 'MaintenanceController@index');
             $router->post('maintenance', 'MaintenanceController@store');
             $router->post('maintenance/start', 'MaintenanceController@start');
@@ -201,7 +243,9 @@ class RouteServiceProvider extends ServiceProvider
             // Studio: the screens of the site on one page (ISS00231 phase 1)
             $router->get('feature', 'FeatureController@index');
             $router->post('feature', 'FeatureController@store');
+            $router->post('feature/notices_known', 'FeatureController@noticesKnown');
             $router->post('feature/bundled/{uuid}/{action}', 'FeatureController@bundled')->where('action', 'install|rollback');
+            $router->post('feature/bundled_upload', 'FeatureController@bundledUpload');
             $router->get('studio', 'StudioController@index');
             $router->get('studio/create', 'StudioController@create');
             $router->post('studio', 'StudioController@store');
@@ -285,12 +329,8 @@ class RouteServiceProvider extends ServiceProvider
             $router->get('template', 'TemplateController@index');
             $router->post('template/import', 'TemplateController@import');
             $router->post('template/export', 'TemplateController@export');
-            $router->get('template/import', function () {
-                return redirect(admin_url('template'));
-            });
-            $router->get('template/export', function () {
-                return redirect(admin_url('template'));
-            });
+            $router->get('template/import', 'TemplateController@redirectIndex');
+            $router->get('template/export', 'TemplateController@redirectIndex');
 
             $router->get("workflow/beginning", 'WorkflowController@beginningForm');
             $router->post("workflow/beginning", 'WorkflowController@beginningPost');
@@ -374,9 +414,7 @@ class RouteServiceProvider extends ServiceProvider
             $router->post("role_group/import", 'RoleGroupController@import');
             $this->setResouce($router, 'role_group', 'RoleGroupController');
 
-            $router->get('role', function () {
-                return redirect(admin_urls('role_group'));
-            });
+            $router->get('role', 'RoleGroupController@redirectRole');
 
             $router->get('qr-code/{tableName}/{id}', 'QrCodeController@scanRedirect');
             $router->get('jan-code/{id}', 'JanCodeController@scanRedirect');
@@ -470,6 +508,10 @@ class RouteServiceProvider extends ServiceProvider
             $router->get("column/{tableKey}/columnTypeHtml", 'CustomColumnController@columnTypeHtml');
             $router->get("column/{tableKey}/{id}/columnTypeHtml", 'CustomColumnController@columnTypeHtml');
             $router->get("copy/{tableKey}/newModal", 'CustomCopyController@newModal');
+
+            // data maintenance of a table (#1829, Features::DATA_MAINTENANCE)
+            $router->get("data_maintenance/{tableKey}", 'DataMaintenanceController@index');
+            $router->post("data_maintenance/{tableKey}/attachments", 'DataMaintenanceController@deleteAttachments');
 
             $router->get("operation/{tableKey}/filter-value", 'CustomOperationController@getFilterValue');
             $router->post('form/{tableKey}/settingModal', 'CustomFormController@settingModal');
@@ -736,9 +778,14 @@ class RouteServiceProvider extends ServiceProvider
                         $router->delete('mcp', 'McpController@notAllowed');
                     }
 
-                    $router->get("notifyPage", 'ApiController@notifyPage')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::NOTIFY_READ));
+                    // the navbar polls (ISS02824): an ETag, so that an unchanged answer is a bodiless 304
+                    // (one middleware() call: with no scope, middleware(null) is a getter)
+                    $navbarCache = \Illuminate\Http\Middleware\SetCacheHeaders::class . ':private;no_cache;etag';
+                    $router->get("notifyPage", 'ApiController@notifyPage')
+                        ->middleware(array_values(array_filter([ApiScope::getScopeString($route['addScope'], ApiScope::NOTIFY_READ), $navbarCache])));
                     // workflow data - tables, record labels, statuses - so the scopes of the wf/ read endpoints
-                    $router->get("workflowTaskPage", 'ApiController@workflowTaskPage')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::WORKFLOW_READ, ApiScope::WORKFLOW_EXECUTE));
+                    $router->get("workflowTaskPage", 'ApiController@workflowTaskPage')
+                        ->middleware(array_values(array_filter([ApiScope::getScopeString($route['addScope'], ApiScope::WORKFLOW_READ, ApiScope::WORKFLOW_EXECUTE), $navbarCache])));
                     $router->get("notify", 'ApiController@notifyList')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::NOTIFY_READ, ApiScope::NOTIFY_WRITE));
                     $router->post("notify", 'ApiController@notifyCreate')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::NOTIFY_WRITE));
 

@@ -12,17 +12,14 @@
   @endif
 
   <!-- Bootstrap 3.3.5 -->
-  <!-- <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/AdminLTE/bootstrap/css/bootstrap.min.css") }}"> -->
   <link rel="stylesheet" href="{{ admin_asset("vendor/open-admin/bootstrap5-editable/css/bootstrap-editable.css") }}">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/font-awesome/css/all.min.css") }}">
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/font-awesome/css/v4-shims.min.css") }}">
   <!-- Theme style -->
-  <!-- <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/AdminLTE/dist/css/AdminLTE.min.css") }}"> -->
   <link rel="stylesheet" href="{{ admin_asset("vendor/open-admin/AdminLTE4/css/adminlte.min.css") }}">
 
   <!-- iCheck -->
-  <!-- <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/AdminLTE/plugins/iCheck/square/blue.css") }}"> -->
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/toastr/build/toastr.min.css") }}">
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/open-admin/css/button-custom.css") }}">
   {{-- The "modern" screen design (system setting, or EXMENT_UI_DESIGN). It stays before the inline style
@@ -110,20 +107,38 @@
       </div>
       <!-- /.login-box -->
 <!-- jQuery 2.1.4 -->
-<!-- <script src="{{ admin_asset("/vendor/open-admin/AdminLTE/plugins/jQuery/jQuery-2.1.4.min.js")}} "></script> -->
 <!-- jQuery 3.7.1 -->
 <script src="{{ admin_asset ("/vendor/open-admin/AdminLTE/plugins/jQuery/jQuery-3.7.1.min.js") }}"></script>
 <!-- Bootstrap 3.3.5 -->
-<!-- <script src="{{ admin_asset("/vendor/open-admin/AdminLTE/bootstrap/js/bootstrap.min.js")}}"></script> -->
 <!-- jQuery 2.1.4 -->
 <script src="{{ admin_asset("/vendor/open-admin/AdminLTE4/js/bootstrap.bundle.min.js")}} "></script>
 <!-- Bootstrap 3.3.5 -->
 <script src="{{ admin_asset("/vendor/open-admin/AdminLTE4/js/adminlte.min.js")}}"></script>
 <!-- iCheck -->
-<!-- <script src="{{ admin_asset("/vendor/open-admin/AdminLTE/plugins/iCheck/icheck.min.js")}}"></script> -->
 
 <script src="{{ admin_asset("/vendor/open-admin/toastr/build/toastr.min.js")}}"></script>
 <script src="{{ admin_asset("/vendor/exment/js/common_all.js")}}"></script>
+@if (session('exment_logged_out'))
+<script>
+    // after the logout: what this browser kept for the user (the navbar, the Studio app)
+    (function () {
+        try {
+            for (var i = localStorage.length - 1; i >= 0; i--) {
+                var key = localStorage.key(i);
+                if (key && key.indexOf('exment.navbar.') === 0) { localStorage.removeItem(key); }
+            }
+        } catch (e) {}
+        try { if (window.indexedDB) { indexedDB.deleteDatabase('exment-app'); } } catch (e) {}
+        try {
+            if (window.caches) {
+                caches.keys().then(function (keys) {
+                    keys.forEach(function (k) { if (k.indexOf('exment-app') === 0) { caches.delete(k); } });
+                }).catch(function () {});
+            }
+        } catch (e) {}
+    })();
+</script>
+@endif
 
 <script>
   // $(function () {
