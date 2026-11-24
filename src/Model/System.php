@@ -263,6 +263,8 @@ class System extends ModelBase
                 return $val;
             }
 
+            //if (boolval(config('exment.use_cache', false)) && static::store()->has(static::storeKey($key))) {
+                //$val = static::store()->get(static::storeKey($key));
             // one read of the store: has() reads the value too, and a null is not kept (ISS00413)
             if (boolval(config('exment.use_cache', false)) && !is_null($val = static::store()->get(static::storeKey($key)))) {
                 static::setRequestSession($key, $val);
@@ -275,6 +277,8 @@ class System extends ModelBase
                 return $val;
             }
 
+            //if (boolval(config('exment.use_cache', false)) && static::store()->has(static::storeKey($key))) {
+                //$val = static::store()->get(static::storeKey($key));
             // one read of the store: has() reads the value too, and a null is not kept (ISS00413)
             if (boolval(config('exment.use_cache', false)) && !is_null($val = static::store()->get(static::storeKey($key)))) {
                 static::setRequestSession($key, $val);
