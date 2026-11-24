@@ -38,6 +38,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: ${{ env.EXMENT_BOILERPLATE_REPOSITORY}}
+          # 7.2 keeps the boilerplate of 7.2 (simple-qrcode); main moved to bacon-qr-code 3
+          ref: 7.2
           path: ./docker-exment/exment-boilerplate
 
       - uses: actions/checkout@v4
@@ -112,7 +114,7 @@ jobs:
           make ${{ matrix.db }}-init
 
       # the whole unit suite reached PHP's default 512M near its end (2400+ tests);
-      # 1024M, written in M because SystemRequireTest compares the value without "M"
+      # 1024M, written in M because SystemRequireTest compares the value without "M" (as master, #1926)
       - name: Raise the PHP memory limit for the tests
         working-directory: docker-exment
         run: |
