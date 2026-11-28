@@ -342,6 +342,11 @@ class NotifyService
         })) {
             $targets->push(exmtrans('notify.notify_action_options.microsoft_teams'));
         }
+        if (count(array_filter((array)$this->notify->action_settings, function ($action_setting) {
+            return isMatchString(NotifyAction::WEBHOOK, array_get($action_setting, 'notify_action'));
+        })) > 0) {
+            $targets->push(exmtrans('notify.notify_action_options.webhook'));
+        }
 
         return $targets->implode(exmtrans("common.separate_word"));
     }
@@ -461,6 +466,22 @@ class NotifyService
                     $params['flex_template_id'] = array_get($action_setting, 'flex_template_id');
                     static::notifyLine($params);
                     break;
+
+                case NotifyAction::TEAMS_PERSONAL:
+                    static::notifyTeamsPersonal($params);
+                    break;
+
+                case NotifyAction::WEBHOOK:
+                    static::notifyJsonWebhook($params, (array)$action_setting);
+                    break;
+
+                case NotifyAction::LINE_WORKS:
+                    static::notifyLineWorks($params, (array)$action_setting);
+                    break;
+
+                case NotifyAction::LINE_WORKS_PERSONAL:
+                    static::notifyLineWorksPersonal($params);
+                    break;
             }
             // call notified trigger operations
             //CustomOperation::operationExecuteEvent(CustomOperationType::NOTIFIED, $custom_value, true);
@@ -471,6 +492,117 @@ class NotifyService
             'custom_value' => $custom_value,
             'notify' => $notify,
         ]);
+    }
+
+    /**
+     * A person's Teams chat through the Teams workflow (ISS02863): the subject and the body of the
+     * mail template, in the language of the person, with the link to the data. Nothing while the
+     * feature is not used, without the address of the workflow, or without the mail address.
+     *
+     * @param array<string, mixed> $params
+     * @return Notifications\TeamsWorkflowSender|null
+     */
+    public static function notifyTeamsPersonal(array $params = [])
+    {
+        if (!Features::enabled(Features::TEAMS_NOTIFY) || is_nullorempty(\Exceedone\Exment\Model\System::system_teams_workflow_url())) {
+            return null;
+        }
+        $params = array_merge([
+            'mail_template' => null,
+            'prms' => [],
+            'user' => null,
+            'custom_value' => null,
+            'subject' => null,
+            'body' => null,
+            'replaceOptions' => [],
+            // the link of the card; the data when not given (a plugin gives the page of its own)
+            'url' => null,
+        ], $params);
+        $user = $params['user'];
+        $email = $user instanceof CustomValue ? $user->getValue('email') : null;
+        if (is_nullorempty($email)) {
+            return null;
+        }
+
+        $locale = UserLocale::forUser($user) ?? UserLocale::siteDefault();
+        return UserLocale::runAs($user, function () use ($params, $email, $locale) {
+            static::replaceSubjectBody($params);
+            $subject = static::replaceWord($params['subject'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+            $body = static::replaceWord($params['body'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+            $custom_value = $params['custom_value'];
+            $login = \Exment::user();
+            $sender = Notifications\TeamsWorkflowSender::make($email, strval($subject), strval($body), [
+                'url' => $params['url'] ?? (isset($custom_value) ? $custom_value->getUrl() : null),
+                'sender' => isset($login) && isset($login->base_user) ? strval($login->base_user->getLabel()) : strval(\Exceedone\Exment\Model\System::site_name()),
+                'locale' => $locale,
+            ]);
+            $sender->send();
+            return $sender;
+        });
+    }
+
+    /**
+     * A message of the LINE WORKS bot to a channel (ISS00114): the subject and the body of the mail
+     * template, with the link to the data. Nothing while the feature or the app is not set, or
+     * without the id of the channel.
+     *
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $action_setting
+     */
+    public static function notifyLineWorks(array $params, array $action_setting): ?\Exceedone\Exment\Jobs\LineWorksSendJob
+    {
+        $channel = trim(strval(array_get($action_setting, 'lineworks_channel_id')));
+        if ($channel === '' || !\Exceedone\Exment\Services\LineWorks\LineWorks::enabled()) {
+            return null;
+        }
+        $params = array_merge([
+            'notify' => null, 'mail_template' => null, 'prms' => [], 'custom_value' => null,
+            'subject' => null, 'body' => null, 'replaceOptions' => [], 'url' => null,
+        ], $params);
+        static::replaceSubjectBody($params);
+        $subject = static::replaceWord($params['subject'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+        $body = static::replaceWord($params['body'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+        $custom_value = $params['custom_value'];
+        $url = $params['url'] ?? ($custom_value instanceof CustomValue ? $custom_value->getUrl() : null);
+        return \Exceedone\Exment\Services\LineWorks\LineWorks::send(
+            \Exceedone\Exment\Services\LineWorks\LineWorks::toChannel($channel),
+            \Exceedone\Exment\Services\LineWorks\LineWorks::content(strval($subject), strval($body), is_null($url) ? null : strval($url)),
+            $params['notify'] instanceof Notify ? $params['notify'] : null
+        );
+    }
+
+    /**
+     * A message of the LINE WORKS bot to a person (ISS00114), in the language of the person: the
+     * LINE WORKS id of the user (the column of the system setting, the mail address by default).
+     *
+     * @param array<string, mixed> $params
+     */
+    public static function notifyLineWorksPersonal(array $params = []): ?\Exceedone\Exment\Jobs\LineWorksSendJob
+    {
+        if (!\Exceedone\Exment\Services\LineWorks\LineWorks::enabled()) {
+            return null;
+        }
+        $params = array_merge([
+            'notify' => null, 'mail_template' => null, 'prms' => [], 'user' => null, 'custom_value' => null,
+            'subject' => null, 'body' => null, 'replaceOptions' => [], 'url' => null,
+        ], $params);
+        $user = $params['user'];
+        $userId = \Exceedone\Exment\Services\LineWorks\LineWorks::userIdOf($user instanceof CustomValue ? $user : null);
+        if (!isset($userId)) {
+            return null;
+        }
+        return UserLocale::runAs($user, function () use ($params, $userId) {
+            static::replaceSubjectBody($params);
+            $subject = static::replaceWord($params['subject'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+            $body = static::replaceWord($params['body'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+            $custom_value = $params['custom_value'];
+            $url = $params['url'] ?? ($custom_value instanceof CustomValue ? $custom_value->getUrl() : null);
+            return \Exceedone\Exment\Services\LineWorks\LineWorks::send(
+                \Exceedone\Exment\Services\LineWorks\LineWorks::toUser($userId),
+                \Exceedone\Exment\Services\LineWorks\LineWorks::content(strval($subject), strval($body), is_null($url) ? null : strval($url)),
+                $params['notify'] instanceof Notify ? $params['notify'] : null
+            );
+        });
     }
 
     /**
@@ -808,6 +940,41 @@ class NotifyService
     }
 
 
+
+    /**
+     * The record as JSON to the URL of the action (ISS02912), with the subject and the body of
+     * the mail template.
+     *
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $action_setting
+     * @return \Exceedone\Exment\Jobs\JsonWebhookJob|null
+     */
+    public static function notifyJsonWebhook(array $params, array $action_setting)
+    {
+        $params = array_merge([
+            'notify' => null,
+            'mail_template' => null,
+            'prms' => [],
+            'custom_value' => null,
+            'custom_table' => null,
+            'subject' => null,
+            'body' => null,
+            'replaceOptions' => [],
+        ], $params);
+        static::replaceSubjectBody($params);
+        $subject = static::replaceWord($params['subject'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+        $body = static::replaceWord($params['body'], $params['custom_value'], $params['prms'], $params['replaceOptions']);
+
+        return \Exceedone\Exment\Services\Notify\JsonWebhook::send(
+            $params['notify'] instanceof Notify ? $params['notify'] : null,
+            $action_setting,
+            $params['custom_value'] instanceof CustomValue ? $params['custom_value'] : null,
+            $params['custom_table'] instanceof CustomTable ? $params['custom_table'] : null,
+            (array)$params['prms'],
+            is_null($subject) ? null : strval($subject),
+            is_null($body) ? null : strval($body)
+        );
+    }
 
     /**
      * replace subject and body from mail template

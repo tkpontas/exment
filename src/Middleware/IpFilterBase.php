@@ -5,7 +5,7 @@ namespace Exceedone\Exment\Middleware;
 use Illuminate\Http\Request;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Enums\SystemTableName;
-use Symfony\Component\HttpFoundation\IpUtils;
+use Exceedone\Exment\Services\IpAddress;
 
 /**
  * Middleware as ip address filter.
@@ -33,17 +33,27 @@ abstract class IpFilterBase
             return $next($request);
         }
 
-        $filters = explode("\r\n", $filters);
+        // one per line (or comma separated), IPv4 and IPv6, an address or a range (ISS02909)
+        $filters = IpAddress::splitRules(strval($filters));
+        if (count($filters) === 0) {
+            return $next($request);
+        }
 
-        $filters = collect($filters)->filter()->map(function ($filter) {
-            return trim($filter);
-        })->toArray();
-
-        if (!IpUtils::checkIp($request->ip(), $filters)) {
-            return $this->returnError();
+        if (!IpAddress::matches($request->ip(), $filters)) {
+            return $this->outside($request, $next);
         }
 
         return $next($request);
+    }
+
+    /**
+     * A request from an address out of the filter.
+     *
+     * @return mixed
+     */
+    protected function outside(Request $request, \Closure $next)
+    {
+        return $this->returnError();
     }
 
     /**

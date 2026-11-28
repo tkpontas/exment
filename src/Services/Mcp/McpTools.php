@@ -6,7 +6,10 @@ use Exceedone\Exment\Enums\ApiScope;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomValue;
+use Exceedone\Exment\Model\DataAccessLog;
+use Exceedone\Exment\Services\LogManagement\DataAccessLogs;
 use Exceedone\Exment\Model\LoginUser;
+use Exceedone\Exment\Services\MemberDirectory;
 use Exceedone\Exment\Services\UserApiKeys;
 
 /**
@@ -52,6 +55,11 @@ class McpTools
         $table = ['type' => 'string', 'description' => 'The table name (as list_tables gives).'];
         $id = ['type' => 'integer', 'description' => 'The id of the record.'];
         $readOnly = ['readOnlyHint' => true, 'destructiveHint' => false, 'idempotentHint' => true, 'openWorldHint' => false];
+        $members = ' Read only: adding or removing members is done with the REST API, not here. For system administrators and users who may manage role groups, when the feature "API for members" is on.';
+        $paging = [
+            'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => static::maxRows(), 'description' => 'How many (at most ' . static::maxRows() . ').'],
+            'offset' => ['type' => 'integer', 'minimum' => 0, 'description' => 'How many to skip: the next_offset of the answer before.'],
+        ];
         return [
             [
                 'name' => 'list_tables',
@@ -67,11 +75,12 @@ class McpTools
             ],
             [
                 'name' => 'search_data',
-                'description' => 'Search the records of a table the user can see. q: words searched in the columns the table searches (optional: without it, the newest records). limit: how many (at most ' . static::maxRows() . ').' . $untrusted,
+                'description' => 'Search the records of a table the user can see. q: words searched in the columns the table searches (optional: without it, the newest records). limit: how many (at most ' . static::maxRows() . '). The answer has next_cursor when there are more: call again with the same table and q and cursor set to it (null: no more).' . $untrusted,
                 'inputSchema' => ['type' => 'object', 'properties' => [
                     'table' => $table,
                     'q' => ['type' => 'string', 'description' => 'Words to search.'],
                     'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => static::maxRows()],
+                    'cursor' => ['type' => 'string', 'description' => 'The next_cursor of the answer before, to read on.'],
                 ], 'required' => ['table']],
                 'annotations' => $readOnly,
             ],
@@ -91,6 +100,31 @@ class McpTools
                 'name' => 'get_workflow_status',
                 'description' => 'The workflow status of a record (when its table has a workflow).',
                 'inputSchema' => ['type' => 'object', 'properties' => ['table' => $table, 'id' => $id], 'required' => ['table', 'id']],
+                'annotations' => $readOnly,
+            ],
+            // the members (ISS00335): read only. Adding or removing members is the API only
+            [
+                'name' => 'list_organization_users',
+                'description' => 'The users of an organization: id, label, code, name, email.' . $members . $untrusted,
+                'inputSchema' => ['type' => 'object', 'properties' => ['organization_id' => ['type' => 'integer', 'description' => 'The id of the organization.']] + $paging, 'required' => ['organization_id']],
+                'annotations' => $readOnly,
+            ],
+            [
+                'name' => 'list_user_organizations',
+                'description' => 'The organizations of a user: id, label, code, name.' . $members . $untrusted,
+                'inputSchema' => ['type' => 'object', 'properties' => ['user_id' => ['type' => 'integer', 'description' => 'The id of the user.']] + $paging, 'required' => ['user_id']],
+                'annotations' => $readOnly,
+            ],
+            [
+                'name' => 'list_role_groups',
+                'description' => 'The role groups: id, name, description, whether it gives the system permission, how many users and organizations.' . $members . $untrusted,
+                'inputSchema' => ['type' => 'object', 'properties' => $paging],
+                'annotations' => $readOnly,
+            ],
+            [
+                'name' => 'get_role_group',
+                'description' => 'One role group: its permissions, users and organizations (the users and organizations are paged with limit and offset).' . $members . $untrusted,
+                'inputSchema' => ['type' => 'object', 'properties' => ['role_group_id' => ['type' => 'integer', 'description' => 'The id of the role group.']] + $paging, 'required' => ['role_group_id']],
                 'annotations' => $readOnly,
             ],
         ];
@@ -120,16 +154,53 @@ class McpTools
                     return $this->answer($this->getTable($this->table($args)));
                 case 'search_data':
                     $this->needScope(ApiScope::VALUE_READ);
-                    return $this->answer($this->searchData($this->table($args), $args));
+                    $table = $this->table($args);
+                    // who listed the data (ISS02905)
+                    DataAccessLogs::from(DataAccessLog::VIA_MCP, function () use ($table) {
+                        DataAccessLogs::listed($table);
+                    });
+                    return $this->answer($this->searchData($table, $args));
                 case 'get_data':
                     $this->needScope(ApiScope::VALUE_READ);
-                    return $this->answer($this->row($this->record($args)));
+                    $record = $this->record($args);
+                    DataAccessLogs::from(DataAccessLog::VIA_MCP, function () use ($record) {
+                        DataAccessLogs::read($record->custom_table, $record->id);
+                    });
+                    return $this->answer($this->row($record));
                 case 'list_attachments':
                     $this->needScope(ApiScope::VALUE_READ);
                     return $this->answer($this->attachments($this->record($args)));
                 case 'get_workflow_status':
                     $this->needScope(ApiScope::WORKFLOW_READ);
                     return $this->answer($this->workflowStatus($this->record($args)));
+                case 'list_organization_users':
+                    $this->needMembers(ApiScope::USER_ORG_READ, ApiScope::USER_ORG_WRITE);
+                    $found = MemberDirectory::organizationUsers($this->intArg($args, 'organization_id'));
+                    if (!isset($found)) {
+                        throw new ToolError('No such organization.');
+                    }
+                    return $this->answer(['organization' => $found['organization']] + $this->page($found['users'], $args, 'users'));
+                case 'list_user_organizations':
+                    $this->needMembers(ApiScope::USER_ORG_READ, ApiScope::USER_ORG_WRITE);
+                    $found = MemberDirectory::userOrganizations($this->intArg($args, 'user_id'));
+                    if (!isset($found)) {
+                        throw new ToolError('No such user.');
+                    }
+                    return $this->answer(['user' => $found['user']] + $this->page($found['organizations'], $args, 'organizations'));
+                case 'list_role_groups':
+                    $this->needMembers(ApiScope::ROLE_GROUP_READ, ApiScope::ROLE_GROUP_WRITE);
+                    return $this->answer($this->page(MemberDirectory::roleGroups(), $args, 'role_groups'));
+                case 'get_role_group':
+                    $this->needMembers(ApiScope::ROLE_GROUP_READ, ApiScope::ROLE_GROUP_WRITE);
+                    $found = MemberDirectory::roleGroup($this->intArg($args, 'role_group_id'));
+                    if (!isset($found)) {
+                        throw new ToolError('No such role group.');
+                    }
+                    // the users and the organizations, each paged the same way
+                    $users = $this->page($found['user'], $args, 'user');
+                    $organizations = $this->page($found['organization'], $args, 'organization');
+                    unset($found['user'], $found['organization']);
+                    return $this->answer($found + ['user' => $users, 'organization' => $organizations]);
             }
         } catch (ToolError $e) {
             return ['content' => [['type' => 'text', 'text' => $e->getMessage()]], 'isError' => true];
@@ -149,6 +220,57 @@ class McpTools
     {
         $json = json_encode(['untrusted_data' => $data], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
         return ['content' => [['type' => 'text', 'text' => static::DATA_NOTE . "\n" . $json]], 'isError' => false];
+    }
+
+    /**
+     * The tools of the members: one of the scopes (read or write, as the API), the feature and
+     * the permission of the role groups (MemberDirectory::allowed).
+     */
+    protected function needMembers(string ...$scopes): void
+    {
+        $can = false;
+        foreach ($scopes as $scope) {
+            $can = $can || $this->user->tokenCan($scope);
+        }
+        if (!$can) {
+            throw new ToolError('The token or key does not have the scope "' . $scopes[0] . '".');
+        }
+        if (!MemberDirectory::allowed($this->user)) {
+            throw new ToolError('Not allowed: the feature "API for members" is off, or the user may not manage role groups.');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $args
+     */
+    protected function intArg(array $args, string $name): int
+    {
+        $value = $args[$name] ?? null;
+        if (!is_numeric($value) || intval($value) != $value || intval($value) <= 0) {
+            throw new ToolError("\"$name\" must be an id.");
+        }
+        return intval($value);
+    }
+
+    /**
+     * A page of a list: limit (at most maxRows) and offset, with the total and the offset of
+     * the next page (null at the end).
+     *
+     * @param array<int, mixed> $items
+     * @param array<string, mixed> $args
+     * @return array<string, mixed>
+     */
+    protected function page(array $items, array $args, string $key): array
+    {
+        $limit = max(1, min(static::maxRows(), intval($args['limit'] ?? 20)));
+        $offset = max(0, intval($args['offset'] ?? 0));
+        $total = count($items);
+        return [
+            $key => array_slice($items, $offset, $limit),
+            'total' => $total,
+            'offset' => $offset,
+            'next_offset' => $offset + $limit < $total ? $offset + $limit : null,
+        ];
     }
 
     protected function needScope(string $scope): void
@@ -205,6 +327,8 @@ class McpTools
             $rows[] = [
                 'table' => $custom_table->table_name,
                 'label' => $custom_table->table_view_name,
+                // the names in the other languages, as the site gave them (7.3)
+                'name_locales' => $custom_table->name_locales,
                 'description' => $custom_table->description,
             ];
         }
@@ -221,6 +345,7 @@ class McpTools
             $row = [
                 'column' => $column->column_name,
                 'label' => $column->column_view_name,
+                'name_locales' => $column->name_locales,
                 'type' => $column->column_type,
                 'required' => boolval($column->getOption('required')),
             ];
@@ -236,7 +361,7 @@ class McpTools
             }
             $columns[] = $row;
         }
-        return ['table' => $custom_table->table_name, 'label' => $custom_table->table_view_name, 'columns' => $columns];
+        return ['table' => $custom_table->table_name, 'label' => $custom_table->table_view_name, 'name_locales' => $custom_table->name_locales, 'columns' => $columns];
     }
 
     /**
@@ -245,6 +370,7 @@ class McpTools
      */
     protected function searchData(CustomTable $custom_table, array $args): array
     {
+        $started = microtime(true);
         $limit = max(1, min(static::maxRows(), intval($args['limit'] ?? 20)));
         $q = $args['q'] ?? '';
         if (!is_string($q)) {
@@ -254,13 +380,47 @@ class McpTools
         if (mb_strlen($q) > static::MAX_QUERY_LENGTH) {
             throw new ToolError('"q" is too long (at most ' . static::MAX_QUERY_LENGTH . ' characters).');
         }
+        $cursor = $this->readCursor($args['cursor'] ?? null, $custom_table, $q);
+
         if ($q !== '') {
-            $found = $custom_table->searchValue($q, ['maxCount' => $limit, 'isApi' => true]) ?? collect();
+            // The columns the table searches by words, as the search box of the data list
+            // (setSearchQueryOrWhere; searchValue with isApi and no columns searched no column).
+            // In one order, the newest id first, on from the last id of the page before: the
+            // search of searchValue has no order, so its pages would repeat and skip records.
+            $dbTable = getDBTableName($custom_table);
+            $query = $custom_table->getValueQuery();
+            $custom_table->getValueModel()->setSearchQueryOrWhere($query, $q);
+            if (isset($cursor)) {
+                $query->where($dbTable . '.id', '<', intval($cursor['i'] ?? 0));
+            }
+            $found = $query->orderByDesc($dbTable . '.id')->limit($limit + 1)->get();
+            $more = $found->count() > $limit;
+            $found = $found->take($limit);
         } else {
-            $found = $custom_table->getValueQuery()->orderByDesc('updated_at')->orderByDesc('id')->limit($limit)->get();
+            // the newest first, on from the last record of the page before; one more than
+            // asked, to know whether there are more
+            $query = $custom_table->getValueQuery();
+            if (isset($cursor)) {
+                $this->afterCursor($query, $cursor);
+            }
+            $found = $query->orderByDesc('updated_at')->orderByDesc('id')->limit($limit + 1)->get();
+            $more = $found->count() > $limit;
+            $found = $found->take($limit);
         }
+
+        $seconds = floatval(config('exment.mcp_search_seconds', 0));
         $rows = [];
+        $examined = 0;
+        $last = null;
+        $stopped = false;
         foreach ($found as $value) {
+            // at least one record a call, so a search always goes on
+            if ($seconds > 0 && $examined > 0 && microtime(true) - $started > $seconds) {
+                $stopped = true;
+                break;
+            }
+            $examined++;
+            $last = $value;
             // the query is filtered by the permissions; each record is checked again, as the API does
             if (!($value instanceof CustomValue) || $value->enableAccess() !== true) {
                 continue;
@@ -270,7 +430,79 @@ class McpTools
                 break;
             }
         }
-        return ['table' => $custom_table->table_name, 'count' => count($rows), 'limit' => $limit, 'rows' => $rows];
+
+        $next = null;
+        if ($last instanceof CustomValue && ($more || $stopped || $examined < $found->count())) {
+            $next = $q !== ''
+                ? $this->makeCursor($custom_table, $q, ['i' => intval($last->id)])
+                : $this->makeCursor($custom_table, $q, ['u' => $last->getAttributes()['updated_at'] ?? null, 'i' => intval($last->id)]);
+        }
+
+        $result = ['table' => $custom_table->table_name, 'count' => count($rows), 'limit' => $limit, 'rows' => $rows, 'next_cursor' => $next];
+        if ($stopped) {
+            $result['stopped'] = 'The time of one call (' . $seconds . ' seconds) was over: read on with next_cursor.';
+        }
+        return $result;
+    }
+
+    /**
+     * The records after the one a cursor points at, in the order of the newest first
+     * (updated_at, id; the records without updated_at come last, as the databases sort them).
+     *
+     * @param mixed $query
+     * @param array<string, mixed> $cursor
+     */
+    protected function afterCursor($query, array $cursor): void
+    {
+        $at = isset($cursor['u']) ? strval($cursor['u']) : null;
+        $id = intval($cursor['i'] ?? 0);
+        $query->where(function ($where) use ($at, $id) {
+            if (!isset($at)) {
+                $where->whereNull('updated_at')->where('id', '<', $id);
+                return;
+            }
+            $where->where('updated_at', '<', $at)
+                ->orWhere(function ($same) use ($at, $id) {
+                    $same->where('updated_at', $at)->where('id', '<', $id);
+                })
+                ->orWhereNull('updated_at');
+        });
+    }
+
+    /**
+     * A cursor: where the next call reads on from, for this table and these words only.
+     *
+     * @param array<string, mixed> $at
+     */
+    protected function makeCursor(CustomTable $custom_table, string $q, array $at): string
+    {
+        $json = json_encode(['h' => $this->cursorHash($custom_table, $q)] + $at) ?: '{}';
+        return rtrim(strtr(base64_encode($json), '+/', '-_'), '=');
+    }
+
+    /**
+     * @param mixed $cursor
+     * @return array<string, mixed>|null
+     */
+    protected function readCursor($cursor, CustomTable $custom_table, string $q): ?array
+    {
+        if (!isset($cursor) || $cursor === '') {
+            return null;
+        }
+        $decoded = is_string($cursor) && strlen($cursor) <= 512 ? base64_decode(strtr($cursor, '-_', '+/'), true) : false;
+        $data = is_string($decoded) ? json_decode($decoded, true) : null;
+        if (!is_array($data) || !isset($data['h'])) {
+            throw new ToolError('"cursor" is not a cursor of search_data.');
+        }
+        if (!hash_equals($this->cursorHash($custom_table, $q), strval($data['h']))) {
+            throw new ToolError('"cursor" is of another search: call with the same table and q.');
+        }
+        return $data;
+    }
+
+    protected function cursorHash(CustomTable $custom_table, string $q): string
+    {
+        return substr(hash('sha256', $custom_table->table_name . "\n" . $q), 0, 16);
     }
 
     /**
@@ -281,7 +513,8 @@ class McpTools
         return [
             'id' => $value->id,
             'label' => $value->getLabel(),
-            'value' => $value->value,
+            // the encrypted columns masked (ISS00148): their plain values are never given to an AI
+            'value' => \Exceedone\Exment\Services\Encryption\EncryptedColumns::maskValues($value->value, $value->custom_table),
             'created_at' => $value->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $value->updated_at?->format('Y-m-d H:i:s'),
         ];

@@ -1,0 +1,413 @@
+{
+    "template_view_name": "Sales pack",
+    "description": "Customers (with contacts), deals, quotes (with lines), contracts and activities, with a kanban of the deals, a sales dashboard, a sales role group and the menu \"Sales & customers\".",
+    "custom_tables": [
+        {
+            "table_name": "sales_customer",
+            "table_view_name": "Customers",
+            "description": "Customers and prospects. Their contacts go in the lines.",
+            "custom_columns": [
+                {
+                    "column_name": "customer_name",
+                    "column_view_name": "Customer"
+                },
+                {
+                    "column_name": "customer_type",
+                    "column_view_name": "Type",
+                    "options": {
+                        "select_item_valtext": "prospect,Prospect\ncustomer,Customer\nformer,Former customer"
+                    }
+                },
+                {
+                    "column_name": "postal_code",
+                    "column_view_name": "Postal code"
+                },
+                {
+                    "column_name": "address",
+                    "column_view_name": "Address"
+                },
+                {
+                    "column_name": "tel",
+                    "column_view_name": "Phone"
+                },
+                {
+                    "column_name": "email",
+                    "column_view_name": "Email"
+                },
+                {
+                    "column_name": "url",
+                    "column_view_name": "Website"
+                },
+                {
+                    "column_name": "owner",
+                    "column_view_name": "Owner"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "Note"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_customer_contact",
+            "table_view_name": "Customer contacts",
+            "description": "The people at the customer.",
+            "custom_columns": [
+                {
+                    "column_name": "contact_name",
+                    "column_view_name": "Name"
+                },
+                {
+                    "column_name": "department",
+                    "column_view_name": "Department"
+                },
+                {
+                    "column_name": "title",
+                    "column_view_name": "Title"
+                },
+                {
+                    "column_name": "tel",
+                    "column_view_name": "Phone"
+                },
+                {
+                    "column_name": "email",
+                    "column_view_name": "Email"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_deal",
+            "table_view_name": "Deals",
+            "description": "Follow each deal by stage and expected amount.",
+            "custom_columns": [
+                {
+                    "column_name": "deal_name",
+                    "column_view_name": "Deal"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "Customer"
+                },
+                {
+                    "column_name": "stage",
+                    "column_view_name": "Stage",
+                    "options": {
+                        "select_item_valtext": "lead,Lead\nproposal,Proposal\nquote,Quote\nwon,Won\nlost,Lost"
+                    }
+                },
+                {
+                    "column_name": "expected_amount",
+                    "column_view_name": "Expected amount"
+                },
+                {
+                    "column_name": "expected_date",
+                    "column_view_name": "Expected close date"
+                },
+                {
+                    "column_name": "probability",
+                    "column_view_name": "Probability",
+                    "options": {
+                        "select_item_valtext": "a,A (almost sure)\nb,B (fifty-fifty)\nc,C (low)"
+                    }
+                },
+                {
+                    "column_name": "owner",
+                    "column_view_name": "Owner"
+                },
+                {
+                    "column_name": "detail",
+                    "column_view_name": "Details"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_quote",
+            "table_view_name": "Quotes",
+            "description": "Quotes and their lines.",
+            "custom_columns": [
+                {
+                    "column_name": "quote_title",
+                    "column_view_name": "Subject"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "Customer"
+                },
+                {
+                    "column_name": "deal",
+                    "column_view_name": "Deal"
+                },
+                {
+                    "column_name": "quote_date",
+                    "column_view_name": "Quote date"
+                },
+                {
+                    "column_name": "valid_until",
+                    "column_view_name": "Valid until"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "Note"
+                },
+                {
+                    "column_name": "total",
+                    "column_view_name": "Total"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_quote_detail",
+            "table_view_name": "Quote lines",
+            "description": "A line of a quote.",
+            "custom_columns": [
+                {
+                    "column_name": "item_name",
+                    "column_view_name": "Item"
+                },
+                {
+                    "column_name": "quantity",
+                    "column_view_name": "Quantity"
+                },
+                {
+                    "column_name": "unit",
+                    "column_view_name": "Unit"
+                },
+                {
+                    "column_name": "unit_price",
+                    "column_view_name": "Unit price"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "Note"
+                },
+                {
+                    "column_name": "amount",
+                    "column_view_name": "Amount"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_contract",
+            "table_view_name": "Contracts",
+            "description": "Contracts and their terms.",
+            "custom_columns": [
+                {
+                    "column_name": "contract_name",
+                    "column_view_name": "Contract"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "Customer"
+                },
+                {
+                    "column_name": "deal",
+                    "column_view_name": "Deal"
+                },
+                {
+                    "column_name": "contract_date",
+                    "column_view_name": "Contract date"
+                },
+                {
+                    "column_name": "start_date",
+                    "column_view_name": "Start date"
+                },
+                {
+                    "column_name": "end_date",
+                    "column_view_name": "End date"
+                },
+                {
+                    "column_name": "auto_renewal",
+                    "column_view_name": "Auto renewal"
+                },
+                {
+                    "column_name": "amount",
+                    "column_view_name": "Amount"
+                },
+                {
+                    "column_name": "document",
+                    "column_view_name": "Contract document"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "Note"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_activity",
+            "table_view_name": "Activities",
+            "description": "Visits, calls, mails and next steps, by customer and deal.",
+            "custom_columns": [
+                {
+                    "column_name": "activity_type",
+                    "column_view_name": "Type",
+                    "options": {
+                        "select_item_valtext": "visit,Visit\ncall,Call\nemail,Mail\nnext,Next step"
+                    }
+                },
+                {
+                    "column_name": "subject",
+                    "column_view_name": "Subject"
+                },
+                {
+                    "column_name": "activity_at",
+                    "column_view_name": "Date and time"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "Customer"
+                },
+                {
+                    "column_name": "deal",
+                    "column_view_name": "Deal"
+                },
+                {
+                    "column_name": "owner",
+                    "column_view_name": "Owner"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "Notes"
+                }
+            ]
+        }
+    ],
+    "custom_forms": [
+        {
+            "suuid": "0858ef1666946ae5f31e",
+            "form_view_name": "Form"
+        },
+        {
+            "suuid": "1e9cf01d6433f6d1e818",
+            "form_view_name": "Form"
+        }
+    ],
+    "custom_views": [
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a01",
+            "view_view_name": "Kanban by stage"
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a02",
+            "view_view_name": "Expected orders by month",
+            "custom_view_summaries": [
+                {
+                    "view_column_table_name": "sales_deal",
+                    "view_column_target_name": "expected_amount",
+                    "view_column_name": "Expected amount"
+                }
+            ]
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a03",
+            "view_view_name": "Open deals by owner",
+            "custom_view_summaries": [
+                {
+                    "view_column_table_name": "sales_deal",
+                    "view_column_target_name": "id",
+                    "view_column_name": "Deals"
+                },
+                {
+                    "view_column_table_name": "sales_deal",
+                    "view_column_target_name": "expected_amount",
+                    "view_column_name": "Expected amount"
+                }
+            ]
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a04",
+            "view_view_name": "Activities this month"
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a05",
+            "view_view_name": "Quotes expiring soon (14 days)"
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a06",
+            "view_view_name": "Contracts ending soon (30 days)"
+        }
+    ],
+    "dashboards": [
+        {
+            "dashboard_name": "exment_sales_dashboard",
+            "dashboard_view_name": "Sales",
+            "dashboard_boxes": [
+                {
+                    "row_no": "1",
+                    "column_no": "1",
+                    "dashboard_box_view_name": "Expected orders by month"
+                },
+                {
+                    "row_no": "1",
+                    "column_no": "2",
+                    "dashboard_box_view_name": "Open deals by owner"
+                },
+                {
+                    "row_no": "2",
+                    "column_no": "1",
+                    "dashboard_box_view_name": "Activities this month"
+                },
+                {
+                    "row_no": "3",
+                    "column_no": "1",
+                    "dashboard_box_view_name": "Quotes expiring soon (14 days)"
+                },
+                {
+                    "row_no": "3",
+                    "column_no": "2",
+                    "dashboard_box_view_name": "Contracts ending soon (30 days)"
+                }
+            ]
+        }
+    ],
+    "admin_menu": [
+        {
+            "title": "Sales & customers",
+            "menu_type": "parent_node",
+            "menu_name": "sales"
+        },
+        {
+            "title": "Sales dashboard",
+            "menu_type": "custom",
+            "menu_name": "sales_dashboard"
+        },
+        {
+            "title": "Customers",
+            "menu_type": "table",
+            "menu_name": "sales_customer"
+        },
+        {
+            "title": "Deals",
+            "menu_type": "table",
+            "menu_name": "sales_deal"
+        },
+        {
+            "title": "Quotes",
+            "menu_type": "table",
+            "menu_name": "sales_quote"
+        },
+        {
+            "title": "Contracts",
+            "menu_type": "table",
+            "menu_name": "sales_contract"
+        },
+        {
+            "menu_type": "table",
+            "menu_name": "sales_activity",
+            "title": "Activities"
+        }
+    ],
+    "roles": [
+        {
+            "role_group_name": "sales_member_group",
+            "role_group_view_name": "Sales",
+            "description": "People who see, make and edit customers, deals, quotes, contracts and activities."
+        }
+    ],
+    "notifies": [
+        {
+            "suuid": "e5967aaf67c9ae4b4398",
+            "notify_view_name": "Contract ending soon (30 days before)"
+        }
+    ]
+}

@@ -2,7 +2,9 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Exceedone\Exment\Services\Mcp\McpGuide;
 use Carbon\Carbon;
+use Exceedone\Exment\Enums\ApiScope;
 use Exceedone\Exment\Enums\LoginType;
 use Exceedone\Exment\Enums\Permission;
 use Exceedone\Exment\Enums\SystemTableName;
@@ -28,29 +30,62 @@ class UserApiKeyController extends AdminControllerBase
     /** The end dates offered on the form (days). */
     public const DAYS = [7, 30, 90, 180, 365];
 
+    /** The system tables shown with the others in the list of tables of a key. */
+    protected const SHOWN_SYSTEM_TABLES = [SystemTableName::USER, SystemTableName::ORGANIZATION];
+
+    /** The scopes by what they are about, in the order of the page. */
+    protected const SCOPE_GROUPS = [
+        'data' => [ApiScope::TABLE_READ, ApiScope::VIEW_READ, ApiScope::VALUE_READ, ApiScope::VALUE_WRITE],
+        'workflow' => [ApiScope::WORKFLOW_READ, ApiScope::WORKFLOW_EXECUTE],
+        'notify' => [ApiScope::NOTIFY_READ, ApiScope::NOTIFY_WRITE],
+        'user_org' => [ApiScope::ME, ApiScope::USER_ORG_READ, ApiScope::USER_ORG_WRITE, ApiScope::ROLE_GROUP_READ, ApiScope::ROLE_GROUP_WRITE],
+        'plugin' => [ApiScope::PLUGIN],
+        'log' => [ApiScope::LOG],
+    ];
+
+    /** The scopes of "from another system by the API": read, and write the data and the workflow. */
+    protected const API_SCOPES = [
+        ApiScope::ME, ApiScope::TABLE_READ, ApiScope::VIEW_READ, ApiScope::VALUE_READ, ApiScope::VALUE_WRITE,
+        ApiScope::WORKFLOW_READ, ApiScope::WORKFLOW_EXECUTE, ApiScope::NOTIFY_READ,
+    ];
+
     /** Tries of the password when making keys, in PASSWORD_DECAY_SECONDS. */
     public const PASSWORD_TRIES = 5;
     public const PASSWORD_DECAY_SECONDS = 15 * 60;
 
     public function __construct()
     {
-        $this->setPageInfo(exmtrans('api_key.header'), exmtrans('api_key.header'), exmtrans('api_key.description'), 'fa-key');
+        $this->setPageInfo(exmtrans('api_key.page_header'), exmtrans('api_key.page_header'), exmtrans('api_key.description'), 'fa-key');
     }
 
     /**
      * The keys of the login user, and the form to make one.
      *
+     * @param array<int, string> $newScopes the scopes of the key just made (the settings of MCP carry it when they fit)
      * @return Content
      */
-    public function index(Request $request, Content $content, ?string $newKey = null, ?string $error = null, ?string $errorLink = null)
+    public function index(Request $request, Content $content, ?string $newKey = null, ?string $error = null, ?string $errorLink = null, array $newScopes = [])
     {
         $this->abortUnlessAllowed();
         $user = \Exment::user();
 
         $tables = CustomTable::filterList(null, ['permissions' => Permission::AVAILABLE_VIEW_CUSTOM_VALUE])
             ->map(function ($table) {
-                return ['name' => strval($table->table_name), 'label' => strval($table->table_view_name)];
+                return [
+                    'name' => strval($table->table_name),
+                    'label' => strval($table->table_view_name),
+                    // the tables of Exment itself (mail templates, mail logs...): hidden until asked; not the users and organizations
+                    'system' => boolval($table->system_flg) && !in_array(strval($table->table_name), static::SHOWN_SYSTEM_TABLES, true),
+                ];
             })->values()->all();
+
+        // the purposes preset the scopes; the boxes show what was sent, or the preset of the purpose
+        $purposes = static::purposes();
+        $purpose = static::text($request, 'purpose');
+        if (!array_key_exists($purpose, $purposes)) {
+            $purpose = McpGuide::allowed() ? 'mcp' : 'read_only';
+        }
+        $checkedScopes = $request->has('scopes') ? static::texts($request, 'scopes') : $purposes[$purpose]['scopes'];
 
         $this->AdminContent($content);
         $content->row(view('exment::api_key.mine', [
@@ -62,7 +97,6 @@ class UserApiKeyController extends AdminControllerBase
             // what was sent, as text only (never the password)
             'old' => [
                 'name' => static::text($request, 'name'),
-                'scope_type' => static::text($request, 'scope_type'),
                 'scopes' => static::texts($request, 'scopes'),
                 'table_type' => static::text($request, 'table_type'),
                 'tables' => static::texts($request, 'tables'),
@@ -70,8 +104,10 @@ class UserApiKeyController extends AdminControllerBase
                 'days' => static::text($request, 'days'),
                 'client_cert_fingerprint' => static::text($request, 'client_cert_fingerprint'),
             ],
-            'scopes' => UserApiKeys::availableScopes(),
-            'read_only_scopes' => UserApiKeys::readOnlyScopes(),
+            'purposes' => $purposes,
+            'purpose' => $purpose,
+            'scope_groups' => static::scopeGroups(),
+            'checked_scopes' => $checkedScopes,
             'tables' => $tables,
             'days' => static::days(),
             'default_days' => min(UserApiKeys::DEFAULT_DAYS, static::maxDaysOfLogin()),
@@ -79,6 +115,15 @@ class UserApiKeyController extends AdminControllerBase
             'ask_password' => $this->asksPassword(),
             'action' => admin_url('auth/api_keys'),
             'read_only' => DemoMode::enabled(),
+            // the MCP server (ISS02879): a key for it, and the settings of Claude with the new key
+            'mcp' => [
+                'allowed' => McpGuide::allowed(),
+                'url' => McpGuide::url(),
+                'scopes' => McpGuide::scopes(),
+                'configs' => McpGuide::configs(isset($newKey) && McpGuide::covers($newScopes) ? $newKey : null),
+                'placeholder_configs' => McpGuide::configs(),
+                'for_new_key' => isset($newKey) && McpGuide::covers($newScopes),
+            ],
         ]));
         return $content;
     }
@@ -114,9 +159,11 @@ class UserApiKeyController extends AdminControllerBase
             return $this->index($request, $content, null, exmtrans('api_key.errors.sign_in_again', 15), admin_url('auth/logout'));
         }
 
-        $scopes = static::text($request, 'scope_type') === 'custom'
+        $scopeType = static::text($request, 'scope_type');
+        $scopes = $scopeType === 'custom'
             ? static::texts($request, 'scopes')
-            : UserApiKeys::readOnlyScopes();
+            // a key for MCP: what its tools read, and nothing more (ISS02879)
+            : ($scopeType === 'mcp' ? McpGuide::scopes() : UserApiKeys::readOnlyScopes());
         $tables = static::text($request, 'table_type') === 'some'
             ? static::texts($request, 'tables')
             : null;
@@ -153,7 +200,7 @@ class UserApiKeyController extends AdminControllerBase
         UserApiKeys::mailCreated($key, $request->ip());
 
         // an empty form: the values of the key are not kept in the fields
-        return $this->index(new Request(), $content, $plain);
+        return $this->index(new Request(), $content, $plain, null, null, (array)$key->scopes);
     }
 
     /**
@@ -201,6 +248,8 @@ class UserApiKeyController extends AdminControllerBase
             return [intval($user->id) => strval($user->getValue('user_name'))];
         })->all();
 
+        // the page of the site's keys has its own heading (the constructor sets the one of the user's page)
+        $this->setPageInfo(exmtrans('api_key.admin_header'), exmtrans('api_key.admin_header'), ' ', 'fa-key');
         $this->AdminContent($content);
         $content->row(view('exment::api_key.admin', [
             'keys' => $this->rows($paginator->items(), $users),
@@ -344,7 +393,9 @@ class UserApiKeyController extends AdminControllerBase
         $rows = [];
         foreach ($keys as $key) {
             $status = isset($key->revoked_at) ? 'revoked' : ($key->expires_at->isFuture() ? 'active' : 'expired');
-            $refusedShown = isset($key->last_refused_at) && (!isset($key->last_used_at) || $key->last_refused_at->greaterThan($key->last_used_at));
+            // the uses not written yet are in the cache (UserApiKeys::touch)
+            $usage = UserApiKeys::usageOf($key);
+            $refusedShown = isset($key->last_refused_at) && (!isset($usage['last_used_at']) || $key->last_refused_at->greaterThan($usage['last_used_at']));
             $rows[] = [
                 'id' => $key->id,
                 'user_id' => $key->user_id,
@@ -356,9 +407,9 @@ class UserApiKeyController extends AdminControllerBase
                 'ips' => implode(', ', $key->ipList()),
                 'cert' => isset($key->client_cert_fingerprint),
                 'expires_at' => $key->expires_at->format('Y-m-d H:i'),
-                'last_used_at' => $key->last_used_at?->format('Y-m-d H:i'),
-                'last_used_ip' => $key->last_used_ip,
-                'use_count' => $key->use_count,
+                'last_used_at' => $usage['last_used_at']?->format('Y-m-d H:i'),
+                'last_used_ip' => $usage['last_used_ip'],
+                'use_count' => $usage['use_count'],
                 'created_at' => $key->created_at?->format('Y-m-d H:i'),
                 'status' => $status,
                 // the last refusal and why (the log is not for every administrator), when it came
@@ -369,4 +420,40 @@ class UserApiKeyController extends AdminControllerBase
         }
         return $rows;
     }
+
+    /**
+     * What a key is for: each presets its scopes (the user may change them).
+     *
+     * @return array<string, array{icon: string, scopes: array<int, string>}>
+     */
+    protected static function purposes(): array
+    {
+        return [
+            'mcp' => ['icon' => 'fa-robot', 'scopes' => McpGuide::scopes()],
+            'api' => ['icon' => 'fa-plug', 'scopes' => static::API_SCOPES],
+            'read_only' => ['icon' => 'fa-eye', 'scopes' => UserApiKeys::readOnlyScopes()],
+        ];
+    }
+
+    /**
+     * The scopes of the page by group, only those the site has (a scope added later goes to "others").
+     *
+     * @return array<string, array<int, string>>
+     */
+    protected static function scopeGroups(): array
+    {
+        $available = UserApiKeys::availableScopes();
+        $groups = [];
+        foreach (static::SCOPE_GROUPS as $group => $scopes) {
+            $groups[$group] = array_values(array_intersect($scopes, $available));
+        }
+        $rest = array_values(array_diff($available, array_merge(...array_values(static::SCOPE_GROUPS))));
+        if (count($rest) > 0) {
+            $groups['others'] = $rest;
+        }
+        return array_filter($groups, function ($scopes) {
+            return count($scopes) > 0;
+        });
+    }
+
 }

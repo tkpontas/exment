@@ -289,6 +289,17 @@
                 {
                     "column_name": "send_datetime",
                     "column_view_name": "Ngày giờ gửi"
+                },
+                {
+                    "column_name": "send_result",
+                    "column_view_name": "Kết quả gửi",
+                    "options": {
+                        "select_item_valtext": "sent,Đã gửi\nfailed,Thất bại"
+                    }
+                },
+                {
+                    "column_name": "send_error",
+                    "column_view_name": "Lỗi gửi"
                 }
             ]
         },
@@ -501,11 +512,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "Thông báo"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "Mẫu định dạng ô"
         },
@@ -513,6 +519,11 @@
             "menu_type": "system",
             "menu_name": "template",
             "title": "Mẫu"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "trash",
+            "title": "Thùng rác"
         },
         {
             "menu_type": "parent_node",
@@ -556,6 +567,16 @@
         },
         {
             "menu_type": "system",
+            "menu_name": "safety_check_setting",
+            "title": "Cài đặt xác nhận an toàn"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "meili_setting",
+            "title": "Cài đặt tìm kiếm toàn văn"
+        },
+        {
+            "menu_type": "system",
             "menu_name": "feature",
             "title": "Quản lý tính năng"
         },
@@ -578,6 +599,21 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "Kiểm tra bảo mật"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "Tác vụ theo lịch"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "sync",
+            "title": "Đồng bộ dữ liệu"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "log_management",
+            "title": "Quản lý log"
         },
         {
             "menu_type": "system",

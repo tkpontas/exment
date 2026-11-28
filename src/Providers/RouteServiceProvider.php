@@ -13,6 +13,7 @@ use Exceedone\Exment\Enums\SystemTableName;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Exceedone\Exment\Services\ApiRateRaises;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -27,21 +28,33 @@ class RouteServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        /** @var int $rate_limit */
-        $rate_limit = config('exment.api_max_rate_limit', 60);
-        RateLimiter::for('api', function (Request $request) use ($rate_limit) {
+        RateLimiter::for('api', function (Request $request) {
+            $rate_limit = ApiRateRaises::base();
+            // too many: the answer as before, and an MCP call is kept in the MCP log (ISS02915)
+            $tooMany = function (?int $userId) {
+                return function (Request $request, array $headers) use ($userId) {
+                    return \Exceedone\Exment\Services\LogManagement\McpLogs::throttled($request, $userId, $headers);
+                };
+            };
             // an API key of a user: not through the OAuth guard (Passport empties the Authorization
             // header of a bearer that is not its token, and the key would never sign in after it)
             $bearer = $request->bearerToken();
             if (\Exceedone\Exment\Services\UserApiKeys::looksLikeKey($bearer)) {
+                // a temporary raise of the user of the key (ISS00442)
+                $per_minute = ApiRateRaises::perMinute($rate_limit, ApiRateRaises::userOfApiKey((string)$bearer));
                 // by the IP (a new random key each time, or many keys, do not get more) and by the key
                 return [
-                    Limit::perMinute($rate_limit)->by('apikey-ip:' . \Exceedone\Exment\Services\UserApiKeys::siteHash() . ':' . $request->ip()),
-                    Limit::perMinute($rate_limit)->by(\Exceedone\Exment\Services\UserApiKeys::limiterKey((string)$bearer)),
+                    Limit::perMinute($per_minute)->by('apikey-ip:' . \Exceedone\Exment\Services\UserApiKeys::siteHash() . ':' . \Exceedone\Exment\Services\IpAddress::limiterKey($request->ip()))->response($tooMany(null)),
+                    Limit::perMinute($per_minute)->by(\Exceedone\Exment\Services\UserApiKeys::limiterKey((string)$bearer))->response($tooMany(null)),
                 ];
             }
             $login_user = \Exment::user()?? \Auth::guard(Define::AUTHENTICATE_KEY_API)->user();
-            return Limit::perMinute($rate_limit)->by($login_user?->base_user_id ?: $request->ip());
+            // a temporary raise of the user or of the API client of the token (ISS00442)
+            $token = $login_user instanceof \Exceedone\Exment\Model\LoginUser ? $login_user->token() : null;
+            $client_id = $token instanceof \Laravel\Passport\Token ? $token->client_id : null;
+            $per_minute = ApiRateRaises::perMinute($rate_limit, $login_user?->base_user_id, $client_id);
+            return Limit::perMinute($per_minute)->by($login_user?->base_user_id ?: \Exceedone\Exment\Services\IpAddress::limiterKey($request->ip()))
+                ->response($tooMany(isset($login_user->base_user_id) ? intval($login_user->base_user_id) : null));
         });
     }
     /**
@@ -51,6 +64,7 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function map()
     {
+        $this->mapExmentBackupRunStateRoute();
         $this->mapExmentWebRotes();
         $this->mapExmentAnonymousWebRotes();
         $this->mapExmentLineWebhookRoute();
@@ -79,6 +93,19 @@ class RouteServiceProvider extends ServiceProvider
             ->where('legacy_admin_path', '.*')
             ->middleware('web')
             ->name('exment.legacy_admin_redirect');
+    }
+
+    /**
+     * The state of a restore while the site is in maintenance (ISS02943): no session, no login,
+     * no database (the restore replaces it); the token of the run instead.
+     *
+     * @return void
+     */
+    protected function mapExmentBackupRunStateRoute()
+    {
+        Route::get(url_join(config('admin.route.prefix'), 'backup/runs/{uuid}/state'), [\Exceedone\Exment\Controllers\BackupRunStateController::class, 'show'])
+            ->where('uuid', '[0-9a-f\-]{36}')
+            ->name('exment.backup_run_state');
     }
 
     /**
@@ -227,12 +254,69 @@ class RouteServiceProvider extends ServiceProvider
 
             $router->post('system/call_update', 'SystemController@callUpdate');
 
+            // the settings once on the detail page of the system settings (#2157)
+            $router->get('safety_check_setting', 'SafetyCheckSettingController@index');
+            $router->post('safety_check_setting', 'SafetyCheckSettingController@post');
+            $router->get('meili_setting', 'MeiliSettingController@index');
+            $router->post('meili_setting', 'MeiliSettingController@post');
+            // mail with OAuth 2.0 (ISS02913)
+            $router->get('mail_oauth_setting', 'MailOAuthSettingController@index');
+            $router->post('mail_oauth_setting', 'MailOAuthSettingController@post');
+            $router->get('mail_oauth_setting/google', 'MailOAuthSettingController@connectGoogle');
+            $router->get('mail_oauth_setting/google/callback', 'MailOAuthSettingController@googleCallback');
+
             // Tuning: what would make the site faster (ISS00414)
             $router->get('tuning', 'TuningController@index');
             $router->post('tuning/action', 'TuningController@action');
             // the security check (ISS02833)
             $router->get('security_check', 'SecurityCheckController@index');
             $router->post('security_check/fix', 'SecurityCheckController@fix');
+            // ISS02935: a small body with an URL, an IP address and a path, sent through what is in front
+            $router->post('security_check/firewall', 'SecurityCheckController@firewall');
+            // the scheduled jobs (ISS02832)
+            $router->get('scheduled_jobs', 'ScheduledJobController@index');
+            // the log management (ISS02839)
+            $router->get('log_management', 'LogManagementController@index');
+            $router->post('log_management/setting', 'LogManagementController@postSetting');
+            $router->get('log_management/logins.csv', 'LogManagementController@loginsCsv');
+            $router->get('log_management/browser', 'BrowserLogController@index');
+            $router->post('log_management/browser/setting', 'BrowserLogController@postSetting');
+            // the log of the MCP calls (ISS02915)
+            $router->get('log_management/mcp', 'McpLogController@index');
+            $router->post('log_management/mcp/setting', 'McpLogController@postSetting');
+            $router->get('log_management/files/{name}', 'LogManagementController@file')->where('name', '[A-Za-z0-9._-]+');
+            $router->get('log_management/archives/{kind}/{name}', 'LogManagementController@archive')->where(['kind' => '[a-z0-9_]+', 'name' => '[A-Za-z0-9._-]+']);
+            // the IT audit report (ISS02840)
+            $router->get('log_management/audit', 'AuditReportController@index');
+            $router->get('log_management/audit.pdf', 'AuditReportController@pdf');
+            $router->get('log_management/audit/{section}.csv', 'AuditReportController@csv')->where('section', '[a-z_]+');
+            $router->get('log_management/audit/files/{id}', 'AuditReportController@file')->where('id', '[0-9]+');
+            $router->get('log_management/audit/record', 'AuditReportController@record');
+            $router->post('log_management/audit/verify', 'AuditReportController@verify');
+            $router->post('log_management/audit/setting', 'AuditReportController@postSetting');
+            $router->post('scheduled_jobs/run', 'ScheduledJobController@run');
+            // temporary raises of the API rate limit (ISS00442)
+            $router->get('api_rate_raises', 'ApiRateRaiseController@index');
+            $router->post('api_rate_raises', 'ApiRateRaiseController@store');
+            $router->post('api_rate_raises/{id}/delete', 'ApiRateRaiseController@delete');
+            // the data sync (ISS00113)
+            $router->get('sync', 'SyncController@index');
+            $router->get('sync/connections/create', 'SyncController@connection');
+            $router->post('sync/connections', 'SyncController@saveConnection');
+            $router->get('sync/connections/{id}/edit', 'SyncController@connection');
+            $router->post('sync/connections/{id}', 'SyncController@saveConnection');
+            $router->post('sync/connections/{id}/test', 'SyncController@testConnection');
+            $router->get('sync/mappings/create', 'SyncController@mapping');
+            $router->post('sync/mappings', 'SyncController@saveMapping');
+            $router->get('sync/mappings/{id}/edit', 'SyncController@mapping');
+            $router->post('sync/mappings/{id}', 'SyncController@saveMapping');
+            $router->post('sync/mappings/{id}/run', 'SyncController@run');
+            $router->get('sync/mappings/{id}/links', 'SyncController@links');
+            $router->get('sync/runs/{id}', 'SyncController@showRun');
+            // the trash: the deleted rows of all the tables (ISS00334)
+            $router->get('trash', 'TrashController@index');
+            $router->post('trash/restore', 'TrashController@restore');
+            $router->post('trash/delete', 'TrashController@delete');
             $router->get('maintenance', 'MaintenanceController@index');
             $router->post('maintenance', 'MaintenanceController@store');
             $router->post('maintenance/start', 'MaintenanceController@start');
@@ -453,6 +537,11 @@ class RouteServiceProvider extends ServiceProvider
             $router->get('backup/importModal', 'BackupController@importModal');
             $router->get('backup/importModal/{file_key}', 'BackupController@importModal');
             $router->get('backup/download/{ymdhms}', 'BackupController@download');
+            // the runs of the backup and the restore (ISS02943)
+            $router->get('backup/runs/current', 'BackupController@runCurrent');
+            $router->get('backup/runs/{uuid}/status', 'BackupController@runStatus')->where('uuid', '[0-9a-fA-F\-]{36}');
+            $router->get('backup/runs/{uuid}/log', 'BackupController@runLog')->where('uuid', '[0-9a-fA-F\-]{36}');
+            $router->get('backup/runs/{uuid}', 'BackupController@runShow')->where('uuid', '[0-9a-fA-F\-]{36}');
 
             $router->get("data/{tableKey}/importModal", 'CustomValueController@importModal');
             $router->post("data/{tableKey}/import", 'CustomValueController@import');
@@ -464,6 +553,8 @@ class RouteServiceProvider extends ServiceProvider
             $router->get("data/{tableKey}/{id}/compareitem", 'CustomValueController@compareitem');
             $router->post("data/{tableKey}/{id}/compare", 'CustomValueController@restoreRevision');
             $router->post("data/{tableKey}/{id}/pluginClick", 'CustomValueController@pluginClick');
+            // the plain value of an encrypted column, shown on purpose and logged (ISS00148)
+            $router->post("data/{tableKey}/{id}/reveal/{column}", 'EncryptedValueController@reveal');
             $router->post("data/{tableKey}/{id}/operationClick", 'CustomValueController@operationClick');
             $router->get("data/{tableKey}/{id}/actionModal", 'CustomValueController@actionModal');
             $router->post("data/{tableKey}/{id}/actionClick", 'CustomValueController@actionClick');
@@ -511,6 +602,10 @@ class RouteServiceProvider extends ServiceProvider
             $router->get("column/{tableKey}/{id}/columnTypeHtml", 'CustomColumnController@columnTypeHtml');
             $router->get("copy/{tableKey}/newModal", 'CustomCopyController@newModal');
 
+            // data maintenance of a table (#1829, Features::DATA_MAINTENANCE)
+            $router->get("data_maintenance/{tableKey}", 'DataMaintenanceController@index');
+            $router->post("data_maintenance/{tableKey}/attachments", 'DataMaintenanceController@deleteAttachments');
+
             $router->get("operation/{tableKey}/filter-value", 'CustomOperationController@getFilterValue');
             $router->post('form/{tableKey}/settingModal', 'CustomFormController@settingModal');
             $router->get('form/{tableKey}/preview/{suuid}', 'CustomFormController@previewBySuuid');
@@ -518,6 +613,10 @@ class RouteServiceProvider extends ServiceProvider
             $router->put('form/{tableKey}/preview', 'CustomFormController@preview');
             $router->get('form/{tableKey}/preview', 'CustomFormController@previewError');
             $router->get('formpublic/{tableKey}/notify_action_target', 'CustomFormPublicController@notify_action_target');
+            // the easy setup and the tags (ISS02942)
+            $router->get('formpublic/{tableKey}/easy', 'CustomFormPublicController@easy');
+            $router->post('formpublic/{tableKey}/easy', 'CustomFormPublicController@easyStore');
+            $router->get('formpublic/{tableKey}/{id}/embed', 'CustomFormPublicController@embed');
             $router->post('formpublic/{tableKey}/preview', 'CustomFormPublicController@preview');
             $router->put('formpublic/{tableKey}/preview', 'CustomFormPublicController@preview');
             $router->post('formpublic/{tableKey}/{id}/preview', 'CustomFormPublicController@preview');
@@ -562,6 +661,8 @@ class RouteServiceProvider extends ServiceProvider
             $router->get('webapi/menu/menutargetview', 'MenuController@menutargetview');
 
             $router->get('webapi/mention/users', 'MentionController@users');
+            // the log of the browsers (ISS02904): at most a sending a second a user
+            $router->post('webapi/browser_log', 'BrowserLogController@store')->middleware('throttle:60,1');
 
             $router->get("webapi/{tableKey}/cellstylepreset", 'CellStylePresetController@presets');
             $router->get("webapi/{tableKey}/cellstylepreset/modal", 'CellStylePresetController@modal');
@@ -574,6 +675,16 @@ class RouteServiceProvider extends ServiceProvider
             $router->get("webapi/{tableKey}/filter-value", 'ApiTableController@getFilterValue');
             $router->get("webapi/{tableKey}/operation-update-type", 'ApiTableController@getOperationUpdateType');
             $router->get("webapi/{tableKey}/operation-filter-value", 'ApiTableController@getOperationFilterValue');
+
+            // a page of a plugin that is not there (no such plugin, or no such page of it): Exment's
+            // error page with 404, as for a table that is not there. A fallback route, matched after
+            // all the others, so the routes of the plugins come first. The files of a plugin
+            // (".../public/...") are not pages: they stay a plain 404.
+            $router->any('plugins/{pluginPath}', 'ErrorController@notFound')
+                ->where('pluginPath', '(?!(?:[^/]+/)*public/).+')
+                // not the check of the plugin's permission: there is no plugin page to allow
+                ->withoutMiddleware('admin.permission')
+                ->fallback();
         });
     }
 
@@ -641,8 +752,13 @@ class RouteServiceProvider extends ServiceProvider
             'middleware'    => ['adminweb', 'admin_install'],
         ], function (Router $router) {
             $router->get('install/reset', 'InstallController@reset');
+            // the reset of an install that failed (InstallRunner): by the form only
+            $router->post('install/reset', 'InstallController@reset');
             $router->get('install', 'InstallController@index');
             $router->post('install', 'InstallController@post');
+            // the install in steps, and its progress (InstallRunner)
+            $router->post('install/step', 'InstallController@step');
+            $router->get('install/status', 'InstallController@status');
         });
     }
 
@@ -668,7 +784,8 @@ class RouteServiceProvider extends ServiceProvider
                 $routes[] = [
                     'type' => 'api',
                     'prefix' => url_join(config('admin.route.prefix'), 'api'),
-                    'middleware' => ['api', 'adminapi'],
+                    // the Content-Type checked strictly when it is set (ISS02915 #5)
+                    'middleware' => ['api', 'adminapi', 'exment.api-content-type'],
                     'addScope' => true,
                     'private' => true,
                     'className' => 'ApiDataController',
@@ -710,6 +827,8 @@ class RouteServiceProvider extends ServiceProvider
                     // because a public form has no grid and its controller has no such
                     // method - the route would only exist to answer with a 500.
                     $router->get("data/{tableKey}/cell/{id}/{column_name}", "ApiDataController@dataCellHtml")->middleware(ApiScope::getScopeString($route["addScope"], ApiScope::VALUE_READ, ApiScope::VALUE_WRITE));
+                    // the plain value of an encrypted column, on purpose and logged (ISS00148)
+                    $router->get("data/{tableKey}/{id}/reveal/{column}", "ApiDataController@dataReveal")->middleware(ApiScope::getScopeString($route["addScope"], ApiScope::VALUE_READ, ApiScope::VALUE_WRITE));
                 }
 
                 // Change class name if public form api for segment
@@ -798,6 +917,16 @@ class RouteServiceProvider extends ServiceProvider
 
                     // User, Organization --------------------------------------------------
                     $router->get("user_organization/select", 'ApiController@userOrganizationSelect')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::VALUE_READ, ApiScope::VALUE_WRITE));
+
+                    // the users of an organization, the role groups and their members (ISS00335)
+                    $router->get("organization/{id}/users", 'ApiMemberController@organizationUsers')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::USER_ORG_READ, ApiScope::USER_ORG_WRITE));
+                    $router->post("organization/{id}/users", 'ApiMemberController@addOrganizationUsers')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::USER_ORG_WRITE));
+                    $router->delete("organization/{id}/users", 'ApiMemberController@removeOrganizationUsers')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::USER_ORG_WRITE));
+                    $router->get("user/{id}/organizations", 'ApiMemberController@userOrganizations')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::USER_ORG_READ, ApiScope::USER_ORG_WRITE));
+                    $router->get("role_group", 'ApiMemberController@roleGroups')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::ROLE_GROUP_READ, ApiScope::ROLE_GROUP_WRITE));
+                    $router->get("role_group/{id}", 'ApiMemberController@roleGroup')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::ROLE_GROUP_READ, ApiScope::ROLE_GROUP_WRITE));
+                    $router->post("role_group/{id}/members", 'ApiMemberController@addRoleGroupMembers')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::ROLE_GROUP_WRITE));
+                    $router->delete("role_group/{id}/members", 'ApiMemberController@removeRoleGroupMembers')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::ROLE_GROUP_WRITE));
 
                     // Workflow --------------------------------------------------
                     $router->get("wf/workflow", 'ApiWorkflowController@getList')->middleware(ApiScope::getScopeString($route['addScope'], ApiScope::WORKFLOW_READ, ApiScope::WORKFLOW_EXECUTE));

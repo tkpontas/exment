@@ -96,6 +96,25 @@ class UpdateCommand extends Command
             // not told
         }
 
+        // the logs keep no input from 7.3.0 (ISS02839): said once
+        try {
+            if (!boolval(\Exceedone\Exment\Model\System::log_privacy_notice_shown())) {
+                $this->warn(strval(exmtrans('log_management.privacy.update_notice')));
+                \Exceedone\Exment\Model\System::log_privacy_notice_shown(true);
+            }
+        } catch (\Throwable $e) {
+            // not told
+        }
+
+        // PHP whose support ends, a database older than the recommended version (ISS00171, ISS00216)
+        try {
+            foreach ((new \Exceedone\Exment\Services\SystemRequire\Security\SupportedVersionSecurity())->findings() as $finding) {
+                $this->warn($finding);
+            }
+        } catch (\Throwable $e) {
+            // not told
+        }
+
         $this->restoreConfigCache($configCached);
 
         return 0;
@@ -135,7 +154,10 @@ class UpdateCommand extends Command
     {
         foreach (['cache:clear', 'config:clear', 'route:clear', 'view:clear'] as $command) {
             try {
-                $this->call($command);
+                // cache:clear empties the store: the restart signal of the queue is put back (ISS02908)
+                \Exceedone\Exment\Services\QueueWorker::keepRestartSignal(function () use ($command) {
+                    $this->call($command);
+                });
             } catch (\Exception $ex) {
             }
         }

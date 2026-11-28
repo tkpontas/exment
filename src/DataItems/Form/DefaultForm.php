@@ -120,12 +120,17 @@ class DefaultForm extends FormBase
                             $relation_name,
                             $block_label,
                             function ($form, $model = null) use ($custom_form_block, $relation, $relation_name) {
-                                $form->nestedEmbeds('value', $form->getKey(), $this->custom_form->form_view_name, $this->getCustomFormColumns($form, $custom_form_block, $model, $relation))
+                                $columns = $this->getCustomFormColumns($form, $custom_form_block, $model, $relation);
+                                $form->nestedEmbeds('value', $form->getKey(), $this->custom_form->form_view_name, function ($form) use ($columns, $custom_form_block) {
+                                    $columns($form);
+                                    $this->addSortColumnField($form, $custom_form_block);
+                                })
                                     ->disableHeader()
                                     ->setRelationName($relation_name)
                                     ->gridEmbeds();
                             }
-                        );
+                        )->rowCopy();
+                        $this->setRowOrder($hasmany, $custom_form_block);
                     }
                 }
                 // n:n
@@ -233,18 +238,61 @@ EOT;
         $hasmany = $form->hasManyTable(
             $relationName,
             $blockLabel,
-            function ($form) use ($customFormColumns, $relationName) {
-                $form->nestedEmbeds('value', $form->getKey(), $this->custom_form->form_view_name, function (Form\EmbeddedForm $form) use ($customFormColumns) {
+            function ($form) use ($customFormColumns, $relationName, $customFormBlock) {
+                $form->nestedEmbeds('value', $form->getKey(), $this->custom_form->form_view_name, function (Form\EmbeddedForm $form) use ($customFormColumns, $customFormBlock) {
                     $this->setCustomFormColumns($form, $customFormColumns);
+                    $this->addSortColumnField($form, $customFormBlock);
                 })->setRelationName($relationName);
             }
-        )->setTableWidth(12, 0);
+        )->setTableWidth(12, 0)->rowCopy();
+        $this->setRowOrder($hasmany, $customFormBlock);
 
         if (isset($lazyLoadUrl)) {
             $hasmany->lazyLoad($lazyLoadUrl);
         }
 
         return $hasmany;
+    }
+
+    /**
+     * The rows of a 1:n block in the order of its sort column (#1595): the up
+     * and down buttons, and 1, 2, 3... written into the column on saving.
+     *
+     * @param \Exceedone\Exment\Form\Field\HasMany|\Exceedone\Exment\Form\Field\HasManyTable $hasmany
+     * @param CustomFormBlock $customFormBlock
+     * @return void
+     */
+    protected function setRowOrder($hasmany, $customFormBlock): void
+    {
+        $sortColumn = $customFormBlock->getSortColumn();
+        if (!isset($sortColumn)) {
+            return;
+        }
+        $hasmany->rowUpDown('value.' . $sortColumn->column_name, 1, true);
+    }
+
+    /**
+     * The sort column of a 1:n block as a hidden input of each row, when the
+     * block does not show it: what saving writes into it has to be part of
+     * the row, or it is dropped with every other value the row does not hold.
+     *
+     * @param \ExmentAdminCore\Admin\Form\EmbeddedForm $form
+     * @param CustomFormBlock $customFormBlock
+     * @return void
+     */
+    protected function addSortColumnField($form, $customFormBlock): void
+    {
+        $sortColumn = $customFormBlock->getSortColumn();
+        if (!isset($sortColumn)) {
+            return;
+        }
+        foreach ($customFormBlock->custom_form_columns as $formColumn) {
+            if ($formColumn->form_column_type == FormColumnType::COLUMN
+                && strval($formColumn->form_column_target_id) === strval($sortColumn->id)) {
+                return;
+            }
+        }
+        $form->hidden($sortColumn->column_name);
     }
 
     /**
@@ -430,7 +478,19 @@ EOT;
                     'width' => $form_column->width ?? 4,
                 ]);
             }
+            $this->appendEmbedFields($form, $custom_form_block);
         };
+    }
+
+    /**
+     * Fields a form adds to a block, after its columns (not shown: internal fields). The fields of
+     * the block are the only values of it that are kept (EmbeddedForm::prepare).
+     *
+     * @param mixed $form the form of the block
+     * @param mixed $custom_form_block
+     */
+    protected function appendEmbedFields($form, $custom_form_block): void
+    {
     }
 
     /**
@@ -503,6 +563,27 @@ EOT;
                 'calledType' => ValidateCalledType::FORM,
             ]))) {
                 $message = $message->merge($validateResult);
+            }
+
+            // a new record: the required columns this form does not have, when the form asks (ISS00374)
+            if (!$model->exists && isset($this->custom_form) && $this->custom_form->check_missing_required) {
+                $empty = $this->custom_form->missingRequiredColumns()->filter(function ($column) use ($input) {
+                    return is_nullorempty(array_get($input, 'value.' . $column->column_name));
+                });
+                if ($empty->count() > 0) {
+                    $names = $empty->map(function ($column) {
+                        return strval($column->column_view_name);
+                    })->implode(exmtrans('custom_form.name_separator'));
+                    $text = exmtrans('custom_form.message.missing_required_empty', ['names' => $names]);
+                    foreach ($empty as $column) {
+                        $message = $message->merge(['value.' . $column->column_name => [$text]]);
+                    }
+                    // the columns are not on the form: said at the top of the page (as HTML, the names escaped)
+                    $html = exmtrans('custom_form.message.missing_required_empty', ['names' => $empty->map(function ($column) {
+                        return esc_html(strval($column->column_view_name));
+                    })->implode(esc_html(exmtrans('custom_form.name_separator')))]);
+                    admin_error(exmtrans('error.header'), admin_html_message($html));
+                }
             }
 
             // validation relations ----------------------------------------------------
@@ -723,7 +804,7 @@ EOT;
                     $target_class = 'copy_from_target_' . $copy->suuid;
                     $tools->append(view('exment::tools.copy-from-button', [
                         // one source: just "Copy from"; several: say which table
-                        'label' => \Exceedone\Exment\Model\CustomCopy::getCreateLabel($copy, count($copies) > 1),
+                        'label' => \Exceedone\Exment\Model\CustomCopy::getCreateLabel($copy, count($copies) > 1, $copies),
                         'target_class' => $target_class,
                         // the picked record id is put after this
                         'url' => admin_urls_query('data', $custom_table->table_name, 'create', ['copy_from' => $copy->suuid]) . '&copy_from_id=',

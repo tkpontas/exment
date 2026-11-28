@@ -51,6 +51,12 @@ class Features
     public const API_KEYS = 'api_keys';
     public const MCP = 'mcp';
     public const SAFETY_CHECK = 'safety_check';
+    public const DATA_MAINTENANCE = 'data_maintenance';
+    public const TEAMS_NOTIFY = 'teams_notify';
+    public const WEBHOOK_NOTIFY = 'webhook_notify';
+    public const LINE_WORKS_NOTIFY = 'lineworks_notify';
+    public const MAIL_OAUTH = 'mail_oauth';
+    public const SALES = 'sales';
 
     /** The key of the menu flag of a plugin in the setting. */
     public const PLUGIN_PREFIX = 'plugin:';
@@ -150,6 +156,16 @@ class Features
             'description' => 'exment::exment.feature.features.api_keys_help',
             'endpoints' => ['auth/api_keys'],
         ]);
+        // the API of the members (Controllers\ApiMemberController, ISS00335): the users of an
+        // organization and the members of the role groups. Off until it is turned on; who may use it
+        // is the permission of the role groups
+        $core[\Exceedone\Exment\Controllers\ApiMemberController::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.api_members',
+            'description' => 'exment::exment.feature.features.api_members_help',
+            'api' => ['organization', 'user', 'role_group'],
+            'manual' => 'api_members',
+            'who' => false,
+        ]);
         // the MCP server (api/mcp, ISS00439): off until an administrator turns it on and
         // chooses the role groups whose users may use it from an AI
         $core[static::MCP] = static::definition([
@@ -166,6 +182,93 @@ class Features
             'description' => 'exment::exment.feature.features.safety_check_help',
             'endpoints' => ['safety_check'],
             'manual' => 'safety_check',
+        ]);
+        // data maintenance of a table (#1829): delete the attachments of a table at once.
+        // It deletes files for good, so it is off until an administrator turns it on; who may
+        // use it is the permission to change the table (Permission::CUSTOM_TABLE).
+        $core[static::DATA_MAINTENANCE] = static::definition([
+            'label' => 'exment::exment.feature.features.data_maintenance',
+            'description' => 'exment::exment.feature.features.data_maintenance_help',
+            'endpoints' => ['data_maintenance'],
+            'manual' => 'data_maintenance',
+            'who' => false,
+        ]);
+        // notifications to a person's Teams chat through a Teams workflow (ISS02863): off until a
+        // system administrator turns it on (and sets the address of the workflow)
+        $core[static::TEAMS_NOTIFY] = static::definition([
+            'label' => 'exment::exment.feature.features.teams_notify',
+            'description' => 'exment::exment.feature.features.teams_notify_help',
+            'manual' => 'notify_teams',
+            'who' => false,
+        ]);
+        // a notification as JSON to any URL (ISS02912): the data leaves the site, so it is off until
+        // a system administrator turns it on
+        $core[static::WEBHOOK_NOTIFY] = static::definition([
+            'label' => 'exment::exment.feature.features.webhook_notify',
+            'description' => 'exment::exment.feature.features.webhook_notify_help',
+            'manual' => 'notify_webhook',
+            'who' => false,
+        ]);
+        // the data sync with other services (ISS00113): the system administrators only, off until
+        // it is turned on
+        $core[Sync\SyncEngine::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.data_sync',
+            'description' => 'exment::exment.feature.features.data_sync_help',
+            'endpoints' => ['sync'],
+            'menu' => 'sync',
+            'manual' => 'sync',
+            'who' => false,
+        ]);
+        // notifications to LINE WORKS (ISS00114): the data leaves the site, so it is off until a
+        // system administrator turns it on (and sets the app)
+        $core[static::LINE_WORKS_NOTIFY] = static::definition([
+            'label' => 'exment::exment.feature.features.lineworks_notify',
+            'description' => 'exment::exment.feature.features.lineworks_notify_help',
+            'manual' => 'notify_lineworks',
+            'who' => false,
+        ]);
+        // the trash (Services\Trash, ISS00334): the deleted rows of all the tables on one page. Off
+        // until it is turned on; who may use it is the permission to see the deleted rows of a table
+        $core[Trash::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.trash',
+            'description' => 'exment::exment.feature.features.trash_help',
+            'endpoints' => ['trash'],
+            'menu' => 'trash',
+            'who' => false,
+        ]);
+        // the log of the browsers (Services\LogManagement\BrowserLogs, ISS02904): off until it is
+        // turned on; the role groups whose users' browsers send it
+        $core[\Exceedone\Exment\Services\LogManagement\BrowserLogs::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.browser_log',
+            'description' => 'exment::exment.feature.features.browser_log_help',
+            'manual' => 'log_management',
+        ]);
+        // the log of the MCP calls (Services\LogManagement\McpLogs, ISS02915): off until it is turned
+        // on; read by the system administrators and the role groups with "Audit"
+        $core[\Exceedone\Exment\Services\LogManagement\McpLogs::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.mcp_log',
+            'description' => 'exment::exment.feature.features.mcp_log_help',
+            'manual' => 'log_management',
+            'who' => false,
+        ]);
+        // mail with OAuth 2.0 (ISS02913): Microsoft 365, Google; off until a system administrator
+        // turns it on and sets the application
+        $core[static::MAIL_OAUTH] = static::definition([
+            'label' => 'exment::exment.feature.features.mail_oauth',
+            'description' => 'exment::exment.feature.features.mail_oauth_help',
+            'endpoints' => ['mail_oauth_setting'],
+            'manual' => 'system_setting',
+            'who' => false,
+        ]);
+        // sales (CRM, SFA, ISS00321): a feature that installs a set of tables (Services\FeaturePacks).
+        // Off until it is turned on; turning it on adds the tables, views, dashboard, menu, notify
+        // and role group of templates/sales_pack (what the site has already is kept). Who may use
+        // them is the role group "Sales" (the permissions of the tables), not this page.
+        $core[static::SALES] = static::definition([
+            'label' => 'exment::exment.feature.features.sales',
+            'description' => 'exment::exment.feature.features.sales_help',
+            'pack' => 'sales_pack',
+            'who' => false,
         ]);
         // the advice is about the server (php.ini, .env): a SaaS keeps it from the tenants
         // with EXMENT_FEATURES_LOCKED=tuning (ISS00428)
@@ -187,6 +290,33 @@ class Features
             'description' => 'exment::exment.feature.features.maintenance_mode_help',
             'endpoints' => ['maintenance'],
             'menu' => 'maintenance',
+            'who' => false,
+        ]);
+        // the scheduled jobs (ScheduledJobs\ScheduledJobs, ISS02832): the system administrators only.
+        // Off until it is turned on: the runs are kept only while it is used
+        $core[ScheduledJobs\ScheduledJobs::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.scheduled_jobs',
+            'description' => 'exment::exment.feature.features.scheduled_jobs_help',
+            'endpoints' => ['scheduled_jobs'],
+            'menu' => 'scheduled_jobs',
+            'manual' => 'scheduled_jobs',
+            'who' => false,
+        ]);
+        // temporary raises of the API rate limit (ApiRateRaises, ISS00442): the system
+        // administrators only. Off until it is turned on
+        $core[ApiRateRaises::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.api_rate_raise',
+            'description' => 'exment::exment.feature.features.api_rate_raise_help',
+            'endpoints' => ['api_rate_raises'],
+            'manual' => 'api_rate_raise',
+            'who' => false,
+        ]);
+        // the encrypted columns (Encryption\EncryptedColumns, ISS00148): the option of a column.
+        // Off until it is turned on; a column already encrypted stays so when it is turned off
+        $core[Encryption\EncryptedColumns::FEATURE] = static::definition([
+            'label' => 'exment::exment.feature.features.encrypted_columns',
+            'description' => 'exment::exment.feature.features.encrypted_columns_help',
+            'manual' => 'column',
             'who' => false,
         ]);
         return $core;
@@ -226,8 +356,9 @@ class Features
             return;
         }
         $definition['plugin'] = array_get($definition, 'plugin') ?? strtok($key, '.');
-        // on from the start is for Exment's own pages only: a new feature of a plugin starts off
-        unset($definition['default']);
+        // on from the start is for Exment's own pages only: a new feature of a plugin starts off.
+        // A pack is a template of Exment (FeaturePacks): not for a plugin either
+        unset($definition['default'], $definition['pack']);
         static::$registered[$key] = static::definition($definition);
         static::$definitions = null;
     }
@@ -257,7 +388,27 @@ class Features
             'requires' => is_string($requires) && $requires !== '' ? $requires : null,
             'manual' => static::manualOf(array_get($definition, 'manual')),
             'action' => static::actionOf(array_get($definition, 'action')),
+            // a template of Exment (templates/<pack>) installed when the feature is turned on (FeaturePacks)
+            'pack' => static::packOf(array_get($definition, 'pack')),
         ];
+    }
+
+    /**
+     * The pack of a definition as it may be kept: the name of one folder of templates/
+     * (small letters, numbers and "_"). Null otherwise.
+     */
+    protected static function packOf(mixed $pack): ?string
+    {
+        return is_string($pack) && preg_match('/\A[a-z0-9_]+\z/', $pack) === 1 ? $pack : null;
+    }
+
+    /**
+     * The pack (a folder of templates/) a feature installs when it is turned on (null: none).
+     */
+    public static function pack(string $key): ?string
+    {
+        $pack = static::attribute($key, 'pack');
+        return is_string($pack) ? $pack : null;
     }
 
     /**
@@ -805,7 +956,9 @@ class Features
         $userId = intval($user->getUserId());
         if (!array_key_exists($userId, static::$userRoleGroups)) {
             $enum = JoinedOrgFilterType::getEnum(System::org_joined_type_role_group(), JoinedOrgFilterType::ALL);
-            $groups = RoleGroup::getHasPermissionRoleGroup($userId, $user->getOrganizationIdsForQuery($enum));
+            // the organizations of this user (the ones of a login user are kept for the user of the
+            // request: the IT audit report asks for every user)
+            $groups = RoleGroup::getHasPermissionRoleGroup($userId, AuthUserOrgHelper::getOrganizationIdsForQuery($enum, $userId));
             static::$userRoleGroups[$userId] = collect($groups)->pluck('id')->map(function ($id) {
                 return intval($id);
             })->all();

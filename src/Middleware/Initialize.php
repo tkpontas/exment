@@ -17,6 +17,7 @@ use Exceedone\Exment\ColumnItems\CustomColumns;
 use Exceedone\Exment\Services\Auth2factor\Auth2factorService;
 use Exceedone\Exment\Services\PartialCrudService;
 use Exceedone\Exment\Services\Installer\InstalledState;
+use Exceedone\Exment\Services\Installer\InstallRunner;
 use ExmentAdminCore\Admin\Form;
 use ExmentAdminCore\Admin\Widgets\Form as WidgetForm;
 use ExmentAdminCore\Admin\Grid;
@@ -36,7 +37,8 @@ class Initialize
      */
     public function handle(Request $request, \Closure $next)
     {
-        if (!canConnection() || !hasTable(SystemTableName::SYSTEM)) {
+        // while the web installer makes the tables (InstallRunner), the site is not set up yet
+        if (!canConnection() || !hasTable(SystemTableName::SYSTEM) || InstallRunner::inProgress()) {
             // An installed site whose database cannot be reached (or is empty) is
             // down: 503 for every path, the install pages too. "Installed" is read
             // from the marker file and from .env itself, not from the database nor
@@ -60,9 +62,9 @@ class Initialize
                 InstalledState::markInstalled();
             }
 
-            // the install pages are closed on an installed site
+            // the install pages are closed on an installed site: not found, whatever the request has
             if ($this->isInstallPath($request) && InstalledState::isInstalled()) {
-                return redirect()->guest(admin_base_path($initialized ? 'auth/login' : 'initialize'));
+                abort(404);
             }
 
             // if path is not "initialize" and not installed, then redirect to initialize
@@ -92,7 +94,7 @@ class Initialize
     protected function isInstallPath(Request $request)
     {
         // Check install directory
-        return collect(['install', 'install/reset'])->contains(function ($path) use ($request) {
+        return collect(['install', 'install/reset', 'install/step', 'install/status'])->contains(function ($path) use ($request) {
             $path = trim(admin_base_path($path), '/');
             return $request->is($path);
         });
@@ -164,6 +166,66 @@ class Initialize
     protected static function defaultLogoExists(string $path): bool
     {
         return is_file(public_path($path));
+    }
+
+    /**
+     * The Exment logo of the login pages, for a site without its own logo: the same file as
+     * the side menu. The light letters when the page color chosen on the login setting is a
+     * dark one (and no image covers it). Null when public/images is not published yet: the
+     * page then shows the site name as text, as before.
+     *
+     * @param string|null $background_color the page color of the login setting
+     * @param bool $has_background_image a background image is set
+     */
+    public static function loginDefaultLogo(?string $background_color = null, bool $has_background_image = false): ?string
+    {
+        if (!static::defaultLogoExists(static::DEFAULT_LOGO)) {
+            return null;
+        }
+        if (!$has_background_image && static::isDarkColor($background_color) && static::defaultLogoExists(static::DEFAULT_LOGO_DARK)) {
+            return asset(static::DEFAULT_LOGO_DARK);
+        }
+        return asset(static::DEFAULT_LOGO);
+    }
+
+    /**
+     * The icons of Exment for a page of a site without its own favicon: the ones of the
+     * install pages. An empty array when public/images is not published yet.
+     *
+     * @return array<int, array{href: string, type: string|null, sizes: string|null}>
+     */
+    public static function defaultFavicons(): array
+    {
+        $icons = [];
+        if (static::defaultLogoExists('images/exment_favicon.png')) {
+            $icons[] = ['href' => asset('images/exment_favicon.png'), 'type' => null, 'sizes' => '32x32'];
+        }
+        if (static::defaultLogoExists(static::DEFAULT_LOGO_MINI)) {
+            $icons[] = ['href' => asset(static::DEFAULT_LOGO_MINI), 'type' => 'image/svg+xml', 'sizes' => null];
+        }
+        return $icons;
+    }
+
+    /**
+     * A color "#rgb" or "#rrggbb" that dark letters cannot be read on.
+     */
+    protected static function isDarkColor(?string $color): bool
+    {
+        if (!is_string($color) || !preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', trim($color), $m)) {
+            return false;
+        }
+        $hex = $m[1];
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        [$r, $g, $b] = array_map('hexdec', str_split($hex, 2));
+        // relative luminance (WCAG); below it, the light letters stand out more than the dark ones
+        $channel = function ($v) {
+            $v = $v / 255;
+            return $v <= 0.03928 ? $v / 12.92 : pow(($v + 0.055) / 1.055, 2.4);
+        };
+        $luminance = 0.2126 * $channel($r) + 0.7152 * $channel($g) + 0.0722 * $channel($b);
+        return $luminance < 0.179;
     }
 
     /**
@@ -536,6 +598,9 @@ class Initialize
                 if (!is_nullorempty(System::system_mail_host()) && Config::get('mail.default') === 'log') {
                     Config::set('mail.default', 'smtp');
                 }
+
+                // mail with OAuth 2.0 (ISS02913): its own mailer, when it is used
+                \Exceedone\Exment\Services\MailOAuth\MailOAuth::applyConfig();
             }
 
             // Google reCAPTCHA ----------------------------------------------------
@@ -655,6 +720,7 @@ class Initialize
             'progressTracker'          => Field\ProgressTracker::class,
             'sectionNav'          => Field\SectionNav::class,
             'systemValues'          => Field\SystemValues::class,
+            'relationSearchList'          => Field\RelationSearchList::class,
 
             ///// workflow
             'workflowStatusSelects'          => Field\Workflow\StatusSelects::class,

@@ -34,6 +34,8 @@
 .exm-fs-preview iframe { width: 100%; height: 75vh; border: 0; background: #fff; }
 .exm-fs-preview pre { width: 100%; max-height: 75vh; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .exm-fs-section { margin-bottom: 16px; }
+/* the place the button "権限" goes to, shown for a moment */
+.exm-fs-flash { box-shadow: 0 0 0 3px rgba(243, 156, 18, .8); transition: box-shadow .3s; }
 .exm-fs-section h4 { font-size: 1.05rem; margin: 0 0 8px; }
 .exm-fs-quota { font-size: .85rem; opacity: .8; }
 .exm-fs-perm-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -132,11 +134,39 @@ window.ExmFs = window.ExmFs || (function () {
             + lines.map(function (line) { return '<li style="overflow-wrap:anywhere">' + escape(line) + '</li>'; }).join('') + '</ul>';
         return window.swal({ title: escape(title), html: html, type: 'error', confirmButtonText: escape(buttons.ok) }).then(function () {});
     }
-    // a text to copy by hand (the clipboard is not there)
-    function show(title, text) {
-        if (typeof window.swal !== 'function') { window.prompt(title, text); return; }
-        window.swal({ title: escape(title), input: 'text', inputValue: text, confirmButtonText: escape(buttons.ok),
-            onOpen: function () { var i = document.querySelector('.swal2-input'); if (i) { i.select(); } } });
+    // a text to copy by hand (the clipboard is not there), selected, with how to copy it;
+    // resolved when the dialog is closed (#2277, #2278)
+    function show(title, text, help) {
+        if (typeof window.swal !== 'function') { window.prompt(help || title, text); return Promise.resolve(); }
+        return window.swal({ title: escape(title), text: help || '', input: 'text', inputValue: text, confirmButtonText: escape(buttons.ok),
+            onOpen: function () {
+                // after SweetAlert has put the value in and focused the box
+                setTimeout(function () { var i = document.querySelector('.swal2-input'); if (i) { i.focus(); i.select(); } }, 50);
+            } }).then(function () {});
+    }
+    // copied to the clipboard: the clipboard API on https and localhost, else the copy
+    // command of the page (which works on http too), else shown to copy by hand.
+    // Resolved true when copied, false after the dialog to copy by hand is closed.
+    var copyHelp = @json(exmtrans('file_server.copy_by_hand'));
+    function copy(text) {
+        var byCommand = function () {
+            var box = document.createElement('textarea');
+            box.value = text;
+            box.setAttribute('readonly', '');
+            box.style.position = 'fixed';
+            box.style.top = '-1000px';
+            document.body.appendChild(box);
+            box.select();
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            document.body.removeChild(box);
+            return ok;
+        };
+        var byHand = function () { return show('URL', text, copyHelp).then(function () { return false; }); };
+        if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+            return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return byCommand() ? true : byHand(); });
+        }
+        return byCommand() ? Promise.resolve(true) : byHand();
     }
 
     function size(bytes) {
@@ -147,7 +177,28 @@ window.ExmFs = window.ExmFs || (function () {
         return (i === 0 ? bytes : bytes.toFixed(1)) + ' ' + units[i];
     }
 
-    return { post: post, send: send, notify: notify, done: done, fail: fail, size: size, token: token, escape: escape, confirm: confirmIt, ask: ask, show: show, report: report };
+    return { post: post, send: send, notify: notify, done: done, fail: fail, size: size, token: token, escape: escape, confirm: confirmIt, ask: ask, show: show, copy: copy, report: report };
+})();
+</script>
+<script>
+// "権限": go to the permissions (#exm-fs-permissions) or the members (#exm-fs-members), on
+// the page that opens (pjax too) and on a link inside the page, and show the place a moment
+(function () {
+    function goToPermissions() {
+        var hash = window.location.hash;
+        if (hash !== '#exm-fs-permissions' && hash !== '#exm-fs-members') { return; }
+        var target = document.querySelector(hash);
+        if (!target) { return; }
+        var box = target.closest('.box, .form-group') || target;
+        box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        box.classList.add('exm-fs-flash');
+        setTimeout(function () { box.classList.remove('exm-fs-flash'); }, 2000);
+    }
+    setTimeout(goToPermissions, 100);
+    if (!window.ExmFsPermissionsHash) {
+        window.ExmFsPermissionsHash = true;
+        window.addEventListener('hashchange', goToPermissions);
+    }
 })();
 </script>
 <script>
@@ -159,11 +210,7 @@ if (!window.ExmFsCopyLink) {
         var copied = @json(exmtrans('file_server.link_copied'));
         var ok = function () { window.ExmFs.notify(copied, true); };
         var plain = function () {
-            if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
-                navigator.clipboard.writeText(url).then(ok, function () { prompt('URL', url); });
-            } else {
-                prompt('URL', url);
-            }
+            window.ExmFs.copy(url).then(function (copied) { if (copied) { ok(); } });
         };
         var html = '<a href="' + window.ExmFs.escape(url) + '">' + window.ExmFs.escape(name || url) + '</a>';
         try {

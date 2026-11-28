@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Controllers;
 
+use Exceedone\Exment\Services\MenuOpen;
 use Exceedone\Exment\Exceptions\SsoLoginErrorException;
 use Exceedone\Exment\Services\Auth2factor\Auth2factorService;
 use Exceedone\Exment\Services\DemoMode;
@@ -263,6 +264,26 @@ class AuthController extends \ExmentAdminCore\Admin\Controllers\AuthController
     }
 
     /**
+     * The page of the user setting, with the user's own login history under the form (ISS00104).
+     *
+     * @return \ExmentAdminCore\Admin\Layout\Content
+     */
+    public function getSetting(\ExmentAdminCore\Admin\Layout\Content $content)
+    {
+        $content = parent::getSetting($content);
+        try {
+            $box = \Exceedone\Exment\Services\LogManagement\LoginHistory::box();
+        } catch (\Throwable $e) {
+            \Log::warning('Exment: the login history was not shown: ' . get_class($e));
+            $box = null;
+        }
+        if (isset($box)) {
+            $content->row($box);
+        }
+        return $content;
+    }
+
+    /**
      * Model-form for user setting.
      *
      * @return Form
@@ -360,14 +381,20 @@ class AuthController extends \ExmentAdminCore\Admin\Controllers\AuthController
                 ->default(\Exment::user()->getSettingValue(UserTimezone::SETTING_KEY))
                 ->placeholder(exmtrans('user.timezone_site', ['timezone' => UserTimezone::site()]))
                 ->help(exmtrans('user.help.timezone'));
+            // how the left menu opens (ISS02958); empty: the default of the site
+            $form->select('user_menu_open', exmtrans('user.menu_open'))
+                ->options(MenuOpen::options())
+                ->default(\Exment::user()->getSettingValue(MenuOpen::SETTING_KEY))
+                ->placeholder(exmtrans('user.menu_open_site', ['value' => array_get(MenuOpen::options(), MenuOpen::site())]))
+                ->help(exmtrans('user.help.menu_open'));
 
             $form->setAction(admin_url('auth/setting'));
-            $form->ignore(['password_confirmation', 'current_password', 'login_2factor_provider', 'user_locale', 'user_timezone']);
+            $form->ignore(['password_confirmation', 'current_password', 'login_2factor_provider', 'user_locale', 'user_timezone', 'user_menu_open']);
             $form->tools(function (Form\Tools $tools) {
                 $tools->disableDelete();
                 // the API keys of the user, when the administrators allow it (ISS00437)
                 if (\Exceedone\Exment\Services\Features::allowed(\Exceedone\Exment\Services\Features::API_KEYS)) {
-                    $tools->append('<a class="btn btn-sm btn-default" href="' . esc_html(admin_url('auth/api_keys')) . '"><i class="fa fa-key"></i> ' . esc_html(exmtrans('api_key.header')) . '</a>');
+                    $tools->append('<a class="btn btn-sm btn-default" href="' . esc_html(admin_url('auth/api_keys')) . '" title="' . esc_html(exmtrans('api_key.button_tooltip')) . '"><i class="fa fa-key"></i> ' . esc_html(exmtrans('api_key.button')) . '</a>');
                 }
             });
 
@@ -386,6 +413,7 @@ class AuthController extends \ExmentAdminCore\Admin\Controllers\AuthController
                 );
 
                 static::saveLocaleTimezone(request()->get('user_locale'), request()->get('user_timezone'));
+                MenuOpen::save(request()->get('user_menu_open'));
             });
 
             $form->saved(function ($form) {

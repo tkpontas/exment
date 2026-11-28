@@ -95,6 +95,29 @@ class SystemChangePageMenu extends ModalTileMenuButton
                 'description' => exmtrans('login.description'),
                 'permission' => \Exment::user()->hasPermission(Permission::SYSTEM),
             ],
+            // once on the detail page of the system settings (#2157)
+            [
+                'href' => admin_url('safety_check_setting'),
+                'icon' => 'fa-heartbeat',
+                'header' => exmtrans('system.safety_check'),
+                'description' => exmtrans('system.safety_check_description'),
+                'permission' => \Exment::user()->hasPermission(Permission::SYSTEM),
+            ],
+            [
+                'href' => admin_url('meili_setting'),
+                'icon' => 'fa-search',
+                'header' => exmtrans('system.meili'),
+                'description' => exmtrans('system.meili_description'),
+                'permission' => \Exment::user()->hasPermission(Permission::SYSTEM),
+            ],
+            // mail with OAuth 2.0 (ISS02913), while it is used
+            [
+                'href' => admin_url('mail_oauth_setting'),
+                'icon' => 'fa-envelope',
+                'header' => exmtrans('system.mail_oauth.header'),
+                'description' => exmtrans('system.mail_oauth.description'),
+                'permission' => \Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::MAIL_OAUTH) && \Exment::user()->hasPermission(Permission::SYSTEM),
+            ],
         ])->filter(function ($item) {
             return $item['permission'];
         })->toArray();

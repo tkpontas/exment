@@ -15,6 +15,7 @@ use Exceedone\Exment\Model\LoginUser;
 use Exceedone\Exment\Services\Plugin\PluginPublicBase;
 use Exceedone\Exment\Services\Plugin\PluginApiBase;
 use Exceedone\Exment\Services\Plugin\PluginCrudBase;
+use Exceedone\Exment\Services\Plugin\PluginBootGuard;
 use Exceedone\Exment\Enums\Driver;
 use Exceedone\Exment\Enums\ApiScope;
 use Exceedone\Exment\Enums\SystemTableName;
@@ -77,6 +78,7 @@ class ExmentServiceProvider extends ServiceProvider
         \Exceedone\Exment\Console\MeiliSetupCommand::class,
         \Exceedone\Exment\Console\VersionCommand::class,
         \Exceedone\Exment\Console\InstallCommand::class,
+        \Exceedone\Exment\Console\InstallStepCommand::class,
         \Exceedone\Exment\Console\UpdateCommand::class,
         \Exceedone\Exment\Console\CacheClearCommand::class,
         \Exceedone\Exment\Console\PublishCommand::class,
@@ -109,9 +111,20 @@ class ExmentServiceProvider extends ServiceProvider
         \Exceedone\Exment\Console\WorkflowClearCommand::class,
         \Exceedone\Exment\Console\SetupDirCommand::class,
         \Exceedone\Exment\Console\LogClearCommand::class,
+        \Exceedone\Exment\Console\LogMaintenanceCommand::class,
+        \Exceedone\Exment\Console\LogDbCommand::class,
+        \Exceedone\Exment\Console\TrashPurgeCommand::class,
+        \Exceedone\Exment\Console\QueueHeartbeatCommand::class,
+        \Exceedone\Exment\Console\TuningDataCommand::class,
+        \Exceedone\Exment\Console\DataKeyCommand::class,
+        \Exceedone\Exment\Console\SyncCommand::class,
+        \Exceedone\Exment\Console\EncryptColumnCommand::class,
+        \Exceedone\Exment\Console\AuditReportCommand::class,
         \Exceedone\Exment\Console\LineLinkCodeCommand::class,
         \Exceedone\Exment\Console\SafetyWatchCommand::class,
         \Exceedone\Exment\Console\MaintenanceCommand::class,
+        \Exceedone\Exment\Console\ScheduleStatusCommand::class,
+        \Exceedone\Exment\Console\ScheduledJobFinishCommand::class,
     ];
 
 
@@ -124,10 +137,14 @@ class ExmentServiceProvider extends ServiceProvider
      */
     // @phpstan-ignore-next-line
     protected $middleware = [
+        // the records of the logs after the response (ISS02903)
+        \Exceedone\Exment\Middleware\WriteLogsAfterResponse::class,
         \Exceedone\Exment\Middleware\TrustProxies::class,
         \Exceedone\Exment\Middleware\ExmentDebug::class,
         // the operator's maintenance, before the database and the login (MaintenanceMode::earlyResponse)
         \Exceedone\Exment\Middleware\MaintenanceOperatorGuard::class,
+        // every answer of Exment says it is (ISS02935): one without the mark was given by a firewall in front
+        \Exceedone\Exment\Middleware\MarkResponse::class,
     ];
 
 
@@ -171,6 +188,8 @@ class ExmentServiceProvider extends ServiceProvider
 
         'admin.demo-mode' => \Exceedone\Exment\Middleware\DemoModeGuard::class,
         'admin.feature' => \Exceedone\Exment\Middleware\FeatureGuard::class,
+        // the Content-Type of the API checked strictly (ISS02915 #5)
+        'exment.api-content-type' => \Exceedone\Exment\Middleware\ApiContentType::class,
         // maintenance mode (Services\MaintenanceMode), with the kind of the pages
         'exment.maintenance' => \Exceedone\Exment\Middleware\MaintenanceGuard::class,
         // the language and the time zone of the user (ISS02835)
@@ -214,7 +233,8 @@ class ExmentServiceProvider extends ServiceProvider
         'admin_anonymous' => [
             'admin.security-headers',
             'admin.browser',
-            'admin.web-ipfilter',
+            // the login pages: shown to a user exempt from the IP filter (ISS02915)
+            'admin.web-ipfilter:login',
             'admin.initialize',
             'exment.maintenance:anonymous',
             // the language of the login page (cookie, browser)
@@ -231,13 +251,14 @@ class ExmentServiceProvider extends ServiceProvider
         ],
         // Exment not login web page, and simple config, (Almost use image)
         'admin_anonymous_simple' => [
-            'admin.web-ipfilter',
+            // the images of the login page: shown while there are exemptions (ISS02915)
+            'admin.web-ipfilter:assets',
             'admin.initialize',
         ],
         // Exment install page
         'admin_install' => [
             'admin.browser',
-            'admin.web-ipfilter',
+            'admin.web-ipfilter:strict',
             'admin.initialize',
             'admin.session',
         ],
@@ -325,6 +346,9 @@ class ExmentServiceProvider extends ServiceProvider
     {
         parent::boot();
 
+        // again: a provider registered after Exment (an application) may have added its file
+        Services\OperatorConfig::apply();
+
         // a site not installed yet without APP_KEY: made before the cookies need it
         if (!$this->app->runningInConsole()) {
             Services\Installer\AppKey::ensure();
@@ -347,15 +371,47 @@ class ExmentServiceProvider extends ServiceProvider
         $this->bootSchedule();
         $this->bootMeilisearch();
         // when the user signed in to the pages (SSO too): a user of SSO makes an API key only soon after
+        // "php artisan cache:clear" keeps the restart signal of the queue (ISS02908)
+        \Illuminate\Support\Facades\Event::listen('cache:clearing', function () {
+            \Exceedone\Exment\Services\QueueWorker::holdSignal();
+        });
+        \Illuminate\Support\Facades\Event::listen('cache:cleared', function () {
+            \Exceedone\Exment\Services\QueueWorker::putBackSignal();
+        });
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Auth\Events\Login::class, function ($event) {
             \Exceedone\Exment\Services\UserApiKeys::rememberSignIn($event->guard);
         });
-
-        // Perf: publishes() only feeds the `vendor:publish` console command; running it on
-        // every web request is pure waste (matches open-admin-core's console-guarded publishing).
-        if ($this->app->runningInConsole()) {
-            $this->publish();
+        // the record of the logins of the pages, and the settings of the application log (ISS02839)
+        \Exceedone\Exment\Services\LogManagement\LoginRecorder::register();
+        // "Create a web form" in the menu of a table: the data list and the table settings (ISS02942);
+        // once (the provider boots again in a test)
+        $webFormPage = 'formpublic/:table_name/easy';
+        if (!collect(\Exceedone\Exment\Services\CoreExtensions::tablePages())->contains(function ($page) use ($webFormPage) {
+            return array_get($page, 'href') === $webFormPage;
+        })) {
+            \Exceedone\Exment\Services\CoreExtensions::addTablePage([
+                'name' => 'formpublic',
+                'href' => $webFormPage,
+                'icon' => 'fa-globe',
+                // already a list of permissions
+                'roles' => \Exceedone\Exment\Enums\Permission::EDIT_CUSTOM_FORM_PUBLIC,
+                'exmtrans' => 'custom_form_public.easy.menu',
+                'description' => 'custom_form_public.easy.menu_description',
+                'visible' => function ($table) {
+                    return isset($table) && boolval(\Exceedone\Exment\Model\System::publicform_available())
+                        && !boolval($table->getOption('one_record_flg'))
+                        && !in_array($table->table_name, \Exceedone\Exment\Enums\SystemTableName::SYSTEM_TABLE_NAME_MASTER(), true);
+                },
+            ], 'form');
         }
+        // the reads and the writes of the data (ISS02905)
+        \Exceedone\Exment\Services\LogManagement\DataAccessLogs::register();
+        \Exceedone\Exment\Services\LogManagement\LogSettings::apply();
+
+        // Always: the web installer and the update screens run exment:publish (vendor:publish)
+        // inside a web request, and without these lists it copies nothing and says nothing (the
+        // site then has no CSS / JS). It only registers a few paths, nothing is copied here.
+        $this->publish();
         $this->load();
 
         $this->registerPolicies();
@@ -418,6 +474,9 @@ class ExmentServiceProvider extends ServiceProvider
         parent::register();
         require_once(__DIR__ . '/Services/Helpers.php');
 
+        // "throttle:10,1" counts an IPv6 address as its /64 (ISS02909)
+        $this->app->bind(\Illuminate\Routing\Middleware\ThrottleRequests::class, Middleware\ThrottleRequests::class);
+
         // the class of a custom table is built when it is first used (ISS00413)
         Services\ClassBuilder::registerAutoloader();
 
@@ -442,6 +501,10 @@ class ExmentServiceProvider extends ServiceProvider
         foreach ($this->middleware as $middleware) {
             $kernel->pushMiddleware($middleware);
         }
+        // the pages of the backup while a restore goes on (ISS02943): first of all, before the
+        // maintenance (the restore has the site down), the session and the database. The other
+        // requests go on to the maintenance as before.
+        $kernel->prependMiddleware(\Exceedone\Exment\Middleware\BackupRestoreGuard::class);
 
         // Exment's API routes use the "api" group and its "api" rate limiter (RouteServiceProvider).
         // The Laravel 10 app Kernel had "throttle:api" in that group; Laravel 11+ adds it only when
@@ -488,6 +551,14 @@ class ExmentServiceProvider extends ServiceProvider
             return new \Exceedone\Exment\Services\Line\LineMessagingClient();
         });
 
+        // mail with OAuth 2.0 (ISS02913): the mailer MailOAuth::applyConfig() sets. Added when the
+        // mail manager is made: in register() it is not there yet (MailServiceProvider is deferred)
+        $this->callAfterResolving('mail.manager', function (\Illuminate\Mail\MailManager $manager) {
+            $manager->extend(\Exceedone\Exment\Services\MailOAuth\MailOAuth::MAILER, function (array $config) {
+                return \Exceedone\Exment\Services\MailOAuth\MailOAuth::transport($config);
+            });
+        });
+
         // guard provider
         Auth::extend('publicformtoken', function ($app, $name, array $config) {
             return tap($this->makeGuard($config), function ($guard) {
@@ -502,6 +573,9 @@ class ExmentServiceProvider extends ServiceProvider
                 \Exceedone\Exment\Exceptions\Handler::class
             );
         }
+
+        // the settings the operator of the server decides, over the config of the site (ISS02861)
+        Services\OperatorConfig::apply();
     }
 
     // @phpstan-ignore-next-line
@@ -527,14 +601,22 @@ class ExmentServiceProvider extends ServiceProvider
             return;
         }
 
+        // on every page, the login too: an error of one plugin leaves out that plugin only
         $pluginPages = Plugin::getByPluginTypes(PluginType::PLUGIN_TYPE_PLUGIN_USE_VIEW(), true);
         foreach ($pluginPages as $pluginPage) {
-            if (!is_null($items = $pluginPage->_getLoadView())) {
-                $this->loadViewsFrom($items[0], $items[1]);
+            if (!is_object($pluginPage) || !method_exists($pluginPage, '_getLoadView')) {
+                // e.g. its files replaced by a version of other types: the class made is another one
+                PluginBootGuard::report($pluginPage, 'views', (is_object($pluginPage) ? get_class($pluginPage) : gettype($pluginPage)) . ' has no _getLoadView()');
+                continue;
             }
-            if (is_object($pluginPage) && method_exists($pluginPage, '_getLoadTranslation') && !is_null($items = $pluginPage->_getLoadTranslation())) {
-                $this->loadTranslationsFrom($items[0], $items[1]);
-            }
+            PluginBootGuard::run($pluginPage, 'views', function () use ($pluginPage) {
+                if (!is_null($items = $pluginPage->_getLoadView())) {
+                    $this->loadViewsFrom($items[0], $items[1]);
+                }
+                if (method_exists($pluginPage, '_getLoadTranslation') && !is_null($items = $pluginPage->_getLoadTranslation())) {
+                    $this->loadTranslationsFrom($items[0], $items[1]);
+                }
+            });
         }
     }
 
@@ -571,51 +653,23 @@ class ExmentServiceProvider extends ServiceProvider
         // set hourly event
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
-            $schedule->command('exment:schedule')->hourly();
-            // only when the safety check watches the feed: otherwise it would start PHP every minute for nothing (ISS02823)
-            $schedule->command('exment:safetywatch')->cron(static::safetyWatchCron())->withoutOverlapping(10)->when(function () {
-                return static::safetyWatchUsed();
-            });
-            // file server: empty the trash past the days of each workspace (ISS00293)
-            $schedule->command('exment:file-server-purge')->dailyAt('03:30')->withoutOverlapping(60);
-
-            // Daily index repair (fix drift accumulated from missed/failed sync
-            // jobs). Uses exment:meili-reconcile (only re-indexes missing docs + removes
-            // orphans) instead of a full exment:meili-index reindex, so it is cheap.
-            if (boolval(config('meilisearch.repair_enabled'))) {
-                $repairAt = (string) config('meilisearch.repair_at', '03:00');
-                if (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/D', $repairAt)) {
-                    \Illuminate\Support\Facades\Log::warning(
-                        "[Meili] ignoring index repair schedule: '{$repairAt}' is not a HH:MM time."
-                    );
-                } else {
-                    $schedule->command('exment:meili-reconcile')
-                        ->dailyAt($repairAt)
-                        ->withoutOverlapping()
-                        ->runInBackground();
-                }
+            if (boolval(config('meilisearch.repair_enabled')) && is_null(static::meiliRepairAt())) {
+                \Illuminate\Support\Facades\Log::warning(
+                    "[Meili] ignoring index repair schedule: '" . strval(config('meilisearch.repair_at', '03:00')) . "' is not a HH:MM time."
+                );
             }
+            static::registerSchedule($schedule);
 
-            // set cron event
-            try {
-                if (hasTable(SystemTableName::PLUGIN)) {
-                    $plugins = Plugin::getCronBatches();
-                    foreach ($plugins as $plugin) {
-                        $cronSchedule = $this->app->make(Schedule::class);
-                        $cronSchedule->command("exment:batch {$plugin->id}")->cron(array_get($plugin, 'options.batch_cron'));
-                    }
-                }
-            } catch (\Exception $ex) {
-            }
-
-            // maintenance mode: the planned start and end; in maintenance the others are skipped
+            // maintenance mode: the planned start and end (the tick); in maintenance the others are skipped
             foreach ($schedule->events() as $event) {
                 $command = strval($event->command);
+                if (static::isMaintenanceTick($command)) {
+                    continue;
+                }
                 $event->skip(function () use ($command) {
                     return \Exceedone\Exment\Services\MaintenanceMode::skipsScheduled($command);
                 });
             }
-            $schedule->command('exment:maintenance tick')->everyMinute()->withoutOverlapping(5);
 
             // Log debug
             \Exceedone\Exment\Middleware\ExmentDebug::logSchedule($schedule);
@@ -632,6 +686,99 @@ class ExmentServiceProvider extends ServiceProvider
                 // never stop the scheduler for this
             }
         });
+
+        // the runs of each scheduled job, for the page "Scheduled jobs" (ISS02832): only while its feature is used
+        \Exceedone\Exment\Services\ScheduledJobs\Recorder::listen();
+    }
+
+    /**
+     * The scheduled jobs of Exment (php artisan schedule:run), on the schedule given. Static and
+     * without side effects, so that the page "Scheduled jobs" builds the same list on a new
+     * Schedule (ISS02832). The console (bootSchedule) adds the skip in a maintenance and the debug.
+     */
+    public static function registerSchedule(Schedule $schedule): void
+    {
+        $schedule->command('exment:schedule')->hourly();
+        // the heartbeat of the queue's worker, only while a queue is used (ISS02908)
+        $schedule->command('exment:queue-heartbeat')->everyFiveMinutes()->when(function () {
+            return \Exceedone\Exment\Services\QueueWorker::used();
+        });
+        // only when the safety check watches the feed: otherwise it would start PHP every minute for nothing (ISS02823)
+        $schedule->command('exment:safetywatch')->cron(static::safetyWatchCron())->withoutOverlapping(10)->when(function () {
+            return static::safetyWatchUsed();
+        });
+        // file server: empty the trash past the days of each workspace (ISS00293)
+        $schedule->command('exment:file-server-purge')->dailyAt('03:30')->withoutOverlapping(60);
+
+        // Daily index repair (fix drift accumulated from missed/failed sync
+        // jobs). Uses exment:meili-reconcile (only re-indexes missing docs + removes
+        // orphans) instead of a full exment:meili-index reindex, so it is cheap.
+        $repairAt = boolval(config('meilisearch.repair_enabled')) ? static::meiliRepairAt() : null;
+        if (!is_null($repairAt)) {
+            $schedule->command('exment:meili-reconcile')
+                ->dailyAt($repairAt)
+                ->withoutOverlapping()
+                ->runInBackground();
+        }
+
+        // set cron event
+        try {
+            if (hasTable(SystemTableName::PLUGIN)) {
+                $plugins = Plugin::getCronBatches();
+                foreach ($plugins as $plugin) {
+                    // a plugin whose cron cannot be read is left out, the others are kept
+                    PluginBootGuard::run($plugin, 'schedule', function () use ($schedule, $plugin) {
+                        $cron = strval(array_get($plugin, 'options.batch_cron'));
+                        if (!\Cron\CronExpression::isValidExpression($cron)) {
+                            throw new \InvalidArgumentException("the cron of the batch '{$cron}' is not valid");
+                        }
+                        $schedule->command("exment:batch {$plugin->id}")->cron($cron);
+                    });
+                }
+            }
+        } catch (\Throwable $ex) {
+            // the plugins cannot be read (the database): the schedule of Exment is made without them
+        }
+
+        // the jobs an application added (CoreExtensions::addSchedule())
+        foreach (\Exceedone\Exment\Services\CoreExtensions::schedules() as $register) {
+            $register($schedule);
+        }
+
+        // the data sync (ISS00113): the mappings whose time has come, while the feature is used
+        $schedule->command('exment:sync')->everyFiveMinutes()->withoutOverlapping(30)->when(function () {
+            return \Exceedone\Exment\Services\Sync\SyncEngine::enabled();
+        });
+
+        // the logs older than they are kept (ISS02839)
+        $schedule->command('exment:log-maintenance')->dailyAt('03:40')->withoutOverlapping(60);
+
+        // the deleted data past the days of its table: archived, then deleted for good (ISS00147)
+        $schedule->command('exment:trash-purge')->dailyAt('03:50')->withoutOverlapping(120);
+        // the IT audit report of the month or the quarter before, when it is set (ISS02840)
+        $schedule->command('exment:audit-report')->dailyAt('04:10')->withoutOverlapping(60);
+        // the counts of the data for the tuning page (ISS02927)
+        $schedule->command('exment:tuning-data')->dailyAt('04:30')->withoutOverlapping(120);
+
+        // maintenance mode: the planned start and end (never skipped in a maintenance)
+        $schedule->command('exment:maintenance tick')->everyMinute()->withoutOverlapping(5);
+    }
+
+    /**
+     * The time of the daily index repair (config meilisearch.repair_at, HH:MM), null when it is not a time.
+     */
+    public static function meiliRepairAt(): ?string
+    {
+        $repairAt = (string) config('meilisearch.repair_at', '03:00');
+        return preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/D', $repairAt) ? $repairAt : null;
+    }
+
+    /**
+     * Whether a command of the schedule is "exment:maintenance tick" (not skipped in a maintenance).
+     */
+    public static function isMaintenanceTick(string $command): bool
+    {
+        return str_ends_with(trim(str_replace(["'", '"'], '', $command)), 'exment:maintenance tick');
     }
 
     /**

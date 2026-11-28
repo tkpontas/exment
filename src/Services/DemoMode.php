@@ -78,6 +78,10 @@ class DemoMode
         // operation log: it shows the IP addresses and requests of the other visitors
         Controllers\LogController::class => ['*'],
         Controllers\ApiController::class => ['authLogs', 'authLog'],
+        // "Run now" of the scheduled jobs: it starts commands on the server (cron still runs them)
+        Controllers\ScheduledJobController::class => ['run'],
+        // the API rate limit of the site (ISS00442)
+        Controllers\ApiRateRaiseController::class => ['store', 'delete'],
     ];
 
     /**
@@ -110,10 +114,23 @@ class DemoMode
         'system_mail_password',
         'system_mail_from',
         'system_mail_from_view_name',
+        'system_mail_auth',
+        'system_mail_oauth_tenant',
+        'system_mail_oauth_client_id',
+        'system_mail_oauth_client_secret',
         // LINE
         'system_line_channel_token',
         'system_line_channel_secret',
         'system_line_oa_basic_id',
+        // Teams workflow
+        'system_teams_workflow_url',
+        // LINE WORKS
+        'system_lineworks_client_id',
+        'system_lineworks_client_secret',
+        'system_lineworks_service_account',
+        'system_lineworks_private_key',
+        'system_lineworks_bot_id',
+        'system_lineworks_user_column',
         // automatic safety check sends by itself
         'safety_check_auto_enabled',
         // full-text search server
@@ -127,6 +144,12 @@ class DemoMode
         // IP filter: could lock every visitor out
         'web_ip_filters',
         'api_ip_filters',
+        'web_ip_filter_exempt_users',
+        'web_ip_filter_exempt_organizations',
+        'web_ip_filter_exempt_role_groups',
+        'api_allowed_users',
+        'api_allowed_organizations',
+        'api_allowed_role_groups',
         // reCAPTCHA keys
         'recaptcha_type',
         'recaptcha_site_key',
@@ -144,8 +167,12 @@ class DemoMode
     public const SECRET_SYSTEM_KEYS = [
         'system_mail_username',
         'system_mail_password',
+        'system_mail_oauth_client_secret',
         'system_line_channel_token',
         'system_line_channel_secret',
+        'system_teams_workflow_url',
+        'system_lineworks_client_secret',
+        'system_lineworks_private_key',
         'meili_key',
         'recaptcha_site_key',
         'recaptcha_secret_key',

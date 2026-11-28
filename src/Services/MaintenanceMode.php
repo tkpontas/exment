@@ -8,7 +8,6 @@ use Exceedone\Exment\Model\System;
 use ExmentAdminCore\Admin\Auth\Database\OperationLog as OperationLogModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpFoundation\IpUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -264,16 +263,8 @@ class MaintenanceMode
      */
     public static function validIp(string $ip): bool
     {
-        $address = explode('/', $ip, 2);
-        if (filter_var($address[0], FILTER_VALIDATE_IP) === false) {
-            return false;
-        }
-        if (count($address) === 2) {
-            $max = str_contains($address[0], ':') ? 128 : 32;
-            // "/0" lets every address in: not an allow list
-            return ctype_digit($address[1]) && intval($address[1]) >= 1 && intval($address[1]) <= $max;
-        }
-        return true;
+        // IPv4 and IPv6 (ISS02909); "/0" lets every address in: not an allow list
+        return IpAddress::isValidRule($ip, false);
     }
 
     /**
@@ -596,7 +587,7 @@ class MaintenanceMode
             return false;
         }
         $ip = $request->ip();
-        return is_string($ip) && IpUtils::checkIp($ip, $ips);
+        return is_string($ip) && IpAddress::matches($ip, array_map('strval', $ips));
     }
 
     /**
@@ -879,7 +870,7 @@ class MaintenanceMode
                 'user_id' => $userId ?? 0,
                 'path' => 'maintenance/' . $action,
                 'method' => isset($request) ? substr($request->method(), 0, 10) : 'CLI',
-                'ip' => isset($request) ? strval($request->getClientIp()) : '127.0.0.1',
+                'ip' => isset($request) ? strval(\Exceedone\Exment\Services\LogManagement\LogPrivacy::ip($request->getClientIp())) : '127.0.0.1',
                 'input' => json_encode($detail, JSON_UNESCAPED_UNICODE),
             ]);
         } catch (\Throwable $e) {

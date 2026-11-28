@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,17 +9,19 @@
 
   @if(!is_null($favicon = Admin::favicon()))
     <link rel="shortcut icon" href="{{$favicon}}">
+  @else
+    {{-- no favicon of the site: the icons of Exment (as the install pages), not the browser's globe --}}
+    @foreach(\Exceedone\Exment\Middleware\Initialize::defaultFavicons() as $icon)
+    <link rel="icon" href="{{ $icon['href'] }}"@if($icon['type']) type="{{ $icon['type'] }}"@endif @if($icon['sizes']) sizes="{{ $icon['sizes'] }}"@endif>
+    @endforeach
   @endif
 
-  <!-- Bootstrap 3.3.5 -->
-  <link rel="stylesheet" href="{{ admin_asset("vendor/open-admin/bootstrap5-editable/css/bootstrap-editable.css") }}">
   <!-- Font Awesome -->
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/font-awesome/css/all.min.css") }}">
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/font-awesome/css/v4-shims.min.css") }}">
   <!-- Theme style -->
   <link rel="stylesheet" href="{{ admin_asset("vendor/open-admin/AdminLTE4/css/adminlte.min.css") }}">
 
-  <!-- iCheck -->
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/toastr/build/toastr.min.css") }}">
   <link rel="stylesheet" href="{{ admin_asset("/vendor/open-admin/open-admin/css/button-custom.css") }}">
   {{-- The "modern" screen design (system setting, or EXMENT_UI_DESIGN). It stays before the inline style
@@ -82,6 +84,23 @@
   .login-logo a b {
       font-weight: 700;
   }
+  /* the Exment logo of a site without its own (the one of the side menu) */
+  .login-logo .exment-login-logo {
+      display: block;
+      width: 280px;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+  }
+  .login-logo .exment-login-site-name {
+      display: block;
+      margin-top: .25em;
+      font-size: .75em;
+  }
+  /* a dark page color (the logo with light letters): the site name in light letters too */
+  body.login-page .login-logo a.exment-login-on-dark {
+      color: #f3f4f6;
+  }
   .has-error .control-label,
   .has-error label {
       color: #dd4b39 !important;
@@ -90,12 +109,25 @@
 </head>
 <body class="hold-transition login-page"@if($modern_ui_skin) data-exm-skin="{{ $modern_ui_skin }}"@endif>
       <div class="login-box">
+          @php
+            $login_site_name = $site_name ?? \Exceedone\Exment\Model\System::site_name();
+            $login_default_logo = isset($header_image) ? null
+                : \Exceedone\Exment\Middleware\Initialize::loginDefaultLogo($background_color ?? null, isset($background_image));
+            $login_on_dark = isset($login_default_logo)
+                && $login_default_logo === asset(\Exceedone\Exment\Middleware\Initialize::DEFAULT_LOGO_DARK);
+          @endphp
           <div class="login-logo">
-              <a href="{{ admin_url('/') }}">
+              <a href="{{ admin_url('/') }}"@if($login_on_dark) class="exment-login-on-dark"@endif>
                 @if(isset($header_image))
                 <img src="{{$header_image}}" style="width:100%; max-height:100px;" />
+                @elseif(isset($login_default_logo))
+                {{-- no logo of the site: the Exment logo, and the site name under it when it is another name --}}
+                <img src="{{ $login_default_logo }}" alt="Exment" class="exment-login-logo" />
+                @if(!is_nullorempty($login_site_name) && strcasecmp(trim($login_site_name), 'Exment') !== 0)
+                <b class="exment-login-site-name">{{ $login_site_name }}</b>
+                @endif
                 @else
-                <b>{{$site_name ?? \Exceedone\Exment\Model\System::site_name()}}</b>
+                <b>{{ $login_site_name }}</b>
                 @endif
               </a>
           </div>
@@ -114,8 +146,6 @@
 <script src="{{ admin_asset("/vendor/open-admin/AdminLTE4/js/bootstrap.bundle.min.js")}} "></script>
 <!-- Bootstrap 3.3.5 -->
 <script src="{{ admin_asset("/vendor/open-admin/AdminLTE4/js/adminlte.min.js")}}"></script>
-<!-- iCheck -->
-
 <script src="{{ admin_asset("/vendor/open-admin/toastr/build/toastr.min.js")}}"></script>
 <script src="{{ admin_asset("/vendor/exment/js/common_all.js")}}"></script>
 @if (session('exment_logged_out'))
@@ -139,16 +169,6 @@
     })();
 </script>
 @endif
-
-<script>
-  // $(function () {
-  //   $('input').iCheck({
-  //     checkboxClass: 'icheckbox_square-blue',
-  //     radioClass: 'iradio_square-blue',
-  //     increaseArea: '20%' // optional
-  //   });
-  // });
-</script>
 
 @if (session('status'))
 <script>

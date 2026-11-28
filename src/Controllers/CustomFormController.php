@@ -91,7 +91,7 @@ class CustomFormController extends AdminControllerTableBase
         $grid->setResource(admin_urls('formpriority', $this->custom_table->table_name));
         $grid->column('form_priority_text', exmtrans("custom_form.priority.form_priority_text"));
         $grid->column('form_view_name', exmtrans("custom_form.priority.form_view_name"));
-        $grid->column('order', exmtrans("custom_form.priority.order"))->editable();
+        $grid->column('order', exmtrans("custom_form.priority.order"))->text();
 
         if (isset($this->custom_table)) {
             $grid->model()
@@ -161,6 +161,12 @@ class CustomFormController extends AdminControllerTableBase
             });
 
             $tools->append(view('exment::tools.button', [
+                'href' => admin_urls('formpublic', $this->custom_table->table_name, 'easy'),
+                'icon' => 'fa-magic',
+                'btn_class' => 'btn-primary',
+                'label' => exmtrans('custom_form_public.easy.button'),
+            ]));
+            $tools->append(view('exment::tools.button', [
                 'href' => admin_urls_query('formpublic', $this->custom_table->table_name, 'create', ['template' => 1]),
                 'icon' => 'fa-plus',
                 'btn_class' => 'btn-success',
@@ -171,9 +177,13 @@ class CustomFormController extends AdminControllerTableBase
         $grid->disableExport();
         $grid->disableRowSelector();
         $grid->disableFilter();
-        $grid->actions(function ($actions) {
+        // $this in the closure is the actions (Closure::call)
+        $tableName = $this->custom_table->table_name;
+        $grid->actions(function ($actions) use ($tableName) {
             $actions->disableView();
             // $actions->disableDelete();
+            // the code to put the form on a web site (ISS02942)
+            $actions->prepend('<a href="' . e(admin_urls('formpublic', $tableName, $actions->getKey(), 'embed')) . '" title="' . e(exmtrans('custom_form_public.easy.embed_header')) . '"><i class="fa fa-code"></i></a>');
         });
 
         return $grid;
@@ -485,7 +495,7 @@ class CustomFormController extends AdminControllerTableBase
                 $form = new CustomForm();
             }
         }
-        $form->append(['show_grid_type', 'form_label_type']);
+        $form->append(['show_grid_type', 'form_label_type', 'check_missing_required']);
 
         // get form block list
         $custom_form_block_items = $this->getFormBlocks($form);
@@ -529,20 +539,9 @@ class CustomFormController extends AdminControllerTableBase
      */
     protected function missingRequiredColumns(CustomForm $form): array
     {
-        $block = $form->custom_form_blocks()->where('form_block_type', FormBlockType::DEFAULT)->first();
-        $placed = isset($block)
-            ? $block->custom_form_columns()->where('form_column_type', FormColumnType::COLUMN)->pluck('form_column_target_id')->map(function ($id) {
-                return intval($id);
-            })->all()
-            : [];
-
-        $missing = [];
-        foreach ($this->custom_table->custom_columns as $column) {
-            if (boolval($column->getOption('required')) && !in_array(intval($column->id), $placed, true)) {
-                $missing[] = strval($column->column_view_name);
-            }
-        }
-        return $missing;
+        return $form->missingRequiredColumns()->map(function ($column) {
+            return strval($column->column_view_name);
+        })->all();
     }
 
     /**
@@ -564,8 +563,15 @@ class CustomFormController extends AdminControllerTableBase
 
         $form->text('form_view_name', exmtrans('custom_form.form_view_name'))
             ->required();
+        // the name in the other languages (ISS02859)
+        \Exceedone\Exment\Services\NameLocales::addArrayFields($form, exmtrans('custom_form.form_view_name'));
 
         $form->switchbool('default_flg', exmtrans('custom_form.default_flg'))
+            ->default(false);
+
+        // the required columns this form does not have (ISS00374)
+        $form->switchbool('check_missing_required', exmtrans('custom_form.check_missing_required'))
+            ->help(exmtrans('custom_form.check_missing_required_help'))
             ->default(false);
 
 
@@ -714,6 +720,7 @@ class CustomFormController extends AdminControllerTableBase
             'custom_form_blocks.*.options' => ['sometimes', 'array'],
             'custom_form_blocks.*.options.hasmany_type' => ['nullable', 'boolean'],
             'custom_form_blocks.*.options.lazy_load_enabled' => ['sometimes', 'boolean'],
+            'custom_form_blocks.*.options.sort_column' => ['nullable', 'string', 'max:255'],
         ];
         if ($validateImages) {
             $rules['custom_form_blocks.*.custom_form_columns.*.options.image'] = ['nullable', new \Exceedone\Exment\Validator\ImageRule()];
@@ -722,6 +729,7 @@ class CustomFormController extends AdminControllerTableBase
         return \Validator::make($request->all(), $rules, [], [
             'custom_form_blocks.*.options.hasmany_type' => exmtrans('custom_form.hasmany_type'),
             'custom_form_blocks.*.options.lazy_load_enabled' => exmtrans('custom_form.lazy_load_enabled'),
+            'custom_form_blocks.*.options.sort_column' => exmtrans('custom_form.sort_column'),
         ]);
     }
 
@@ -807,9 +815,13 @@ class CustomFormController extends AdminControllerTableBase
             $form = CustomForm::getEloquent($id);
         }
         $form->form_view_name = $request->get('form_view_name');
+        if (is_array($request->get('name_locales'))) {
+            $form->name_locales = $request->get('name_locales');
+        }
         $form->default_flg = $request->get('default_flg');
         $form->form_label_type = $request->get('form_label_type', FormLabelType::HORIZONTAL);
         $form->show_grid_type = $request->get('show_grid_type', ShowGridType::GRID);
+        $form->check_missing_required = boolval($request->get('check_missing_required', false));
 
         $new_columns = [];
         $deletes = [];
@@ -829,6 +841,9 @@ class CustomFormController extends AdminControllerTableBase
             /** @var CustomFormBlock $block */
             $block->available = array_get($value, 'available') ?? 0;
             $block->form_block_view_name = array_get($value, 'form_block_view_name');
+            if (is_array(array_get($value, 'name_locales'))) {
+                $block->name_locales = array_get($value, 'name_locales');
+            }
             $submittedOptions = array_get($value, 'options', []);
             $blockOptions = array_replace(jsonToArray($block->options), $submittedOptions);
             if ($block->form_block_type == FormBlockType::ONE_TO_MANY) {
@@ -838,6 +853,17 @@ class CustomFormController extends AdminControllerTableBase
                 && boolval(array_get($blockOptions, 'hasmany_type'))
                     ? intval(boolval(array_get($blockOptions, 'lazy_load_enabled', 0)))
                     : 0;
+            // the number column of the child table the rows are kept in order by (#1595):
+            // anything that is not one is not kept
+            $sortColumn = null;
+            if ($block->form_block_type == FormBlockType::ONE_TO_MANY && !is_nullorempty(array_get($submittedOptions, 'sort_column'))) {
+                $sortTable = CustomTable::getEloquent($block->form_block_target_table_id);
+                $sortCustomColumn = isset($sortTable) ? CustomColumn::getEloquent(strval(array_get($submittedOptions, 'sort_column')), $sortTable) : null;
+                if (isset($sortCustomColumn) && in_array($sortCustomColumn->column_type, CustomFormBlock::sortColumnTypes(), true)) {
+                    $sortColumn = strval($sortCustomColumn->column_name);
+                }
+            }
+            $blockOptions['sort_column'] = $sortColumn;
             $block->options = $blockOptions;
 
             // create columns --------------------------------------------------

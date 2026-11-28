@@ -40,6 +40,9 @@ class NotifyNav implements Renderable
         $no_newitem = exmtrans('notify_navbar.message.no_newitem');
         $list = trans('admin.list');
         $list_url = admin_url('notify_navbar');
+        // read all: the notifications stay in the list, greyed (ISS00360)
+        $read_all = esc_html(exmtrans('notify_navbar.read_all'));
+        $read_all_url = esc_html(admin_url('notify_navbar/batchAll/read'));
         $interval = static::interval();
         $user_key = static::userKey();
 
@@ -48,7 +51,7 @@ class NotifyNav implements Renderable
             <input id="notify_navbar_interval" type="hidden" value="$interval" data-user="$user_key" />
             <li class="navbar-notify dropdown notifications-menu">
                 <a href="javascript:void(0);" 
-                class="container-notify hidden-xs dropdown-toggle" 
+                class="container-notify dropdown-toggle" 
                 data-bs-toggle="dropdown" 
                 aria-expanded="false">
                 <i class="fa fa-bell"></i>
@@ -59,8 +62,9 @@ class NotifyNav implements Renderable
                         <!-- inner menu: contains the actual data -->
                         <ul class="menu"></ul>
                     </li>
-                    <li class="footer text-center">
-                        <a href="$list_url">$list</a>
+                    <li class="footer text-center notify-navbar-footer">
+                        <a href="javascript:void(0);" class="notify-navbar-read-all" data-url="$read_all_url" style="display:inline-block;width:49%;">$read_all</a>
+                        <a href="$list_url" style="display:inline-block;width:49%;">$list</a>
                     </li>
                 </ul>
             </li>

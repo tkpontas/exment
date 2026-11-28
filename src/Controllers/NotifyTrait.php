@@ -135,7 +135,49 @@ trait NotifyTrait
             /** @phpstan-ignore-next-line */
             ->help(exmtrans("notify.help.webhook_url", getManualUrl('notify_webhook')))
             ->attribute([
-                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::SLACK, NotifyAction::MICROSOFT_TEAMS]])
+                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::SLACK, NotifyAction::MICROSOFT_TEAMS, NotifyAction::WEBHOOK]])
+            ]);
+
+        // LINE WORKS (ISS00114): the channel of the bot; the app is a system setting
+        /** @phpstan-ignore-next-line */
+        $form->text('lineworks_channel_id', exmtrans('notify.lineworks_channel_id'))
+            ->required()
+            ->rules(['max:100', 'regex:/\A[A-Za-z0-9_\-]+\z/'])
+            /** @phpstan-ignore-next-line */
+            ->help(exmtrans('notify.help.lineworks_channel_id'))
+            ->attribute([
+                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::LINE_WORKS]])
+            ]);
+        /** @phpstan-ignore-next-line */
+        $form->descriptionHtml(esc_html(exmtrans('notify.help.lineworks_personal')) . ' <a href="' . esc_html(admin_url('system?advanced=1')) . '">' . esc_html(exmtrans('notify.lineworks_setting_link')) . '</a>')
+            ->attribute([
+                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::LINE_WORKS, NotifyAction::LINE_WORKS_PERSONAL]])
+            ]);
+
+        // a JSON webhook (ISS02912): the columns sent, and the secret of the signature
+        /** @phpstan-ignore-next-line */
+        $form->multipleSelect('webhook_columns', exmtrans('notify.webhook_columns'))
+            ->options(function ($val) use ($custom_table) {
+                if (!isset($custom_table)) {
+                    return [];
+                }
+                return $custom_table->custom_columns_cache->mapWithKeys(function ($column) {
+                    return [$column->id => $column->column_view_name];
+                });
+            })
+            /** @phpstan-ignore-next-line */
+            ->help(exmtrans('notify.help.webhook_columns'))
+            ->attribute([
+                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::WEBHOOK]])
+            ]);
+
+        /** @phpstan-ignore-next-line */
+        $form->password('webhook_secret', exmtrans('notify.webhook_secret'))
+            ->rules(['nullable', 'max:1000'])
+            /** @phpstan-ignore-next-line */
+            ->help(exmtrans('notify.help.webhook_secret', getManualUrl('notify_webhook')))
+            ->attribute([
+                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::WEBHOOK]])
             ]);
 
         /** @phpstan-ignore-next-line */
@@ -146,7 +188,7 @@ trait NotifyTrait
             ]);
 
         $system_slack_user_column = CustomColumn::getEloquent(System::system_slack_user_column());
-        $notify_action_target_filter = isset($system_slack_user_column) ? [NotifyAction::EMAIL, NotifyAction::SHOW_PAGE, NotifyAction::SLACK, NotifyAction::LINE] : [NotifyAction::EMAIL, NotifyAction::SHOW_PAGE, NotifyAction::LINE];
+        $notify_action_target_filter = isset($system_slack_user_column) ? [NotifyAction::EMAIL, NotifyAction::SHOW_PAGE, NotifyAction::SLACK, NotifyAction::LINE, NotifyAction::TEAMS_PERSONAL, NotifyAction::LINE_WORKS_PERSONAL] : [NotifyAction::EMAIL, NotifyAction::SHOW_PAGE, NotifyAction::LINE, NotifyAction::TEAMS_PERSONAL, NotifyAction::LINE_WORKS_PERSONAL];
 
         /** @phpstan-ignore-next-line */
         $help = exmtrans("notify.help.notify_action_target");
@@ -175,7 +217,7 @@ trait NotifyTrait
             ->attribute([
                 'data-filter' => json_encode([
                     ['key' => 'notify_action', 'value' => $notify_action_target_filter],
-                    ['key' => 'notify_action', 'requiredValue' => [NotifyAction::EMAIL, NotifyAction::SHOW_PAGE, NotifyAction::LINE]],
+                    ['key' => 'notify_action', 'requiredValue' => [NotifyAction::EMAIL, NotifyAction::SHOW_PAGE, NotifyAction::LINE, NotifyAction::TEAMS_PERSONAL, NotifyAction::LINE_WORKS_PERSONAL]],
                 ])
             ])
             ->help($help);
@@ -270,6 +312,13 @@ trait NotifyTrait
                 ->escape(false);
             $form->ignore('notify_action_target_text');
         }
+
+        // Teams (personal): the address of the workflow is a system setting (ISS02863)
+        /** @phpstan-ignore-next-line */
+        $form->descriptionHtml(esc_html(exmtrans('notify.help.teams_personal')) . ' <a href="' . esc_html(admin_url('system?advanced=1')) . '">' . esc_html(exmtrans('notify.teams_setting_link')) . '</a>')
+            ->attribute([
+                'data-filter' => json_encode(['key' => 'notify_action', 'value' => [NotifyAction::TEAMS_PERSONAL]])
+            ]);
 
         /** @phpstan-ignore-next-line */
         $form->select('flex_template_id', exmtrans('notify.flex_template_id'))

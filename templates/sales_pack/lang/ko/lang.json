@@ -1,0 +1,413 @@
+{
+    "template_view_name": "영업 팩",
+    "description": "고객(담당자), 영업 기회, 견적(명세), 계약, 활동 기록과 영업 기회 칸반, 영업 대시보드, 영업 역할 그룹, 「영업·고객」 메뉴의 세트입니다.",
+    "custom_tables": [
+        {
+            "table_name": "sales_customer",
+            "table_view_name": "고객",
+            "description": "고객 및 잠재 고객입니다. 담당자는 명세에 입력합니다.",
+            "custom_columns": [
+                {
+                    "column_name": "customer_name",
+                    "column_view_name": "고객"
+                },
+                {
+                    "column_name": "customer_type",
+                    "column_view_name": "유형",
+                    "options": {
+                        "select_item_valtext": "prospect,잠재 고객\ncustomer,고객\nformer,이전 고객"
+                    }
+                },
+                {
+                    "column_name": "postal_code",
+                    "column_view_name": "우편번호"
+                },
+                {
+                    "column_name": "address",
+                    "column_view_name": "주소"
+                },
+                {
+                    "column_name": "tel",
+                    "column_view_name": "전화번호"
+                },
+                {
+                    "column_name": "email",
+                    "column_view_name": "이메일"
+                },
+                {
+                    "column_name": "url",
+                    "column_view_name": "웹사이트"
+                },
+                {
+                    "column_name": "owner",
+                    "column_view_name": "담당자"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "비고"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_customer_contact",
+            "table_view_name": "고객 담당자",
+            "description": "고객사의 담당자입니다.",
+            "custom_columns": [
+                {
+                    "column_name": "contact_name",
+                    "column_view_name": "이름"
+                },
+                {
+                    "column_name": "department",
+                    "column_view_name": "부서"
+                },
+                {
+                    "column_name": "title",
+                    "column_view_name": "직함"
+                },
+                {
+                    "column_name": "tel",
+                    "column_view_name": "전화번호"
+                },
+                {
+                    "column_name": "email",
+                    "column_view_name": "이메일"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_deal",
+            "table_view_name": "영업 기회",
+            "description": "영업 기회별로 단계와 예상 금액을 관리합니다.",
+            "custom_columns": [
+                {
+                    "column_name": "deal_name",
+                    "column_view_name": "영업 기회"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "고객"
+                },
+                {
+                    "column_name": "stage",
+                    "column_view_name": "단계",
+                    "options": {
+                        "select_item_valtext": "lead,리드\nproposal,제안\nquote,견적\nwon,수주\nlost,실주"
+                    }
+                },
+                {
+                    "column_name": "expected_amount",
+                    "column_view_name": "예상 금액"
+                },
+                {
+                    "column_name": "expected_date",
+                    "column_view_name": "예상 계약일"
+                },
+                {
+                    "column_name": "probability",
+                    "column_view_name": "가능성",
+                    "options": {
+                        "select_item_valtext": "a,A(거의 확실)\nb,B(반반)\nc,C(낮음)"
+                    }
+                },
+                {
+                    "column_name": "owner",
+                    "column_view_name": "담당자"
+                },
+                {
+                    "column_name": "detail",
+                    "column_view_name": "내용"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_quote",
+            "table_view_name": "견적",
+            "description": "견적과 그 명세입니다.",
+            "custom_columns": [
+                {
+                    "column_name": "quote_title",
+                    "column_view_name": "제목"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "고객"
+                },
+                {
+                    "column_name": "deal",
+                    "column_view_name": "영업 기회"
+                },
+                {
+                    "column_name": "quote_date",
+                    "column_view_name": "견적일"
+                },
+                {
+                    "column_name": "valid_until",
+                    "column_view_name": "유효 기한"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "비고"
+                },
+                {
+                    "column_name": "total",
+                    "column_view_name": "합계"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_quote_detail",
+            "table_view_name": "견적 명세",
+            "description": "견적의 명세입니다.",
+            "custom_columns": [
+                {
+                    "column_name": "item_name",
+                    "column_view_name": "품목"
+                },
+                {
+                    "column_name": "quantity",
+                    "column_view_name": "수량"
+                },
+                {
+                    "column_name": "unit",
+                    "column_view_name": "단위"
+                },
+                {
+                    "column_name": "unit_price",
+                    "column_view_name": "단가"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "비고"
+                },
+                {
+                    "column_name": "amount",
+                    "column_view_name": "금액"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_contract",
+            "table_view_name": "계약",
+            "description": "계약과 그 조건입니다.",
+            "custom_columns": [
+                {
+                    "column_name": "contract_name",
+                    "column_view_name": "계약"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "고객"
+                },
+                {
+                    "column_name": "deal",
+                    "column_view_name": "영업 기회"
+                },
+                {
+                    "column_name": "contract_date",
+                    "column_view_name": "계약일"
+                },
+                {
+                    "column_name": "start_date",
+                    "column_view_name": "시작일"
+                },
+                {
+                    "column_name": "end_date",
+                    "column_view_name": "종료일"
+                },
+                {
+                    "column_name": "auto_renewal",
+                    "column_view_name": "자동 갱신"
+                },
+                {
+                    "column_name": "amount",
+                    "column_view_name": "금액"
+                },
+                {
+                    "column_name": "document",
+                    "column_view_name": "계약서"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "비고"
+                }
+            ]
+        },
+        {
+            "table_name": "sales_activity",
+            "table_view_name": "활동 기록",
+            "description": "방문, 전화, 메일, 다음 일정을 고객과 영업 기회별로 남깁니다.",
+            "custom_columns": [
+                {
+                    "column_name": "activity_type",
+                    "column_view_name": "종류",
+                    "options": {
+                        "select_item_valtext": "visit,방문\ncall,전화\nemail,메일\nnext,다음 일정"
+                    }
+                },
+                {
+                    "column_name": "subject",
+                    "column_view_name": "제목"
+                },
+                {
+                    "column_name": "activity_at",
+                    "column_view_name": "일시"
+                },
+                {
+                    "column_name": "customer",
+                    "column_view_name": "고객"
+                },
+                {
+                    "column_name": "deal",
+                    "column_view_name": "영업 기회"
+                },
+                {
+                    "column_name": "owner",
+                    "column_view_name": "담당자"
+                },
+                {
+                    "column_name": "note",
+                    "column_view_name": "내용"
+                }
+            ]
+        }
+    ],
+    "custom_forms": [
+        {
+            "suuid": "0858ef1666946ae5f31e",
+            "form_view_name": "폼"
+        },
+        {
+            "suuid": "1e9cf01d6433f6d1e818",
+            "form_view_name": "폼"
+        }
+    ],
+    "custom_views": [
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a01",
+            "view_view_name": "단계별 칸반"
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a02",
+            "view_view_name": "월별 수주 예상",
+            "custom_view_summaries": [
+                {
+                    "view_column_table_name": "sales_deal",
+                    "view_column_target_name": "expected_amount",
+                    "view_column_name": "예상 금액"
+                }
+            ]
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a03",
+            "view_view_name": "담당자별 진행 중인 영업 기회",
+            "custom_view_summaries": [
+                {
+                    "view_column_table_name": "sales_deal",
+                    "view_column_target_name": "id",
+                    "view_column_name": "건수"
+                },
+                {
+                    "view_column_table_name": "sales_deal",
+                    "view_column_target_name": "expected_amount",
+                    "view_column_name": "예상 금액"
+                }
+            ]
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a04",
+            "view_view_name": "이번 달 활동"
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a05",
+            "view_view_name": "유효 기한이 가까운 견적 (14일)"
+        },
+        {
+            "suuid": "5a1e5c0a7b3d4e2f9a06",
+            "view_view_name": "종료일이 가까운 계약 (30일)"
+        }
+    ],
+    "dashboards": [
+        {
+            "dashboard_name": "exment_sales_dashboard",
+            "dashboard_view_name": "영업",
+            "dashboard_boxes": [
+                {
+                    "row_no": "1",
+                    "column_no": "1",
+                    "dashboard_box_view_name": "월별 수주 예상"
+                },
+                {
+                    "row_no": "1",
+                    "column_no": "2",
+                    "dashboard_box_view_name": "담당자별 진행 중인 영업 기회"
+                },
+                {
+                    "row_no": "2",
+                    "column_no": "1",
+                    "dashboard_box_view_name": "이번 달 활동"
+                },
+                {
+                    "row_no": "3",
+                    "column_no": "1",
+                    "dashboard_box_view_name": "유효 기한이 가까운 견적 (14일)"
+                },
+                {
+                    "row_no": "3",
+                    "column_no": "2",
+                    "dashboard_box_view_name": "종료일이 가까운 계약 (30일)"
+                }
+            ]
+        }
+    ],
+    "admin_menu": [
+        {
+            "title": "영업·고객",
+            "menu_type": "parent_node",
+            "menu_name": "sales"
+        },
+        {
+            "title": "영업 대시보드",
+            "menu_type": "custom",
+            "menu_name": "sales_dashboard"
+        },
+        {
+            "title": "고객",
+            "menu_type": "table",
+            "menu_name": "sales_customer"
+        },
+        {
+            "title": "영업 기회",
+            "menu_type": "table",
+            "menu_name": "sales_deal"
+        },
+        {
+            "title": "견적",
+            "menu_type": "table",
+            "menu_name": "sales_quote"
+        },
+        {
+            "title": "계약",
+            "menu_type": "table",
+            "menu_name": "sales_contract"
+        },
+        {
+            "menu_type": "table",
+            "menu_name": "sales_activity",
+            "title": "활동 기록"
+        }
+    ],
+    "roles": [
+        {
+            "role_group_name": "sales_member_group",
+            "role_group_view_name": "영업",
+            "description": "고객, 영업 기회, 견적, 계약, 활동 기록을 조회·작성·편집할 수 있는 사람입니다."
+        }
+    ],
+    "notifies": [
+        {
+            "suuid": "e5967aaf67c9ae4b4398",
+            "notify_view_name": "계약 만료 임박 (30일 전)"
+        }
+    ]
+}

@@ -7,6 +7,7 @@ use ExmentAdminCore\Admin\Facades\Admin as Ad;
 use Exceedone\Exment\Controllers;
 use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Services\DemoMode;
+use Exceedone\Exment\Services\BackButton;
 
 /**
  * Middleware as Bootstrap.
@@ -23,8 +24,27 @@ class Bootstrap
     public function handle(Request $request, \Closure $next)
     {
         $this->setCssJs($request, $next);
+        $this->setBackButton($request);
+        // how the left menu opens, a class of <body> (ISS02958)
+        \Exceedone\Exment\Services\MenuOpen::applyLayout();
 
         return $next($request);
+    }
+
+    /**
+     * The "back" button at the left of the page title (ISS00363). On pjax requests as well:
+     * a pjax page has a new title, and the destination is of that page.
+     *
+     * @param Request $request
+     * @return void
+     */
+    protected function setBackButton(Request $request)
+    {
+        $url = BackButton::destinationForRequest($request);
+        if (is_null($url)) {
+            return;
+        }
+        BackButton::append($url, exmtrans('common.back'));
     }
 
     /**
@@ -71,15 +91,8 @@ class Bootstrap
         static::setCssJsList(['lib/js/bignumber.min.js'], false);
 
         static::setCssJsList([
-            // iCheck is not decoration here. Grid\Displayers\RowSelector
-            // emits `$('.grid-row-checkbox').iCheck(...).on('ifChanged',
-            // ...)`, so without the plugin that call throws and the whole
-            // handler chain behind it - `$.admin.grid.select()`, the batch
-            // action button, the "N selected" counter - is never bound.
-            // The skin has to come with it: iCheck hides the real input
-            // and draws its own box, so the JS alone would leave every
-            // checkbox invisible.
-            'vendor/open-admin/AdminLTE/plugins/iCheck/minimal/blue.css',
+            // no iCheck (admin-core 2.0): the check boxes are native ones, and every
+            // handler listens to the native change event
             'vendor/exment/css/common.css',
             'vendor/exment/css/workflow.css',
             'vendor/exment/css/workflow_task_navbar.css',
@@ -96,6 +109,7 @@ class Bootstrap
         // through csslast or it silently loses every specificity tie.
         static::setCssJsList([
             'vendor/exment/css/grid_tools.css',
+            'vendor/exment/css/menu-flyout.css',
         ], true, true);
 
         // The "modern" screen design (system setting "Screen design", or
@@ -110,8 +124,6 @@ class Bootstrap
         }
 
         static::setCssJsList([
-            // see the note on the stylesheet above
-            'vendor/open-admin/AdminLTE/plugins/iCheck/icheck.min.js',
             'vendor/exment/validation/jquery.validate.min.js',
             'vendor/exment/chartjs/chart.min.js',
             'vendor/exment/codemirror/codemirror.js',
@@ -129,6 +141,7 @@ class Bootstrap
             'vendor/exment/fullcalendar/UltraDate.min.js',
             'vendor/exment/jstree/jstree.min.js',
             'vendor/exment/js/common_all.js',
+            'vendor/exment/js/menu-flyout.js',
             'vendor/exment/js/common.js',
             'vendor/exment/js/grid_tools.js',
             'vendor/exment/js/cellstyle_preset.js',
@@ -150,6 +163,7 @@ class Bootstrap
             'vendor/exment/js/customformitem.js',
             'vendor/exment/js/customform.js',
             'vendor/exment/js/hasmanytable-validation.js',
+            'vendor/exment/js/hasmany-copy.js',
             'vendor/exment/js/preview.js',
             'vendor/exment/js/assign_me.js',
             'vendor/exment/js/paste_attach.js',
@@ -176,6 +190,25 @@ class Bootstrap
         }
         // @phpstan-ignore-next-line
         Ad::jslast(admin_asset('vendor/exment/js/customscript.js?ver='.$ver));
+
+        // a save refused on its way by a firewall in front of the site (ISS02935): said as one
+        // @phpstan-ignore-next-line
+        Ad::jslast(admin_asset('vendor/exment/js/blocked_notice.js?ver='.$ver));
+        $blockedTexts = [];
+        foreach (['title', 'back_title', 'body', 'details', 'help', 'close', 'd_status', 'd_where', 'd_headers', 'd_text'] as $key) {
+            $blockedTexts[$key] = exmtrans('blocked_notice.' . $key);
+        }
+        Ad::script('if (window.ExmentBlockedNotice) { window.ExmentBlockedNotice.start(' . json_encode([
+            'texts' => $blockedTexts,
+            'help' => getManualUrl('troubleshooting_firewall'),
+        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '); }');
+
+        // the log of the browser (ISS02904): only for a user who has it, nothing for the others
+        if (\Exceedone\Exment\Services\LogManagement\BrowserLogs::active()) {
+            // @phpstan-ignore-next-line
+            Ad::jslast(admin_asset('vendor/exment/js/browser_log.js?ver='.$ver));
+            Ad::script('if (window.ExmentBrowserLog) { window.ExmentBrowserLog.start(' . json_encode(\Exceedone\Exment\Services\LogManagement\BrowserLogs::scriptConfig(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES) . '); }');
+        }
 
         // delete object
         $delete_confirm = trans('admin.delete_confirm');

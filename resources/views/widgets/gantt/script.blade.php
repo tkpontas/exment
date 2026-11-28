@@ -160,25 +160,36 @@
 
     /* ------------------------------------------------ rows -------------- */
     function orderRows(list) {
-        // parents first, each followed by its children, everything by start date
+        // parents first, each followed by its children at every level (an
+        // issue, its child, the child of that one...), everything by start date
         var byStart = function (a, b) {
             if (!a.start && !b.start) { return String(a.id) < String(b.id) ? -1 : 1; }
             if (!a.start) { return 1; }
             if (!b.start) { return -1; }
             return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0);
         };
-        var ids = {};
+        var ids = {}, kids = {};
         list.forEach(function (r) { ids[String(r.id)] = true; });
-        var roots = list.filter(function (r) { return !r.parent || !ids[String(r.parent)]; }).sort(byStart);
-        var out = [];
-        roots.forEach(function (r) {
-            out.push(r);
-            list.filter(function (c) { return String(c.parent) === String(r.id); })
-                .sort(byStart)
-                .forEach(function (c) { c._child = true; out.push(c); });
+        list.forEach(function (r) {
+            var p = r.parent ? String(r.parent) : '';
+            if (p && p !== String(r.id) && ids[p]) { (kids[p] = kids[p] || []).push(r); }
         });
-        // anything still missing (grandchildren...) keeps flat order at the end
-        list.forEach(function (r) { if (out.indexOf(r) < 0) { out.push(r); } });
+        var roots = list.filter(function (r) { var p = r.parent ? String(r.parent) : ''; return !p || p === String(r.id) || !ids[p]; }).sort(byStart);
+        var out = [], seen = {};
+        var walk = function (r, depth, anc) {
+            if (seen[String(r.id)]) { return; }
+            seen[String(r.id)] = true;
+            var children = (kids[String(r.id)] || []).slice().sort(byStart);
+            r._depth = depth;
+            r._child = depth > 0;
+            r._anc = anc;
+            r._kids = children.length;
+            out.push(r);
+            children.forEach(function (c) { walk(c, depth + 1, anc.concat([String(r.id)])); });
+        };
+        roots.forEach(function (r) { walk(r, 0, []); });
+        // a parent chain that never reaches a root (a loop): flat at the end
+        list.forEach(function (r) { if (!seen[String(r.id)]) { walk(r, 0, []); } });
         return out;
     }
 
@@ -187,7 +198,11 @@
         var overdue = !!(r.end && parse(r.end) < today && (r.progress === null || r.progress === undefined || r.progress < 100));
         var left = '<div class="gt-left" style="width:' + LEFT_W + 'px">';
         left += '<span class="gt-dot" style="background:' + esc(color) + '"></span>';
-        left += '<span class="gt-label">' + (r._child ? '<span class="gt-indent">└ </span>' : '') +
+        // the levels under a parent: indented, and a parent folds what hangs under it
+        var depth = Math.min(r._depth || 0, 10);
+        left += '<span class="gt-label"' + (depth > 0 ? ' style="padding-left:' + (depth * 12) + 'px"' : '') + '>' +
+            (r._kids ? '<span class="gt-tgl fa fa-caret-down" data-tid="' + esc(r.id) + '" role="button" aria-expanded="true"></span> ' : '') +
+            (r._child && !r._kids ? '<span class="gt-indent">└ </span>' : '') +
             '<a href="' + esc(r.url) + '" title="' + esc(r.label) + '">' + esc(r.label) + '</a></span>';
         if (D.features.assignee) {
             var a = r.assignee && D.assignees ? D.assignees[r.assignee] : null;
@@ -212,7 +227,7 @@
             }
         }
         canvas += '</div>';
-        return '<div class="gt-row gt-item" style="height:' + ROW_H + 'px">' + left + canvas + '</div>';
+        return '<div class="gt-row gt-item" data-anc="' + esc(' ' + (r._anc || []).join(' ') + ' ') + '" style="height:' + ROW_H + 'px">' + left + canvas + '</div>';
     }
 
     var html = '';
@@ -259,12 +274,87 @@
     inner.style.width = (LEFT_W + CANVAS_W) + 'px';
     inner.innerHTML = html;
 
+    /* ------------------------------------------------ list (phone) ------ */
+    // A phone has no room for the bars: there the rows read as a list, group
+    // by group, in the order of their due dates, under the week each is due
+    // in (L3). A button switches between the list and the chart, on any width.
+    function weekStart(d) { return addDays(d, -((d.getDay() + 6) % 7)); }
+    function listHtml() {
+        var out = '';
+        (D.groups || []).forEach(function (g) {
+            var rows = (D.rows || []).filter(function (r) { return String(r.group || '') === String(g.key); });
+            if (!rows.length) { return; }
+            rows = rows.slice().sort(function (a, b) {
+                if (!a.end !== !b.end) { return a.end ? -1 : 1; }
+                return String(a.end || '').localeCompare(String(b.end || '')) || String(a.label).localeCompare(String(b.label));
+            });
+            if (hasGroups) {
+                out += '<div class="gt-l-grp"><i class="fa fa-flag-checkered"></i> ' + esc(g.label || '') +
+                    ' <span class="gt-cnt">' + rows.length + '</span>' + (g.due ? ' <span class="gt-due">◆ ' + fmtShort(g.due) + '</span>' : '') + '</div>';
+            }
+            var week = null;
+            rows.forEach(function (r) {
+                var end = parse(r.end);
+                var wk = end ? fmtMD(weekStart(end)) : '';
+                if (wk !== week) {
+                    week = wk;
+                    out += '<div class="gt-l-wk">' + esc(end ? String(L.week).replace(':date', wk) : L.no_bar) + '</div>';
+                }
+                var color = (D.colors && D.colors[r.color]) || '#3c8dbc';
+                var overdue = !!(end && end < today && (r.progress === null || r.progress === undefined || r.progress < 100));
+                var a = r.assignee && D.assignees ? D.assignees[r.assignee] : null;
+                out += '<a class="gt-l-row" href="' + esc(r.url) + '">' +
+                    '<span class="gt-dot" style="background:' + esc(color) + '"></span>' +
+                    '<span class="gt-l-label">' + esc(r.label) + '</span>' +
+                    (r.progress !== null && r.progress !== undefined ? '<span class="gt-l-pg">' + esc(Math.round(r.progress)) + '%</span>' : '') +
+                    (a ? '<span class="gt-av" style="background:' + esc(a.color) + '" title="' + esc(a.name) + '">' + esc(a.initial) + '</span>' : '') +
+                    '<span class="gt-due' + (overdue ? ' gt-overdue' : '') + '">' + (r.end ? fmtShort(r.end) : '—') + '</span></a>';
+            });
+        });
+        return out;
+    }
+    var scrollBox = root.querySelector('.gt-scroll');
+    var listBox = document.createElement('div');
+    listBox.className = 'gt-list';
+    listBox.innerHTML = listHtml();
+    scrollBox.parentNode.insertBefore(listBox, scrollBox.nextSibling);
+    listBox.addEventListener('click', function (ev) {
+        var a = ev.target.closest('.gt-l-row');
+        if (a && window.ppNavigate && window.ppNavigate(a.getAttribute('href'))) { ev.preventDefault(); }
+    });
+    var modeBtn = document.createElement('button');
+    modeBtn.type = 'button';
+    modeBtn.className = 'btn btn-sm btn-default gt-mode';
+    function setMode(asList) {
+        root.classList.toggle('gt-as-list', asList);
+        modeBtn.innerHTML = '<i class="fa ' + (asList ? 'fa-align-left' : 'fa-list') + '"></i> ' + esc(asList ? L.view_chart : L.view_list);
+        modeBtn.setAttribute('aria-pressed', asList ? 'true' : 'false');
+    }
+    modeBtn.addEventListener('click', function () { setMode(!root.classList.contains('gt-as-list')); });
+    var toolLeft = root.querySelector('.gt-toolbar-left');
+    if (toolLeft) { toolLeft.insertBefore(modeBtn, toolLeft.firstChild); }
+    setMode(root.clientWidth > 0 && root.clientWidth < 600);
+
     /* ------------------------------------------------ events ------------ */
     inner.addEventListener('click', function (ev) {
         var bar = ev.target.closest('.gt-bar');
         if (bar) {
             var barUrl = bar.getAttribute('data-url');
             if (!(window.ppNavigate && window.ppNavigate(barUrl))) { window.location.href = barUrl; }
+            return;
+        }
+        // a parent: fold or open everything under it, at every level
+        var tgl = ev.target.closest('.gt-tgl');
+        if (tgl) {
+            var folded = tgl.classList.toggle('fa-caret-right');
+            tgl.classList.toggle('fa-caret-down', !folded);
+            tgl.setAttribute('aria-expanded', folded ? 'false' : 'true');
+            var closed = [];
+            inner.querySelectorAll('.gt-tgl.fa-caret-right').forEach(function (t) { closed.push(' ' + t.getAttribute('data-tid') + ' '); });
+            inner.querySelectorAll('.gt-item').forEach(function (el) {
+                var anc = el.getAttribute('data-anc') || '';
+                el.classList.toggle('gt-tree-hidden', closed.some(function (c) { return anc.indexOf(c) >= 0; }));
+            });
             return;
         }
         var grp = ev.target.closest('.gt-grp');

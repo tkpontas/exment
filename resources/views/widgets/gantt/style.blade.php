@@ -37,11 +37,27 @@
 .exment-gantt .gt-label a{color:#24323f;text-decoration:none;}
 .exment-gantt .gt-label a:hover{color:#3c8dbc;}
 .exment-gantt .gt-label .gt-indent{color:#98a5b1;font-size:11px;}
+.exment-gantt .gt-label .gt-tgl{color:#98a5b1;width:10px;cursor:pointer;}
+.exment-gantt .gt-row.gt-tree-hidden{display:none;}
 .exment-gantt .gt-dot{display:inline-block;width:8px;height:8px;border-radius:2px;flex:none;}
 .exment-gantt .gt-av{display:inline-flex;width:22px;height:22px;border-radius:50%;color:#fff;align-items:center;
   justify-content:center;font-size:10px;font-weight:700;flex:none;}
 .exment-gantt .gt-due{flex:none;width:44px;text-align:right;color:#6b7a88;font-size:11px;white-space:nowrap;}
 .exment-gantt .gt-due.gt-overdue{color:#d9534f;font-weight:700;}
 .exment-gantt .gt-hidden{display:none;}
+/* the list of a phone (L3): by group, then by the week of the due date */
+.exment-gantt .gt-list{display:none;border:1px solid #dfe5ea;border-radius:4px;background:#fff;}
+.exment-gantt.gt-as-list .gt-list{display:block;}
+.exment-gantt.gt-as-list .gt-scroll{display:none;}
+.exment-gantt .gt-l-grp{padding:8px 12px;background:#f3f6f8;font-weight:700;color:#4d5d6b;font-size:13px;border-bottom:1px solid #eef2f5;}
+.exment-gantt .gt-l-grp .fa{color:#8e44ad;}
+.exment-gantt .gt-l-grp .gt-cnt{color:#8b99a5;font-weight:400;font-size:11px;}
+.exment-gantt .gt-l-grp .gt-due{width:auto;color:#8e44ad;}
+.exment-gantt .gt-l-wk{padding:6px 12px 2px;color:#8b99a5;font-size:11px;font-weight:700;}
+.exment-gantt .gt-l-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 12px;border-bottom:1px solid #eef2f5;color:#24323f;text-decoration:none;}
+.exment-gantt .gt-l-row:hover{background:#f9fbfc;color:#24323f;}
+.exment-gantt .gt-l-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;}
+.exment-gantt .gt-l-pg{flex:none;color:#6b7a88;font-size:11px;}
+.exment-gantt .gt-mode{white-space:nowrap;}
 .exment-gantt .gt-empty{padding:28px 12px;text-align:center;color:#8b99a5;font-size:13px;}
 </style>

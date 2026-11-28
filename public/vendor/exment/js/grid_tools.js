@@ -996,14 +996,32 @@
     each(rows, function (tr) { tbody.appendChild(tr); });
   }
 
+  // An image column has no text in its cells (only the <img>): grouping on it, or filtering the
+  // page by one of its cells, would put every row together (#2168). Its cells carry the class
+  // of the column type (DefaultGrid).
+  function isImageColumn(table, col) {
+    if (!table || !col) return false;
+    var cell = table.querySelector('tbody td.column-' + col);
+    return !!cell && cell.classList.contains('exm-coltype-image');
+  }
+
   function applyGroup(box) {
     var table = gridOf(box);
     if (!table) return;
     var tbody = table.querySelector('tbody');
     if (!tbody) return;
 
+    each(box.querySelectorAll('.exm-group-item[data-col]'), function (item) {
+      var itemCol = item.getAttribute('data-col');
+      if (itemCol && isImageColumn(table, itemCol)) {
+        var li = closest(item, 'li') || item;
+        li.parentNode.removeChild(li);
+      }
+    });
+
     var key = box.getAttribute('data-key');
     var col = readStore('sessionStorage', GROUP_PREFIX + key) || '';
+    if (col && isImageColumn(table, col)) col = '';
 
     markRowOrder(tbody);
 
@@ -2314,6 +2332,10 @@
       && attachDatePicker(td, editor, meta, cfg);
     var showCalendar = function () {
       try {
+        if (editor._flatpickr) {
+          editor._flatpickr.open();
+          return;
+        }
         var picker = window.jQuery(editor).data('DateTimePicker');
         if (picker) picker.show();
       } catch (e) { /* the editor still takes typed text */ }
@@ -2569,10 +2591,11 @@
   /* ----------------------------------------------- date editor calendar --- */
 
   // Exment's own date fields (ExmentAdminCore Form/Field/Date, Datetime) use
-  // eonasdan's bootstrap-datetimepicker with moment, and the admin layout
-  // already loads both. The formats are those fields' formats: the text is
-  // posted as is.
+  // flatpickr from admin-core 2.0, eonasdan's bootstrap-datetimepicker with
+  // moment before. The formats are those fields' formats: the text is posted
+  // as is.
   var DATE_FORMATS = { date: 'YYYY-MM-DD', datetime: 'YYYY-MM-DD HH:mm:ss' };
+  var FLATPICKR_FORMATS = { date: 'Y-m-d', datetime: 'Y-m-d H:i:S' };
   var DATE_ICONS = {
     time: 'fa fa-clock-o',
     date: 'fa fa-calendar',
@@ -2638,6 +2661,7 @@
    * what is typed. Returns whether a calendar was attached.
    */
   function attachDatePicker(td, editor, meta, cfg) {
+    if (typeof window.flatpickr === 'function') return attachFlatpickr(td, editor, meta, cfg);
     if (!datePickerAvailable()) return false;
     var $input = window.jQuery(editor);
     $input.datetimepicker({
@@ -2702,6 +2726,58 @@
       try {
         var picker = $input.data('DateTimePicker');
         if (picker) picker.destroy();
+      } catch (e) {
+        /* already gone with its input */
+      }
+    };
+    return true;
+  }
+
+  /**
+   * The calendar of admin-core 2.0: flatpickr. It puts its calendar on
+   * <body> and places it next to the input itself, so it is not clipped by
+   * the grid's scrolling box.
+   */
+  function attachFlatpickr(td, editor, meta, cfg) {
+    var fp = window.flatpickr;
+    var l10ns = fp.l10ns || {};
+    var lang = String((cfg && cfg.locale) || document.documentElement.lang || '').toLowerCase().replace('_', '-');
+    var locale = l10ns[lang] ? lang : (l10ns[lang.split('-')[0]] ? lang.split('-')[0] : null);
+    var options = {
+      dateFormat: FLATPICKR_FORMATS[meta.type],
+      enableTime: meta.type === 'datetime',
+      enableSeconds: meta.type === 'datetime',
+      time_24hr: true,
+      allowInput: true,
+      // opened by the editor (showCalendar), not by every click in it
+      clickOpens: false,
+      // Picking a day IS the decision for a date, as picking an option is
+      // for a select. A datetime still has its time to set, so it closes the
+      // way a typed input does: Enter, or a click elsewhere.
+      onChange: function () {
+        if (meta.type !== 'date') return;
+        if (!editor._exmPickerDown || Date.now() - editor._exmPickerDown > 1000) return;
+        setTimeout(function () {
+          if (!td.classList.contains('exm-editing')) return;
+          finishInlineEditor(td, true);
+          kbdAfterEdit(td, null);
+        }, 0);
+      }
+    };
+    if (locale) options.locale = locale;
+    var instance = fp(editor, options);
+    if (!instance || !instance.calendarContainer) return false;
+
+    var onDown = function (ev) {
+      if (instance.calendarContainer.contains(ev.target)) editor._exmPickerDown = Date.now();
+    };
+    document.addEventListener('mousedown', onDown, true);
+
+    editor._exmDetachPicker = function () {
+      editor._exmDetachPicker = null;
+      document.removeEventListener('mousedown', onDown, true);
+      try {
+        instance.destroy();
       } catch (e) {
         /* already gone with its input */
       }
@@ -2915,11 +2991,16 @@
       // waited behind another one of the same record has to send the
       // updated_at that save left on the row, not the one from before it.
       var row = findRowById(id) || closest(td, 'tr');
+      var body = screenWriteBody(row, values);
+      // Marks the write as an inline edit of this view, so the server can
+      // refuse it when the settings turned inline edit off
+      // (GridInlineEditor::INLINE_EDIT_KEY).
+      body[INLINE_EDIT_KEY] = cfg.cellView || 1;
       return fetch(updateUrl, {
         method: 'PUT',
         credentials: 'same-origin',
         headers: headers,
-        body: JSON.stringify(screenWriteBody(row, values))
+        body: JSON.stringify(body)
       });
     }).then(function (r) {
       if (!r.ok) {
@@ -3567,6 +3648,9 @@
   // applies: the form's view only / read only / hidden / internal columns,
   // its required columns, and the "cannot change from display" switch.
   var SCREEN_WRITE_KEY = '_grid_edit';
+  // Added by the inline edit of one cell only (GridInlineEditor::
+  // INLINE_EDIT_KEY): the view of the grid, for the inline edit settings.
+  var INLINE_EDIT_KEY = '_grid_inline';
   // The row's updated_at as the page was drawn (DefaultGrid puts it on the
   // <tr>): the edit lock the edit form also sends.
   var UPDATED_AT_ATTR = 'data-exm-updated-at';
@@ -3712,7 +3796,7 @@
     // has nothing to work with over the checkbox and action columns. Show
     // it greyed there rather than let it look live and do nothing.
     var fcol = menu.getAttribute('data-row-col') || '';
-    var filterable = !!fcol && fcol.indexOf('__') !== 0;
+    var filterable = !!fcol && fcol.indexOf('__') !== 0 && !isImageColumn(closest(td, 'table.exm-grid'), fcol);
     var flink = menu.querySelector('.exm-ctx-filter');
     if (flink) flink.classList.toggle('disabled', !filterable);
 
@@ -3826,9 +3910,15 @@
     };
     function close() {
       document.removeEventListener('keydown', onKey);
+      if (window.$) window.$(document).off('pjax:send.exmPeek');
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }
     document.addEventListener('keydown', onKey);
+    // "Open the whole record" goes by pjax, which leaves what is outside
+    // #pjax-container: close when the page changes (#2181). Not on a click
+    // of the link itself - pjax only follows a link still in the document,
+    // and a new tab (ctrl / middle click) keeps the preview.
+    if (window.$) window.$(document).one('pjax:send.exmPeek', close);
     overlay.addEventListener('click', function (ev) {
       // Only the backdrop itself - a click that started inside the panel
       // must not close the record the user is reading.
@@ -4011,7 +4101,7 @@
       if (!tr) return;
       var ftable = closest(tr, 'table.exm-grid');
       var fcell = tr.querySelector('td.column-' + col);
-      if (!ftable || !fcell) return;
+      if (!ftable || !fcell || fcell.classList.contains('exm-coltype-image')) return;
       applyRowFilter(ftable, menu, col, cellText(fcell));
       return;
     }
@@ -4362,6 +4452,9 @@
     if (closest(e.target, 'a, button, input, textarea, select, label')) return;
     var td = closest(e.target, 'td.exm-editable');
     if (!td) return;
+    // A slow double click: the first click already opened the row (after the wait of the row
+    // click, common.ts) and the page is leaving - do not open an editor too (#2167).
+    if (window.__exmRowOpenedAt && Date.now() - window.__exmRowOpenedAt < 2000) return;
     e.preventDefault();
     openInlineEditor(td);
   });

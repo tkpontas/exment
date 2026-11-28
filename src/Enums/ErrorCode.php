@@ -19,11 +19,13 @@ namespace Exceedone\Exment\Enums;
  * @method static ErrorCode PLUGIN_NOT_FOUND()
  * @method static ErrorCode WRONG_VIEW_AND_TABLE()
  * @method static ErrorCode UNSUPPORTED_VIEW_KIND_TYPE()
+ * @method static ErrorCode UNSUPPORTED_CONTENT_TYPE()
  * @method static ErrorCode WORKFLOW_LOCK()
  * @method static ErrorCode WORKFLOW_NOSTART()
  * @method static ErrorCode WORKFLOW_END()
  * @method static ErrorCode WORKFLOW_ACTION_DISABLED()
  * @method static ErrorCode DISAPPROVAL_IP()
+ * @method static ErrorCode API_NOT_ALLOWED()
  * @method static ErrorCode NOT_CONTAINS_CUSTOM_FORM()
  * @method static ErrorCode ONE_RECORD_ALREADY()
  * @method static ErrorCode WORKFLOW_NOT_HAS_NEXT_USER()
@@ -45,12 +47,16 @@ class ErrorCode extends EnumBase
     public const PLUGIN_NOT_FOUND = '111';
     public const WRONG_VIEW_AND_TABLE = '112';
     public const UNSUPPORTED_VIEW_KIND_TYPE = '113';
+    // the Content-Type is not application/json (exment.api_strict_content_type, ISS02915 #5)
+    public const UNSUPPORTED_CONTENT_TYPE = '114';
     public const WORKFLOW_LOCK = '201';
     public const WORKFLOW_NOSTART = '202';
     public const WORKFLOW_END = '203';
     public const WORKFLOW_ACTION_DISABLED = '204';
     public const WORKFLOW_NOT_HAS_NEXT_USER = '205';
     public const DISAPPROVAL_IP = '301';
+    // the user may not use the API (the API setting, ISS02915)
+    public const API_NOT_ALLOWED = '302';
     public const NOT_CONTAINS_CUSTOM_FORM = '401';
     // a refusal told to the user as it is (the message of the exception): a limit of the site
     public const ERROR_CODE_VALIDATION_FAILED = '1000';

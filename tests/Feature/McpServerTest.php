@@ -2,6 +2,7 @@
 
 namespace Exceedone\Exment\Tests\Feature;
 
+use Exceedone\Exment\Services\Mcp\McpGuide;
 use Exceedone\Exment\Controllers\McpController;
 use Exceedone\Exment\Enums\ApiScope;
 use Exceedone\Exment\Enums\SystemTableName;
@@ -135,7 +136,10 @@ class McpServerTest extends ApiTestBase
         $this->mcp($key, ['jsonrpc' => '2.0', 'method' => 'notifications/initialized'])->assertStatus(202);
 
         $tools = $this->mcp($key, ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/list'], ['MCP-Protocol-Version' => '2025-06-18'])->assertOk()->json('result.tools');
-        $this->assertSame(['list_tables', 'get_table', 'search_data', 'get_data', 'list_attachments', 'get_workflow_status'], array_column($tools, 'name'));
+        $this->assertSame([
+            'list_tables', 'get_table', 'search_data', 'get_data', 'list_attachments', 'get_workflow_status',
+            'list_organization_users', 'list_user_organizations', 'list_role_groups', 'get_role_group',
+        ], array_column($tools, 'name'));
         foreach ($tools as $tool) {
             $this->assertTrue($tool['annotations']['readOnlyHint'], $tool['name']);
         }
@@ -205,10 +209,10 @@ class McpServerTest extends ApiTestBase
         $this->setFeatures([Features::MCP => ['enabled' => true, 'role_groups' => null], Features::API_KEYS => ['enabled' => true, 'role_groups' => null]]);
         $user2 = LoginUser::findOrFail(TestDefine::TESTDATA_USER_LOGINID_USER2);
         $table = CustomTable::getEloquent('custom_value_edit');
-        $all = \DB::table(getDBTableName($table))->whereNull('deleted_at')->pluck('id')->map('intval')->all();
+        $all = \DB::table(getDBTableName($table))->whereNull('deleted_at')->pluck('id')->map(fn ($v) => intval($v))->all();
         $this->be($user2);
         System::clearRequestSession();
-        $visible = $table->getValueQuery()->pluck('id')->map('intval')->all();
+        $visible = $table->getValueQuery()->pluck('id')->map(fn ($v) => intval($v))->all();
         $hidden = array_values(array_diff($all, $visible));
         $this->assertNotEmpty($hidden, 'user2 cannot see some records of custom_value_edit');
         \Auth::logout();
@@ -354,5 +358,195 @@ class McpServerTest extends ApiTestBase
         $response = $this->mcp($key, ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping']);
         $response->assertStatus(500)->assertJsonPath('error.code', -32603)->assertJsonPath('error.message', 'Internal error.');
         $this->assertStringNotContainsString('secret detail', (string)$response->getContent());
+    }
+
+    /**
+     * The scopes the pages name for each tool (McpGuide, ISS02879) are the ones the tools ask:
+     * without its scope a tool says which one it needs, and a key "for MCP" runs every tool.
+     */
+    public function testTheScopesOfTheGuideAreTheOnesTheToolsAsk(): void
+    {
+        $this->assertSame(McpTools::names(), array_keys(McpGuide::TOOL_SCOPES), 'every tool has its scope, in the same order');
+        $record = CustomTable::getEloquent('custom_value_edit')->getValueModel()->newQueryWithoutScopes()->first();
+        $this->assertNotNull($record);
+        $args = [
+            'list_tables' => [],
+            'get_table' => ['table' => 'custom_value_edit'],
+            'search_data' => ['table' => 'custom_value_edit'],
+            'get_data' => ['table' => 'custom_value_edit', 'id' => $record->id],
+            'list_attachments' => ['table' => 'custom_value_edit', 'id' => $record->id],
+            'get_workflow_status' => ['table' => 'custom_value_edit', 'id' => $record->id],
+        ];
+        // the tools of the members (ISS00335): not in a key "for MCP", see McpMemberToolsTest
+        $memberArgs = [
+            'list_organization_users' => ['organization_id' => 1],
+            'list_user_organizations' => ['user_id' => 1],
+            'list_role_groups' => [],
+            'get_role_group' => ['role_group_id' => 1],
+        ];
+        $this->assertSame(McpGuide::MEMBER_TOOLS, array_keys($memberArgs));
+        $this->assertSame(array_keys(McpGuide::TOOL_SCOPES), array_merge(array_keys($args), array_keys($memberArgs)));
+        /** @var array<string, array<string, mixed>> $toolArgs */
+        $toolArgs = array_merge($args, $memberArgs);
+        $all = UserApiKeys::readOnlyScopes();
+        foreach (McpGuide::TOOL_SCOPES as $tool => $scope) {
+            $token = $this->getUser1AccessToken(array_values(array_diff($all, [$scope])));
+            $denied = $this->tool($token, $tool, $toolArgs[$tool] ?? []);
+            $this->assertTrue($denied['isError'], "$tool without $scope");
+            $this->assertStringContainsString('"' . $scope . '"', $denied['content'][0]['text'], "$tool names $scope");
+        }
+        $base = (int)LoginUser::findOrFail(TestDefine::TESTDATA_USER_LOGINID_USER1)->base_user_id;
+        $key = UserApiKeys::create($base, 'for mcp', McpGuide::scopes())[1];
+        foreach ($args as $tool => $arguments) {
+            $result = $this->tool($key, $tool, $arguments);
+            $this->assertStringNotContainsString('does not have the scope', (string)($result['content'][0]['text'] ?? ''), "$tool with a key for MCP");
+        }
+    }
+
+    /**
+     * search_data reads on with next_cursor: the pages one after another are the records one
+     * call reads, in the same order, none twice (ISS02885).
+     */
+    public function testSearchReadsOnWithTheCursor(): void
+    {
+        // the administrator: the search with words as Api2Test::testDataQueryWithPage (more than 3 pages)
+        $this->setFeatures([Features::MCP => ['enabled' => true, 'role_groups' => null], Features::API_KEYS => ['enabled' => true, 'role_groups' => null]]);
+        $key = $this->key(TestDefine::TESTDATA_USER_LOGINID_ADMIN);
+        config(['exment.mcp_max_rows' => 100]);
+
+        foreach ([['table' => 'custom_value_edit'], ['table' => 'custom_value_access_all', 'q' => 'index']] as $args) {
+            $all = $this->data($this->tool($key, 'search_data', $args + ['limit' => 100]));
+            $expected = array_column($all['rows'], 'id');
+            $this->assertGreaterThan(7, count($expected), json_encode($args) ?: '');
+
+            // all of them in one call: the pages end (no cursor) with the last of them
+            $enough = count($expected) < 100 ? PHP_INT_MAX : count($expected);
+            $this->assertSame($expected, $this->readAllPages($key, $args + ['limit' => 7], $enough), json_encode($args) ?: '');
+        }
+    }
+
+    public function testSearchCursorOfAnotherSearch(): void
+    {
+        $key = $this->key();
+        $first = $this->data($this->tool($key, 'search_data', ['table' => 'custom_value_edit', 'limit' => 2]));
+        $this->assertNotNull($first['next_cursor']);
+
+        foreach ([['q' => 'other'], ['table' => 'custom_value_access_all']] as $other) {
+            $denied = $this->tool($key, 'search_data', $other + ['table' => 'custom_value_edit', 'cursor' => $first['next_cursor']]);
+            $this->assertTrue($denied['isError']);
+            $this->assertStringContainsString('another search', $denied['content'][0]['text']);
+        }
+        $denied = $this->tool($key, 'search_data', ['table' => 'custom_value_edit', 'cursor' => 'not a cursor']);
+        $this->assertTrue($denied['isError']);
+    }
+
+    public function testSearchStopsAtTheTimeAndReadsOn(): void
+    {
+        $key = $this->key();
+        config(['exment.mcp_max_rows' => 100]);
+        $args = ['table' => 'custom_value_edit', 'limit' => 20];
+        $expected = array_column($this->data($this->tool($key, 'search_data', $args))['rows'], 'id');
+
+        // a time no record can be read in: one record a call, and the cursor goes on
+        config(['exment.mcp_search_seconds' => 0.000001]);
+        $first = $this->data($this->tool($key, 'search_data', $args));
+        $this->assertLessThanOrEqual(1, $first['count']);
+        $this->assertArrayHasKey('stopped', $first);
+        $this->assertNotNull($first['next_cursor']);
+
+        $this->assertSame($expected, array_slice($this->readAllPages($key, $args, count($expected)), 0, count($expected)));
+    }
+
+    /**
+     * The ids of the pages, read on with next_cursor until there is none or there are enough.
+     *
+     * @param array<string, mixed> $args
+     * @return array<int, mixed>
+     */
+    protected function readAllPages(string $key, array $args, int $enough): array
+    {
+        $ids = [];
+        $cursor = null;
+        for ($i = 0; $i < 200; $i++) {
+            $page = $this->data($this->tool($key, 'search_data', $args + (isset($cursor) ? ['cursor' => $cursor] : [])));
+            foreach (array_column($page['rows'], 'id') as $id) {
+                $this->assertNotContains($id, $ids, 'no record twice');
+                $ids[] = $id;
+            }
+            $cursor = $page['next_cursor'];
+            if (!isset($cursor) || count($ids) >= $enough) {
+                break;
+            }
+        }
+        return array_slice($ids, 0, $enough);
+    }
+
+    /**
+     * search_data with words finds the records the search of the data API finds (it found
+     * nothing: searchValue with isApi and no columns searched no column).
+     */
+    public function testSearchWithWords(): void
+    {
+        $this->setFeatures([Features::MCP => ['enabled' => true, 'role_groups' => null], Features::API_KEYS => ['enabled' => true, 'role_groups' => null]]);
+        $key = $this->key(TestDefine::TESTDATA_USER_LOGINID_ADMIN);
+
+        $found = $this->data($this->tool($key, 'search_data', ['table' => 'custom_value_access_all', 'q' => 'index_002', 'limit' => 50]));
+        $this->assertGreaterThan(0, $found['count'], 'the words find records');
+        $ids = array_column($found['rows'], 'id');
+        sort($ids);
+
+        // the same as the search of the data API (Api2Test::testDataQuery)
+        $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
+        \Auth::forgetGuards();
+        $api = $this->withHeaders(['Authorization' => "Bearer $token"])
+            ->get(admin_urls('api', 'data', 'custom_value_access_all', 'query') . '?q=index_002&count=50')
+            ->assertStatus(200)
+            ->json('data');
+        $this->assertIsArray($api);
+        $apiIds = array_column($api, 'id');
+        sort($apiIds);
+        $this->assertSame($apiIds, $ids);
+
+        // words nothing has
+        $none = $this->data($this->tool($key, 'search_data', ['table' => 'custom_value_access_all', 'q' => 'no-record-has-these-words']));
+        $this->assertSame(0, $none['count']);
+    }
+
+    /**
+     * Read on through a search with words: every record the search of the data API finds, each
+     * once, the newest id first (ISS02885: the pages repeated records, the search had no order).
+     */
+    public function testSearchWithWordsReadsOnEachRecordOnce(): void
+    {
+        $this->setFeatures([Features::MCP => ['enabled' => true, 'role_groups' => null], Features::API_KEYS => ['enabled' => true, 'role_groups' => null]]);
+        $key = $this->key(TestDefine::TESTDATA_USER_LOGINID_ADMIN);
+        config(['exment.mcp_max_rows' => 100]);
+        $args = ['table' => 'custom_value_access_all', 'q' => 'index'];
+
+        // what the search of the data API finds, all pages
+        $token = $this->getAdminAccessToken([ApiScope::VALUE_READ]);
+        $expected = [];
+        for ($page = 1; $page <= 20; $page++) {
+            \Auth::forgetGuards();
+            $json = $this->withHeaders(['Authorization' => "Bearer $token"])
+                ->get(admin_urls('api', 'data', 'custom_value_access_all', 'query') . '?q=index&count=100&page=' . $page)
+                ->assertStatus(200)
+                ->json();
+            foreach ((array)($json['data'] ?? []) as $row) {
+                $expected[] = intval($row['id']);
+            }
+            if (!isset($json['next_page_url'])) {
+                break;
+            }
+        }
+        $this->assertGreaterThan(7, count($expected));
+        rsort($expected);
+
+        $ids = $this->readAllPages($key, $args + ['limit' => 7], PHP_INT_MAX);
+        $ints = [];
+        foreach ($ids as $id) {
+            $ints[] = intval($id);
+        }
+        $this->assertSame($expected, $ints, 'each record once, in the order of the newest id first');
     }
 }

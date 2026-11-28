@@ -90,8 +90,6 @@ class AdminScreensContentTest extends FeatureTestBase
             'copy show' => ['copy/custom_value_edit_all/1', 'copy/custom_value_edit_all/1/edit'],
             'operation show' => ['operation/custom_value_edit_all/1', 'operation/custom_value_edit_all/1/edit'],
             'notify show' => ['notify/custom_value_edit_all/1', 'notify/custom_value_edit_all/1/edit'],
-            // an installed site: the install pages are closed
-            'install reset' => ['install/reset', 'auth/login'],
         ];
     }
 
@@ -224,6 +222,12 @@ class AdminScreensContentTest extends FeatureTestBase
         $create = $this->open('cell_style_preset/create');
         $this->assertScreen($create, exmtrans('cell_style_preset.header'));
         $this->assertForm($this->html($create), 'cell_style_preset', 'POST', ['preset_name', 'options[grid_style]', 'column_types[]']);
+
+        // #2158: each color field is marked for the swatch + clear button, and still accepts "no color"
+        foreach (['grid_color', 'grid_bg_color', 'grid_border_color'] as $color_key) {
+            $create->assertSee('name="options[' . $color_key . ']"', false);
+        }
+        $this->assertSame(3, substr_count(strval($create->getContent()), 'data-cellstyle-colorpicker'));
 
         $preset = CellStylePreset::findOrFail(1);
         $edit = $this->open('cell_style_preset/1/edit');

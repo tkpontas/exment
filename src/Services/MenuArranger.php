@@ -31,16 +31,16 @@ class MenuArranger
         [null, [['system', 'home']]],
         ['groupware', [['system', 'file_server'], ['custom', 'exment_groupware_mail']]],
         ['master', [['table', 'base_info'], ['table', 'organization'], ['table', 'user'], ['table', 'information']]],
-        ['admin_data', [['system', 'custom_table'], ['system', 'studio'], ['system', 'menu'], ['system', 'workflow'], ['table', 'mail_template'], ['system', 'notify'], ['system', 'cell_style_preset'], ['system', 'template']]],
+        ['admin_data', [['system', 'custom_table'], ['system', 'studio'], ['system', 'menu'], ['system', 'workflow'], ['table', 'mail_template'], ['system', 'notify'], ['system', 'cell_style_preset'], ['system', 'template'], ['system', 'trash']]],
         ['admin_user', [['system', 'loginuser'], ['system', 'role_group'], ['system', 'login_setting'], ['system', 'api_setting'], ['system', 'operation_log']]],
-        ['admin', [['system', 'system'], ['system', 'feature'], ['system', 'plugin'], ['system', 'backup'], ['system', 'tuning'], ['system', 'security_check'], ['system', 'maintenance']]],
+        ['admin', [['system', 'system'], ['system', 'safety_check_setting'], ['system', 'meili_setting'], ['system', 'feature'], ['system', 'plugin'], ['system', 'backup'], ['system', 'tuning'], ['system', 'security_check'], ['system', 'scheduled_jobs'], ['system', 'sync'], ['system', 'log_management'], ['system', 'maintenance']]],
     ];
 
     /** The settings, after the groups of the feature map (master is 90). */
     public const SETTINGS = ['admin_data' => ['fa-th-large', 91], 'admin_user' => ['fa-users', 92], 'admin' => ['fa-cogs', 93]];
 
     /** The menus of the official plugins: [plugin_name => group]. */
-    public const PLUGIN_GROUPS = ['ExmentPM' => 'project', 'ExmentITSupport' => 'it_support'];
+    public const PLUGIN_GROUPS = ['ExmentPM' => 'project', 'ExmentSupportDesk' => 'it_support'];
 
     /** Titles that change while they are still the ones Exment gave: menu_name => [titles of Exment, lang key of the new one] */
     public const TITLES = [

@@ -202,6 +202,11 @@ class LoginSettingController extends AdminControllerBase
             ->help(exmtrans("login.help.update_user_info"))
             ->default(false);
 
+            // the avatar of the IdP (#1593): on, as before the setting
+            $form->switchbool('get_avatar', exmtrans("login.get_avatar"))
+            ->help(exmtrans("login.help.get_avatar"))
+            ->default(true);
+
 
             $form->exmheader(exmtrans('login.login_button'))->hr();
 
@@ -400,6 +405,17 @@ class LoginSettingController extends AdminControllerBase
             ->default(0)
             ->between(0, 20)
             ->help(exmtrans("system.help.password_history_cnt"));
+
+        // a notice of a login from a new IP address (ISS00104)
+        $form->exmheader(exmtrans('login.new_ip_header'))->hr();
+
+        $form->switchbool('login_notify_new_ip', exmtrans('login.login_notify_new_ip'))
+            ->help(exmtrans('login.help.login_notify_new_ip', ['days' => \Exceedone\Exment\Services\LogManagement\LoginHistory::NEW_IP_DAYS]))
+            ->attribute(['data-filtertrigger' => true]);
+
+        $form->switchbool('login_notify_new_ip_mail', exmtrans('login.login_notify_new_ip_mail'))
+            ->help(exmtrans('login.help.login_notify_new_ip_mail'))
+            ->attribute(['data-filter' => json_encode(['key' => 'login_notify_new_ip', 'value' => '1'])]);
 
         $form->exmheader(exmtrans('system.login_page_view'))->hr();
 

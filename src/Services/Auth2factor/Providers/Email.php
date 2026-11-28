@@ -60,6 +60,7 @@ class Email
 
         if (!Auth2factorService::verifyCode('email', $verify_code, true)) {
             $this->incrementLoginAttempts($request);
+            \Exceedone\Exment\Services\LogManagement\LoginRecorder::twoFactorFailed($loginuser);
 
             // error
             return back()->withInput()->withErrors([
@@ -102,7 +103,7 @@ class Email
     protected function throttleKey(\Illuminate\Http\Request $request): string
     {
         $loginuser = \Admin::user();
-        return '2factor|' . ($loginuser ? $loginuser->id : $request->ip());
+        return '2factor|' . ($loginuser ? $loginuser->id : \Exceedone\Exment\Services\IpAddress::limiterKey($request->ip()));
     }
 
     /**

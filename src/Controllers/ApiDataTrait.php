@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\CustomColumn;
+use Exceedone\Exment\Services\Encryption\EncryptedColumns;
 use Exceedone\Exment\Model\CustomRelation;
 use Exceedone\Exment\Model\CustomView;
 use Exceedone\Exment\Model\CustomValue;
@@ -188,13 +189,22 @@ trait ApiDataTrait
     /**
      * Modify logic for getting value
      * @param Request $request
-     * @param Collection|\Illuminate\Pagination\LengthAwarePaginator|CustomValue $target
+     * @param Collection|\Illuminate\Pagination\AbstractPaginator|CustomValue $target
      * @param $options
      * @return array|CustomValue|\Illuminate\Pagination\LengthAwarePaginator|mixed|void
      */
     // @phpstan-ignore-next-line
     protected function modifyAfterGetValue(Request $request, $target, $options = [])
     {
+        // who read or listed the data (ISS02905): a list is one row
+        if (isset($this->custom_table)) {
+            if ($target instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+                \Exceedone\Exment\Services\LogManagement\DataAccessLogs::listed($this->custom_table);
+            } elseif ($target instanceof \Exceedone\Exment\Model\CustomValue) {
+                \Exceedone\Exment\Services\LogManagement\DataAccessLogs::read($this->custom_table, $target->id);
+            }
+        }
+
         $options = array_merge(
             [
                 'makeHidden' => true,
@@ -203,7 +213,7 @@ trait ApiDataTrait
         );
 
         // for paginate logic
-        if ($target instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+        if ($target instanceof \Illuminate\Pagination\AbstractPaginator) {
             $options = array_merge(
                 [
                     'appends' => [],
@@ -222,6 +232,7 @@ trait ApiDataTrait
                     'target_view_id',
                     'children',
                     'parents',
+                    'total',
                 ]),
                 $options['appends']
             );
@@ -302,6 +313,11 @@ trait ApiDataTrait
         $valuetype = $request->get('valuetype');
         if ($request->has('valuetype') && ValueType::isRegetApiCustomValue($valuetype)) {
             $custom_value->setValueDirectly($custom_value->getValues(ValueType::getEnum($valuetype), ['asApi' => true]));
+        }
+
+        // the encrypted columns are given masked (ISS00148): the plain value only by .../reveal/{column}
+        if ($custom_value instanceof CustomValue && count(EncryptedColumns::namesOf($this->custom_table)) > 0) {
+            $custom_value->setValueDirectly(EncryptedColumns::maskValues($custom_value->value, $this->custom_table));
         }
 
         /** @phpstan-ignore-next-line */
@@ -411,6 +427,9 @@ trait ApiDataTrait
         $getLabel = $this->isAppendLabel($request);
         $paginator = $this->custom_table->searchValue($q, [
             'paginate' => true,
+            'simplePaginate' => $this->withoutTotal($request),
+            // one order, each match once on its page (ISS02907)
+            'stableOrder' => true,
             'makeHidden' => true,
             'target_view' => $custom_view,
             'maxCount' => $count,

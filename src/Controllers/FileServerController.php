@@ -194,7 +194,8 @@ class FileServerController extends AdminControllerBase
         $asked = array_values(array_filter(explode('/', $path), function ($segment) {
             return $segment !== '';
         }));
-        $current = isset($url) ? array_merge([$paths->workspaceSegment($ws)], isset($node) ? $paths->names($node) : []) : null;
+        // a file named like a static file (sample.png): its address ends with "/~" (GitHub #2290)
+        $current = isset($url) ? $paths->segments($ws, $node) : null;
         if ($asked !== $current) {
             $query = $request->query();
             if (!isset($url)) {
@@ -298,6 +299,10 @@ class FileServerController extends AdminControllerBase
             'can_upload' => $level >= Level::UPLOAD,
             'can_edit' => $level >= Level::EDIT,
             'can_manage_workspace' => $access->can($ws, null, Level::MANAGE),
+            // "権限": the permissions of the folder, or the members of the workspace at its top
+            'permissions_url' => $level >= Level::MANAGE
+                ? (isset($folder) ? $this->nodeUrl($ws, $folder) . '#exm-fs-permissions' : $this->url($ws, 'settings') . '#exm-fs-members')
+                : null,
             // phase 5 (ISS00379)
             'following' => (new Collaboration($library))->isFollowing($ws, $folder),
             'follow_url' => isset($folder) ? $this->nodeUrl($ws, $folder, 'follow') : $this->url($ws, 'follow'),

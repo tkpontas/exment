@@ -78,12 +78,16 @@ class Define
         'default_date_format' => ['default' => 'format_default', 'group' => 'advanced'],
         'grid_pager_count' => ['type' => 'int', 'default' => '20', 'group' => 'advanced'],
         'datalist_pager_count' => ['type' => 'int', 'default' => '5', 'group' => 'advanced'],
+        // how an item of the left menu with items under it opens: "flyout" (to the side) or "inline" (ISS02958)
+        'menu_open' => ['type' => 'string', 'default' => 'flyout', 'group' => 'advanced'],
         'data_submit_redirect' => ['type' => 'string', 'default' => null, 'group' => 'advanced'],
         'header_user_info' => ['type' => 'array', 'default' => SystemColumn::CREATED_AT, 'group' => 'advanced'],
         // the languages the users can choose (ISS02835). Empty: all the installed languages
         'allowed_locales' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
         // the language of the browser for a user who has not chosen one (ISS02835). On by default
         'locale_from_browser' => ['type' => 'boolean', 'default' => '1', 'group' => 'advanced'],
+        // inline edit of the data list (#2163). On by default, as before
+        'grid_inline_edit_available' => ['type' => 'boolean', 'default' => '1', 'group' => 'advanced'],
 
         // name is "flg", but array is OK.
         'grid_filter_disable_flg' => ['type' => 'array', 'default' => 'comment', 'group' => 'advanced'] ,
@@ -92,6 +96,14 @@ class Define
 
         'web_ip_filters' => ['default' => '', 'group' => 'advanced'] ,
         'api_ip_filters' => ['default' => '', 'group' => 'advanced'] ,
+        // who the IP filter of the web pages does not refuse (ISS02915): users, organizations, role groups
+        'web_ip_filter_exempt_users' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
+        'web_ip_filter_exempt_organizations' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
+        'web_ip_filter_exempt_role_groups' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
+        // who may use the API (ISS02915): users, organizations, role groups. Nothing chosen: every user
+        'api_allowed_users' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
+        'api_allowed_organizations' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
+        'api_allowed_role_groups' => ['type' => 'array', 'default' => null, 'group' => 'advanced'],
 
         'userview_available' => ['type' => 'boolean', 'default' => false, 'group' => 'advanced'],
         'userdashboard_available' => ['type' => 'boolean', 'default' => false, 'group' => 'advanced'],
@@ -110,6 +122,12 @@ class Define
         'site_id' => ['type' => 'string', 'default' => null],
         // the notices told to the system administrators (Services\PluginDistribution\AdminNotices)
         'admin_notices_sent' => ['type' => 'json', 'default' => []],
+        // the scheduled jobs told to the system administrators as failing, until they run well (Services\ScheduledJobs\Recorder)
+        'scheduled_job_alerted' => ['type' => 'json', 'default' => []],
+        // the counts of the data for the tuning page, made every night (Services\SystemRequire\Tuning\DataStats)
+        'tuning_data_stats' => ['type' => 'json', 'default' => []],
+        // the columns whose index the tuning page is adding: column id => since when (AddColumnIndexJob)
+        'tuning_index_pending' => ['type' => 'json', 'default' => []],
         'recaptcha_type' => ['type' => 'string', 'group' => 'advanced'],
         'recaptcha_site_key' => ['type' => 'password', 'group' => 'advanced'],
         'recaptcha_secret_key' => ['type' => 'password', 'group' => 'advanced'],
@@ -118,6 +136,9 @@ class Define
         'password_expiration_days' => ['type' => 'int', 'default' => '0', 'group' => 'login'],
         'first_change_password' => ['type' => 'boolean', 'group' => 'login', 'default' => false],
         'password_history_cnt' => ['type' => 'int', 'default' => '0', 'group' => 'login'],
+        // a notice of a login from a new IP address (ISS00104)
+        'login_notify_new_ip' => ['type' => 'boolean', 'default' => '0', 'group' => 'login'],
+        'login_notify_new_ip_mail' => ['type' => 'boolean', 'default' => '0', 'group' => 'login'],
 
         'login_background_color' => ['type' => 'string', 'default' => '#d2d6de', 'group' => 'login'],
         'login_page_image' => ['type' => 'file', 'move' => 'system', 'group' => 'login'],
@@ -136,15 +157,16 @@ class Define
         'filter_multi_user' => ['type' => 'int', 'default' => '-1', 'group' => 'advanced'],
 
         // Meilisearch (full-text search) — 'config' maps let get_system_value fall back to .env.
-        'meili_host' => ['config' => 'meilisearch.host', 'group' => 'advanced'],
-        'meili_key' => ['type' => 'password', 'config' => 'meilisearch.key', 'group' => 'advanced'],
-        'meili_index' => ['config' => 'meilisearch.index', 'group' => 'advanced'],
-        'meili_global_search' => ['type' => 'boolean', 'config' => 'meilisearch.global_search', 'group' => 'advanced'],
-        'meili_realtime_sync' => ['type' => 'boolean', 'config' => 'meilisearch.realtime_sync', 'group' => 'advanced'],
-        'meili_batch_size' => ['type' => 'int', 'config' => 'meilisearch.batch_size', 'group' => 'advanced'],
-        'meili_repair_enabled' => ['type' => 'boolean', 'config' => 'meilisearch.repair_enabled', 'group' => 'advanced'],
-        'meili_repair_at' => ['config' => 'meilisearch.repair_at', 'group' => 'advanced'],
-        'meili_filter_mode' => ['config' => 'meilisearch.filter.mode', 'group' => 'advanced'],
+        // Group "meili": the page of its own (MeiliSettingController, #2157), not the detail page.
+        'meili_host' => ['config' => 'meilisearch.host', 'group' => 'meili'],
+        'meili_key' => ['type' => 'password', 'config' => 'meilisearch.key', 'group' => 'meili'],
+        'meili_index' => ['config' => 'meilisearch.index', 'group' => 'meili'],
+        'meili_global_search' => ['type' => 'boolean', 'config' => 'meilisearch.global_search', 'group' => 'meili'],
+        'meili_realtime_sync' => ['type' => 'boolean', 'config' => 'meilisearch.realtime_sync', 'group' => 'meili'],
+        'meili_batch_size' => ['type' => 'int', 'config' => 'meilisearch.batch_size', 'group' => 'meili'],
+        'meili_repair_enabled' => ['type' => 'boolean', 'config' => 'meilisearch.repair_enabled', 'group' => 'meili'],
+        'meili_repair_at' => ['config' => 'meilisearch.repair_at', 'group' => 'meili'],
+        'meili_filter_mode' => ['config' => 'meilisearch.filter.mode', 'group' => 'meili'],
         'meili_indexed_at' => ['type' => 'json', 'group' => 'meili_state'],
 
 
@@ -157,20 +179,45 @@ class Define
         'system_mail_from' => ['default' => 'no-reply@hogehoge.com', 'group' => 'notify'],
         'system_mail_from_view_name' => ['group' => 'notify'],
         'system_mail_body_type' => ['default' => 'html', 'group' => 'notify'],
+        // mail with OAuth 2.0 (ISS02913, Services\MailOAuth): microsoft, google, or none (the password)
+        'system_mail_auth' => ['group' => 'mail_oauth'],
+        'system_mail_oauth_tenant' => ['group' => 'mail_oauth'],
+        'system_mail_oauth_client_id' => ['group' => 'mail_oauth'],
+        // "data_key": kept with the keys of the encrypted columns when the site has them (ISS02929,
+        // Services\Encryption\Secrets), else with APP_KEY
+        'system_mail_oauth_client_secret' => ['type' => 'password', 'group' => 'mail_oauth', 'data_key' => true],
+        // set by connecting the mailbox (Google), not by the setting page
+        'system_mail_oauth_refresh_token' => ['type' => 'password', 'group' => 'mail_oauth_state', 'data_key' => true],
+        'system_mail_oauth_connected_at' => ['group' => 'mail_oauth_state'],
 
         'system_slack_user_column' => ['group' => 'notify'],
 
         'system_line_channel_token' => ['type' => 'password', 'config' => 'exment.line.channel_access_token', 'group' => 'notify'],
         'system_line_channel_secret' => ['type' => 'password', 'config' => 'exment.line.channel_secret', 'group' => 'notify'],
+        // the address of the Teams workflow (ISS02863): a secret, never shown again
+        'system_teams_workflow_url' => ['type' => 'password', 'group' => 'notify'],
+        // the LINE WORKS app (ISS00114): the secret and the private key kept encrypted, never shown again
+        'system_lineworks_client_id' => ['group' => 'notify'],
+        'system_lineworks_client_secret' => ['type' => 'password', 'group' => 'notify', 'data_key' => true],
+        'system_lineworks_service_account' => ['group' => 'notify'],
+        'system_lineworks_private_key' => ['type' => 'password', 'group' => 'notify', 'data_key' => true],
+        'system_lineworks_bot_id' => ['group' => 'notify'],
+        // the column of the users with their LINE WORKS id (the mail address by default)
+        'system_lineworks_user_column' => ['group' => 'notify'],
         'system_line_oa_basic_id' => ['config' => 'exment.line.oa_basic_id', 'group' => 'notify'],
 
-        'safety_check_auto_enabled' => ['type' => 'boolean', 'default' => '0', 'group' => 'notify'],
-        'safety_check_min_scale' => ['type' => 'int', 'default' => '45', 'group' => 'notify'],
-        'safety_check_cooldown_minutes' => ['type' => 'int', 'default' => '60', 'group' => 'notify'],
-        'safety_check_comment_window_minutes' => ['type' => 'int', 'default' => '60', 'group' => 'notify'],
-        'safety_check_max_bulletin_age_minutes' => ['type' => 'int', 'default' => '10', 'group' => 'notify'],
-        'safety_check_resend_throttle_minutes' => ['type' => 'int', 'default' => '5', 'group' => 'notify'],
-        'safety_check_answer_url_expire_days' => ['type' => 'int', 'default' => '7', 'group' => 'notify'],
+        // Group "safety_check": the page of its own (SafetyCheckSettingController, #2157)
+        'safety_check_auto_enabled' => ['type' => 'boolean', 'default' => '0', 'group' => 'safety_check'],
+        'safety_check_min_scale' => ['type' => 'int', 'default' => '45', 'group' => 'safety_check'],
+        'safety_check_cooldown_minutes' => ['type' => 'int', 'default' => '60', 'group' => 'safety_check'],
+        'safety_check_comment_window_minutes' => ['type' => 'int', 'default' => '60', 'group' => 'safety_check'],
+        'safety_check_max_bulletin_age_minutes' => ['type' => 'int', 'default' => '10', 'group' => 'safety_check'],
+        'safety_check_resend_throttle_minutes' => ['type' => 'int', 'default' => '5', 'group' => 'safety_check'],
+        'safety_check_answer_url_expire_days' => ['type' => 'int', 'default' => '7', 'group' => 'safety_check'],
+        // 送信対象 (GitHub #2180): empty is every user
+        'safety_check_target_organizations' => ['type' => 'array', 'default' => null, 'group' => 'safety_check'],
+        'safety_check_target_view' => ['type' => 'int', 'default' => null, 'group' => 'safety_check'],
+        'safety_check_excluded_users' => ['type' => 'array', 'default' => null, 'group' => 'safety_check'],
         'safety_check_last_feed_time' => ['type' => 'datetime'],
         // Comments written before this time ('Y-m-d H:i:s') are shown as the plain text they were
         // written as; later ones are shown as Markdown. Set once, by the migration that brings
@@ -184,6 +231,8 @@ class Define
         'backup_target' => ['type' => 'array', 'default' => 'database,plugin,attachment,log,config', 'group' => 'backup'] ,
         'backup_automatic_executed' => ['type' => 'datetime'],
         'backup_history_files' => ['type' => 'int', 'default' => '0', 'group' => 'backup'],
+        // the backups made by hand (the screen, the command) count toward backup_history_files too (ISS02943)
+        'backup_history_include_manual' => ['type' => 'boolean', 'default' => '0', 'group' => 'backup'],
 
         // Operation log auto-delete
         // Opt-in (default '0') like backup_enable_automatic above: a destructive housekeeping task
@@ -196,6 +245,34 @@ class Define
         'operation_log_automatic_hour' => ['group' => 'operation_log'],
         'operation_log_automatic_minute' => ['group' => 'operation_log'],
         'operation_log_automatic_executed' => ['type' => 'datetime'],
+        // the days the logs are kept (ISS02839, Services\LogManagement\LogCatalog); empty: the default
+        'log_retention_login_log' => ['type' => 'int', 'group' => 'log_management'],
+        'log_retention_permission_change' => ['type' => 'int', 'group' => 'log_management'],
+        'audit_report_schedule' => ['default' => 'off', 'group' => 'log_management'],
+        'audit_report_mail' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        'log_retention_app_log' => ['type' => 'int', 'group' => 'log_management'],
+        'log_app_level' => ['group' => 'log_management'],
+        'log_app_daily' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        'operation_log_scope' => ['default' => 'all', 'group' => 'log_management'],
+        // the archive of the old logs before they are deleted (part 3)
+        'log_archive_enabled' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        'log_archive_driver' => ['default' => 'local', 'group' => 'log_management'],
+        'log_archive_years' => ['type' => 'int', 'group' => 'log_management'],
+        // what the logs keep of personal data (part 4)
+        'log_store_input' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        'log_ip_mode' => ['default' => 'keep', 'group' => 'log_management'],
+        'log_archive_encrypt' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        'mail_log_no_body' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        // the log of the browsers (ISS02904): the pages opened too, the days kept
+        'browser_log_pages' => ['type' => 'boolean', 'default' => '0', 'group' => 'log_management'],
+        'log_retention_browser_log' => ['type' => 'int', 'group' => 'log_management'],
+        // the log of the MCP calls (ISS02915): the days kept
+        'log_retention_mcp_log' => ['type' => 'int', 'group' => 'log_management'],
+        // the reads and the writes of the data (ISS02905): the days their rows and their counts are kept
+        'log_retention_data_access' => ['type' => 'int', 'group' => 'log_management'],
+        'log_retention_data_access_daily' => ['type' => 'int', 'group' => 'log_management'],
+        'data_access_summarized_until' => [],
+        'log_privacy_notice_shown' => ['type' => 'boolean', 'default' => '0'],
 
         // 2factor ----------------------------------
         'login_use_2factor' => ['type' => 'boolean', 'default' => '0', 'group' => '2factor'],
@@ -336,6 +413,15 @@ class Define
             'uri' => 'system',
             'icon' => 'fa-cogs',
         ],
+        // the settings once on the detail page of the system settings (#2157)
+        'safety_check_setting' => [
+            'uri' => 'safety_check_setting',
+            'icon' => 'fa-heartbeat',
+        ],
+        'meili_setting' => [
+            'uri' => 'meili_setting',
+            'icon' => 'fa-search',
+        ],
         'meili_filter' => [
             'uri' => 'meili-filter',
             'icon' => 'fa-filter',
@@ -364,6 +450,19 @@ class Define
             'uri' => 'security_check',
             'icon' => 'fa-shield',
         ],
+        'log_management' => [
+            'uri' => 'log_management',
+            'icon' => 'fa-archive',
+        ],
+        'scheduled_jobs' => [
+            'uri' => 'scheduled_jobs',
+            'icon' => 'fa-clock-o',
+        ],
+        // the data sync (ISS00113)
+        'sync' => [
+            'uri' => 'sync',
+            'icon' => 'fa-refresh',
+        ],
         'maintenance' => [
             'uri' => 'maintenance',
             'icon' => 'fa-wrench',
@@ -387,6 +486,11 @@ class Define
         'cell_style_preset' => [
             'uri' => 'cell_style_preset',
             'icon' => 'fa-paint-brush',
+        ],
+        // the deleted rows of all the tables (ISS00334)
+        'trash' => [
+            'uri' => 'trash',
+            'icon' => 'fa-trash',
         ],
         'workflow' => [
             'uri' => 'workflow',
@@ -487,6 +591,8 @@ class Define
         ['name' => 'data', 'href' => 'data/:table_name', 'icon' => 'fa-database', 'roles' => Permission::AVAILABLE_VIEW_CUSTOM_VALUE, 'exmtrans' => 'change_page_menu.custom_value', 'description' => 'custom_value.description'],
         ['name' => 'qrcode', 'href' => 'table/:id/edit?qrcodesetting=1', 'icon' => 'fa-qrcode', 'roles' => Permission::CUSTOM_TABLE, 'exmtrans' => 'change_page_menu.qrcode', 'description' => 'qrcode.description'],
         ['name' => 'jancode', 'href' => 'table/:id/edit?jancodesetting=1', 'icon' => 'fa-barcode', 'roles' => Permission::CUSTOM_TABLE, 'exmtrans' => 'change_page_menu.jancode', 'description' => 'jancode.description'],
+        // only when the feature is used (Features::DATA_MAINTENANCE, #1829)
+        ['name' => 'data_maintenance', 'href' => 'data_maintenance/:table_name', 'icon' => 'fa-wrench', 'roles' => [Permission::CUSTOM_TABLE], 'exmtrans' => 'change_page_menu.data_maintenance', 'description' => 'data_maintenance.description', 'feature' => 'data_maintenance'],
     ];
 
     public const CUSTOM_VALUE_TRAITS = [
@@ -532,10 +638,12 @@ class Define
         'sqlsrv' => 'SQLServer',
     ];
 
+    // min: the install stops below it. recommended: the versions that still get fixes from their
+    // makers (the security check and exment:update say so below it; ISS00216)
     public const DATABASE_VERSION = [
-        'mysql' => ['min' => '5.7.8'],
-        'mariadb' => ['min' => '10.2.7'],
-        'sqlsrv' => ['min' => '13.0.0.0'],
+        'mysql' => ['min' => '5.7.8', 'recommended' => '8.0'],
+        'mariadb' => ['min' => '10.2.7', 'recommended' => '10.11'],
+        'sqlsrv' => ['min' => '13.0.0.0', 'recommended' => '13.0'],
     ];
 
     /**
@@ -613,10 +721,19 @@ class Define
         ['uri'=> 'dashboard', 'help_uri'=> 'dashboard'],
         ['uri'=> 'dashboardbox', 'help_uri'=> 'dashboard'],
         ['uri'=> 'system', 'help_uri'=> 'system_setting'],
+        ['uri'=> 'safety_check_setting', 'help_uri'=> 'safety_check'],
+        ['uri'=> 'meili_setting', 'help_uri'=> 'additional_meilisearch'],
+        // the flow designer, before "workflow" (a "*" is one part of the path, as the id)
+        ['uri'=> 'workflow/design/create', 'help_uri'=> 'workflow_design'],
+        ['uri'=> 'workflow/*/design', 'help_uri'=> 'workflow_design'],
         ['uri'=> 'workflow', 'help_uri'=> 'workflow_setting'],
+        ['uri'=> 'line/link', 'help_uri'=> 'line'],
         ['uri'=> 'login_setting', 'help_uri'=> 'login_setting'],
         ['uri'=> 'tuning', 'help_uri'=> 'tuning'],
         ['uri'=> 'security_check', 'help_uri'=> 'security_check'],
+        ['uri'=> 'scheduled_jobs', 'help_uri'=> 'scheduled_jobs'],
+        ['uri'=> 'sync', 'help_uri'=> 'sync'],
+        ['uri'=> 'log_management', 'help_uri'=> 'log_management'],
         ['uri'=> 'feature', 'help_uri'=> 'feature'],
         ['uri'=> '/', 'help_uri'=> 'dashboard'],
     ];

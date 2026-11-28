@@ -39,26 +39,42 @@ use Cache;
  * @method static string|void system_mail_from($arg = null)
  * @method static string|void system_mail_body_type($arg = null)
  * @method static string|void system_mail_from_view_name($arg = null)
+ * @method static string|void system_mail_auth($arg = null)
+ * @method static string|void system_mail_oauth_tenant($arg = null)
+ * @method static string|void system_mail_oauth_client_id($arg = null)
+ * @method static string|void system_mail_oauth_client_secret($arg = null)
+ * @method static string|void system_mail_oauth_refresh_token($arg = null)
+ * @method static string|void system_mail_oauth_connected_at($arg = null)
  * @method static boolean|void userview_available($arg = null)
  * @method static boolean|void userdashboard_available($arg = null)
  * @method static string|void default_date_format($arg = null)
  * @method static int|void grid_pager_count($arg = null)
  * @method static int|void datalist_pager_count($arg = null)
+ * @method static string|null|void menu_open($arg = null)
  * @method static array|void grid_filter_disable_flg($arg = null)
  * @method static string|void system_values_pos($arg = null)
  * @method static string|void data_submit_redirect($arg = null)
  * @method static array|void header_user_info($arg = null)
  * @method static array<int, string>|void allowed_locales($arg = null)
  * @method static bool|void locale_from_browser($arg = null)
+ * @method static bool|void grid_inline_edit_available($arg = null)
  * @method static boolean|void complex_password($arg = null)
  * @method static int|void password_expiration_days($arg = null)
  * @method static boolean|void first_change_password($arg = null)
  * @method static int|void password_history_cnt($arg = null)
+ * @method static bool|void login_notify_new_ip($arg = null)
+ * @method static bool|void login_notify_new_ip_mail($arg = null)
  * @method static string|void login_background_color($arg = null)
  * @method static string|void login_page_image($arg = null)
  * @method static string|void login_page_image_type($arg = null)
  * @method static string|void web_ip_filters($arg = null)
  * @method static string|void api_ip_filters($arg = null)
+ * @method static mixed web_ip_filter_exempt_users($arg = null)
+ * @method static mixed web_ip_filter_exempt_organizations($arg = null)
+ * @method static mixed web_ip_filter_exempt_role_groups($arg = null)
+ * @method static mixed api_allowed_users($arg = null)
+ * @method static mixed api_allowed_organizations($arg = null)
+ * @method static mixed api_allowed_role_groups($arg = null)
  * @method static int|void org_joined_type_role_group($arg = null)
  * @method static int|void org_joined_type_custom_value($arg = null)
  * @method static int|void filter_multi_user($arg = null)
@@ -69,6 +85,7 @@ use Cache;
  * @method static array|void backup_target($arg = null)
  * @method static Carbon|void backup_automatic_executed($arg = null)
  * @method static int|void backup_history_files($arg = null)
+ * @method static bool|void backup_history_include_manual($arg = null)
  * @method static boolean|void operation_log_enable_automatic($arg = null)
  * @method static int|void operation_log_keep_days($arg = null)
  * @method static string|void operation_log_automatic_week($arg = null)
@@ -77,6 +94,28 @@ use Cache;
  * @method static string|void operation_log_automatic_hour($arg = null)
  * @method static string|void operation_log_automatic_minute($arg = null)
  * @method static Carbon|void operation_log_automatic_executed($arg = null)
+ * @method static int|null|void log_retention_login_log($arg = null)
+ * @method static int|null|void log_retention_permission_change($arg = null)
+ * @method static string|null|void audit_report_schedule($arg = null)
+ * @method static bool|null|void audit_report_mail($arg = null)
+ * @method static int|null|void log_retention_app_log($arg = null)
+ * @method static string|null|void log_app_level($arg = null)
+ * @method static bool|void log_app_daily($arg = null)
+ * @method static string|null|void operation_log_scope($arg = null)
+ * @method static bool|void log_archive_enabled($arg = null)
+ * @method static string|null|void log_archive_driver($arg = null)
+ * @method static int|null|void log_archive_years($arg = null)
+ * @method static bool|void log_store_input($arg = null)
+ * @method static string|null|void log_ip_mode($arg = null)
+ * @method static bool|void log_archive_encrypt($arg = null)
+ * @method static bool|void mail_log_no_body($arg = null)
+ * @method static bool|void browser_log_pages($arg = null)
+ * @method static int|null|void log_retention_browser_log($arg = null)
+ * @method static int|null|void log_retention_mcp_log($arg = null)
+ * @method static int|null|void log_retention_data_access($arg = null)
+ * @method static int|null|void log_retention_data_access_daily($arg = null)
+ * @method static string|null|void data_access_summarized_until($arg = null)
+ * @method static bool|void log_privacy_notice_shown($arg = null)
  * @method static boolean|void login_use_2factor($arg = null)
  * @method static string|void login_2factor_provider($arg = null)
  * @method static array|void system_admin_users($arg = null)
@@ -88,6 +127,13 @@ use Cache;
  * @method static string|void system_slack_user_column($arg = null)
  * @method static string|void system_line_channel_token($arg = null)
  * @method static string|void system_line_channel_secret($arg = null)
+ * @method static string|void system_teams_workflow_url($arg = null)
+ * @method static string|void system_lineworks_client_id($arg = null)
+ * @method static string|void system_lineworks_client_secret($arg = null)
+ * @method static string|void system_lineworks_service_account($arg = null)
+ * @method static string|void system_lineworks_private_key($arg = null)
+ * @method static string|void system_lineworks_bot_id($arg = null)
+ * @method static string|void system_lineworks_user_column($arg = null)
  * @method static string|void system_line_oa_basic_id($arg = null)
  * @method static boolean|void safety_check_auto_enabled($arg = null)
  * @method static int|void safety_check_min_scale($arg = null)
@@ -96,6 +142,9 @@ use Cache;
  * @method static int|void safety_check_max_bulletin_age_minutes($arg = null)
  * @method static int|void safety_check_resend_throttle_minutes($arg = null)
  * @method static int|void safety_check_answer_url_expire_days($arg = null)
+ * @method static array<int, string>|void safety_check_target_organizations($arg = null)
+ * @method static int|null|void safety_check_target_view($arg = null)
+ * @method static array<int, string>|void safety_check_excluded_users($arg = null)
  * @method static Carbon|void safety_check_last_feed_time($arg = null)
  * @method static string|null|void comment_markdown_start($arg = null)
  * @method static bool|void publicform_available($arg = null)
@@ -105,6 +154,9 @@ use Cache;
  * @method static mixed maintenance_missed_schedule($arg = null)
  * @method static string|null|void site_id($arg = null)
  * @method static mixed admin_notices_sent($arg = null)
+ * @method static mixed scheduled_job_alerted($arg = null)
+ * @method static mixed tuning_data_stats($arg = null)
+ * @method static mixed tuning_index_pending($arg = null)
  * @method static string|void recaptcha_site_key($arg = null)
  * @method static string|void recaptcha_secret_key($arg = null)
  * @method static string|void recaptcha_type($arg = null)
@@ -419,7 +471,10 @@ class System extends ModelBase
         try {
             $driver = static::storeDriver();
             if ($driver === 'file') {
-                static::store()->getStore()->flush();
+                // emptied whole: the restart signal of the queue put back (ISS02908)
+                \Exceedone\Exment\Services\QueueWorker::keepRestartSignal(function () {
+                    static::store()->getStore()->flush();
+                });
             } elseif ($driver === 'database') {
                 $default = strval(config('cache.default'));
                 $prefix = strval(Cache::store()->getStore()->getPrefix()) . static::STORE_KEY_PREFIX;
@@ -580,9 +635,14 @@ class System extends ModelBase
             } elseif ($type == 'file') {
                 $value = is_null($value) ? null : Storage::disk(config('admin.upload.disk'))->url($value);
             } elseif ($type == 'password') {
-                try {
-                    $value = is_null($value) ? null : decrypt($value);
-                } catch (\Exception $ex) {
+                if (boolval(array_get($setting, 'data_key'))) {
+                    // the keys of the encrypted columns when the site has them (ISS02929)
+                    $value = is_null($value) ? null : \Exceedone\Exment\Services\Encryption\Secrets::decrypt(strval($value));
+                } else {
+                    try {
+                        $value = is_null($value) ? null : decrypt($value);
+                    } catch (\Exception $ex) {
+                    }
                 }
             }
             return $value;
@@ -622,7 +682,11 @@ class System extends ModelBase
                 Storage::disk(config('admin.upload.disk'))->delete($old_value);
             }
         } elseif ($type == 'password') {
-            $system->system_value = is_null($value) ? null : encrypt($value);
+            // "data_key": with the keys of the encrypted columns when the site has them (ISS02929),
+            // else with APP_KEY as before (the bare payload, as the other secrets)
+            $system->system_value = is_null($value) ? null : (boolval(array_get($setting, 'data_key'))
+                ? \Exceedone\Exment\Services\Encryption\Secrets::encrypt(strval($value), false)
+                : encrypt($value));
         } else {
             $system->system_value = $value;
         }

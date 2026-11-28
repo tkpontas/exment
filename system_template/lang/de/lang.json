@@ -289,6 +289,17 @@
                 {
                     "column_name": "send_datetime",
                     "column_view_name": "Versanddatum"
+                },
+                {
+                    "column_name": "send_result",
+                    "column_view_name": "Sendeergebnis",
+                    "options": {
+                        "select_item_valtext": "sent,Gesendet\nfailed,Fehlgeschlagen"
+                    }
+                },
+                {
+                    "column_name": "send_error",
+                    "column_view_name": "Sendefehler"
                 }
             ]
         },
@@ -501,11 +512,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "Benachrichtigung"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "Zellstil-Vorlagen"
         },
@@ -513,6 +519,11 @@
             "menu_type": "system",
             "menu_name": "template",
             "title": "Vorlage"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "trash",
+            "title": "Papierkorb"
         },
         {
             "menu_type": "parent_node",
@@ -556,6 +567,16 @@
         },
         {
             "menu_type": "system",
+            "menu_name": "safety_check_setting",
+            "title": "Einstellungen zur Sicherheitsabfrage"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "meili_setting",
+            "title": "Einstellungen der Volltextsuche"
+        },
+        {
+            "menu_type": "system",
             "menu_name": "feature",
             "title": "Funktionsverwaltung"
         },
@@ -578,6 +599,21 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "Sicherheitsprüfung"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "Geplante Aufgaben"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "sync",
+            "title": "Datensynchronisierung"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "log_management",
+            "title": "Protokollverwaltung"
         },
         {
             "menu_type": "system",

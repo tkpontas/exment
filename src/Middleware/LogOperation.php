@@ -28,12 +28,13 @@ class LogOperation extends BaseLogOperation
                 'user_id' => ($login_user ? $login_user->id : 0),
                 'path'    => substr(static::hidePathParams($request->path()), 0, 255),
                 'method'  => $request->method(),
-                'ip'      => $request->getClientIp(),
+                'ip'      => \Exceedone\Exment\Services\LogManagement\LogPrivacy::ip($request->getClientIp()),
                 'input'   => json_encode(static::maskInputArray((array)$request->input(), $request->path())),
             ];
 
+            // written after the response (ISS02903); a row that cannot be written is kept in a file
             try {
-                OperationLogModel::create($log);
+                \Exceedone\Exment\Services\LogManagement\LogWriter::insert(OperationLogModel::class, $log);
             } catch (\Exception $exception) {
                 // pass
             }
@@ -56,6 +57,18 @@ class LogOperation extends BaseLogOperation
     }
 
     /**
+     * The methods kept: as the config says, and as the log management says (ISS02839: only the
+     * requests that change something, when it is chosen).
+     *
+     * @param string $method
+     * @return bool
+     */
+    protected function inAllowedMethods($method)
+    {
+        return \Exceedone\Exment\Services\LogManagement\LogSettings::logsMethod(strval($method)) && parent::inAllowedMethods($method);
+    }
+
+    /**
      * Determine if the request has a URI that should pass through CSRF verification.
      *
      * @param \Illuminate\Http\Request $request
@@ -68,6 +81,10 @@ class LogOperation extends BaseLogOperation
             return true;
         }
         if ($request->is(ltrim(admin_base_path('safety/answer'), '/'))) {
+            return true;
+        }
+        // the log of the browsers is a log itself (ISS02904)
+        if ($request->is(ltrim(admin_base_path('webapi/browser_log'), '/'))) {
             return true;
         }
         // the MCP server logs each tool call itself, marked "MCP" (Services\Mcp\McpServer)
@@ -89,6 +106,11 @@ class LogOperation extends BaseLogOperation
      */
     public static function maskInputArray(array $data, string $path): array
     {
+        // the logs keep no values unless "keep the input in the logs" is on (ISS02839)
+        if (!\Exceedone\Exment\Services\LogManagement\LogPrivacy::storeInput()) {
+            return \Exceedone\Exment\Services\LogManagement\LogPrivacy::keysOnly($data);
+        }
+        $data = \Exceedone\Exment\Services\LogManagement\LogPrivacy::maskSecrets($data);
         $data = static::maskArrayRecursive($data, static::getHideColumnsByPath($path));
 
         // laravel-admin posts the previous page url as "_previous_"; it can contain
@@ -171,6 +193,18 @@ class LogOperation extends BaseLogOperation
             // follower, the secret authenticates the webhook.
             'system_line_channel_token',
             'system_line_channel_secret',
+            // the address of the Teams workflow: whoever has it can post to the chats
+            'system_teams_workflow_url',
+            'system_teams_workflow_url_new',
+            // the LINE WORKS app: whoever has them posts as its bot
+            'system_lineworks_client_secret',
+            'system_lineworks_client_secret_new',
+            'system_lineworks_private_key',
+            'system_lineworks_private_key_new',
+            // the application of the mail with OAuth (ISS02913)
+            'system_mail_oauth_client_secret',
+            // the refresh token of the mailbox (Google): whoever has it sends mail as the mailbox
+            'system_mail_oauth_refresh_token',
         ];
     }
 

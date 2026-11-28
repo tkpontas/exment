@@ -4,6 +4,7 @@ namespace Exceedone\Exment\Model;
 
 use Exceedone\Exment\Database\Eloquent\ExtendedBuilder;
 use Exceedone\Exment\Enums\CopyColumnType;
+use Exceedone\Exment\Services\Calc\CalcEvaluator;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -156,6 +157,11 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
                         true
                     );
                 }
+
+                // the sums and counts of the children copied (ISS02870)
+                if (count(CalcEvaluator::recalculate($to_custom_value)) > 0) {
+                    $to_custom_value->saveOrFail();
+                }
             }
 
             return true;
@@ -196,18 +202,35 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
      *
      * The admin picks what the brackets say: the copy-from table, their own label,
      * or "auto" - nothing, or the copy-from table when the form has more than one
-     * such button.
+     * such button (and the button label of each, when two or more copy from the same
+     * table, #2274).
      *
      * @param CustomCopy $copy
      * @param bool $several
+     * @param iterable<CustomCopy>|null $copies the settings whose buttons are on the same form
      * @return string
      */
-    public static function getCreateLabel(CustomCopy $copy, bool $several): string
+    public static function getCreateLabel(CustomCopy $copy, bool $several, ?iterable $copies = null): string
     {
         $type = $copy->getOption('create_label_type') ?? static::CREATE_LABEL_AUTO;
         $label = $copy->getOption('create_label');
         if ($type == static::CREATE_LABEL_LABEL && is_string($label) && trim($label) !== '') {
             return strval(exmtrans('custom_copy.copy_from.button_table', trim($label)));
+        }
+        // Auto, and other settings on the form copy from the same table: the table's name
+        // would be the same on each, so the button label of the setting tells them apart,
+        // unless it is empty or the default "コピー" (#2274).
+        if ($type != static::CREATE_LABEL_TABLE && $several && isset($copies)) {
+            $same = 0;
+            foreach ($copies as $other) {
+                if (intval($other->from_custom_table_id) === intval($copy->from_custom_table_id)) {
+                    $same++;
+                }
+            }
+            $button = $copy->getOption('label');
+            if ($same > 1 && is_string($button) && trim($button) !== '' && trim($button) !== exmtrans('common.copy')) {
+                return strval(exmtrans('custom_copy.copy_from.button_table', trim($button)));
+            }
         }
         if ($type == static::CREATE_LABEL_TABLE || $several) {
             return strval(exmtrans('custom_copy.copy_from.button_table', $copy->from_custom_table->table_view_name));
@@ -226,11 +249,14 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
      */
     public function makeNewModel($from_custom_value)
     {
-        return static::makeCopyModel(
+        $to_custom_value = static::makeCopyModel(
             $this->custom_copy_columns,
             $this->to_custom_table,
             $from_custom_value
         );
+        // the calc columns from the values copied, as the form would show them (ISS02870)
+        CalcEvaluator::recalculate($to_custom_value);
+        return $to_custom_value;
     }
 
     // @phpstan-ignore-next-line
@@ -258,6 +284,9 @@ class CustomCopy extends ModelBase implements Interfaces\TemplateImporterInterfa
                 }
             }
         }
+        // the calc columns from the values copied and typed in the dialog: the dialog has no
+        // calc of the form (ISS02870)
+        CalcEvaluator::recalculate($to_custom_value);
         // save
         $to_custom_value->saveOrFail();
         return $to_custom_value;

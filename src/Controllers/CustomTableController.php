@@ -175,7 +175,7 @@ class CustomTableController extends AdminControllerBase
         $grid = new Grid(new CustomTable());
         $grid->column('table_name', exmtrans("custom_table.table_name"))->sortable();
         $grid->column('table_view_name', exmtrans("custom_table.table_view_name"))->sortable();
-        $grid->column('order', exmtrans("custom_table.order"))->sortable()->editable();
+        $grid->column('order', exmtrans("custom_table.order"))->sortable()->text();
 
         $grid->tools(function (Grid\Tools $tools) {
             $tools->disableBatchActions();
@@ -308,9 +308,17 @@ class CustomTableController extends AdminControllerBase
             $form->number('revision_count', exmtrans("custom_table.revision_count"))->help(exmtrans("custom_table.help.revision_count"))
                 ->min(0)
                 ->max(500)
-                ->default(config('exment.revision_count', 100))
+                ->default(config('exment.revision_count_default', 100))
                 ->attribute(['data-filter' => json_encode(['key' => 'options_revision_flg', 'value' => "1"])])
             ;
+            // the deleted data deleted for good after these days, kept in the archive (ISS00147)
+            if (!isset($id) || \Exceedone\Exment\Services\TrashPurge::purgeable(CustomTable::getEloquent($id))) {
+                $form->number(\Exceedone\Exment\Services\TrashPurge::OPTION, exmtrans("custom_table.deleted_keep_days"))
+                    ->help(exmtrans("custom_table.help.deleted_keep_days"))
+                    ->min(0)
+                    ->rules('nullable|integer|min:0')
+                ;
+            }
 
             $form->select('data_submit_redirect', exmtrans("system.data_submit_redirect"))
                 ->options(DataSubmitRedirectEx::transKeyArray("custom_table.data_submit_redirect_options"))
@@ -340,6 +348,9 @@ class CustomTableController extends AdminControllerBase
                 $form->switchbool('editable_with_parent', exmtrans("custom_table.editable_with_parent"))->help(exmtrans("custom_table.help.editable_with_parent"))
                     ->default("1");
             }
+
+            // the name in the other languages (ISS02859)
+            \Exceedone\Exment\Services\NameLocales::addFields($form, exmtrans("custom_table.table_view_name"));
         })->disableHeader()->preserveExistingValues();
 
         // if create table, show menulist
@@ -596,6 +607,13 @@ HTML;
                 ->default('default')
                 ->options(exmtrans('custom_table.custom_column_multi.gridrow_select_options'))
             ;
+
+            // the related tables the related search shows, and their order (#1570)
+            if (isset($custom_table)) {
+                $form->relationSearchList(\Exceedone\Exment\Services\Search\RelationSearchSetting::OPTION_NAME, exmtrans('custom_table.relation_search_label'))
+                    ->customTable($custom_table)
+                    ->help(exmtrans('custom_table.help.relation_search_label'));
+            }
 
             if (boolval(config('exment.expart_mode', false))) {
                 $form->text('table_label_format', exmtrans("custom_table.custom_column_multi.table_label_format"))

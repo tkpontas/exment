@@ -7,6 +7,9 @@ use Exceedone\Exment\Exceptions\InvalidZipEntryException;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\LoginUser;
 use Exceedone\Exment\Model\System;
+use Exceedone\Exment\Services\FeaturePacks;
+use Exceedone\Exment\Services\Features;
+use Exceedone\Exment\Services\Login\PasswordPolicy;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Services\SystemRequire\Security\SecurityCheck;
 use Exceedone\Exment\Services\SystemRequire\Tuning\AutoTuning;
@@ -45,6 +48,15 @@ class InitializeForm
                 ->options($autoItems)
                 ->default(array_keys($autoItems))
                 ->help(exmtrans('tuning.auto.install_help'));
+        }
+
+        // the features that install a set of tables (as sales): chosen here, installed after the setup is saved
+        $packs = $this->featurePackOptions();
+        if (count($packs) > 0) {
+            $form->exmheader(exmtrans('feature.pack_install_header'))->hr();
+            $form->checkbox('feature_packs', exmtrans('feature.pack_install_label'))
+                ->options($packs)
+                ->help(exmtrans('feature.pack_install_help'));
         }
         return view('exment::initialize.content', [
             'content'=> $form->render(),
@@ -94,6 +106,9 @@ class InitializeForm
             // add system role
             System::system_admin_users([$user->getUserId()]);
 
+            // the recommended password policy for a new site (EXMENT_PASSWORD_POLICY_NEW_SITE)
+            PasswordPolicy::applyNewSite();
+
             // add system initialized flg.
             System::initialized(1);
 
@@ -116,7 +131,19 @@ class InitializeForm
                 \Log::error($ex);
             }
 
+            // the features chosen on the screen (as sales): a failure does not stop the setup
+            // (it is logged, and the feature can be turned on later in Feature management)
+            $failedPacks = [];
+            try {
+                $failedPacks = FeaturePacks::installChosen($request->get('feature_packs', []));
+            } catch (\Throwable $ex) {
+                \Log::error($ex);
+            }
+
             admin_toastr(trans('admin.save_succeeded'));
+            if (count($failedPacks) > 0) {
+                admin_toastr(exmtrans('feature.pack_failed', ['name' => esc_html(implode(', ', $failedPacks))]), 'error');
+            }
             $this->guard()->login($loginuser);
 
             // set session for 2factor
@@ -133,8 +160,8 @@ class InitializeForm
                 if ($after['other'] > 0) {
                     admin_warning(
                         exmtrans('security_check.header'),
-                        e(exmtrans('security_check.after_initialize', ['count' => $after['other']]))
-                            . ' <a href="' . e(admin_url('security_check')) . '">' . e(exmtrans('security_check.open')) . '</a>'
+                        admin_html_message(e(exmtrans('security_check.after_initialize', ['count' => $after['other']]))
+                            . ' <a href="' . e(admin_url('security_check')) . '">' . e(exmtrans('security_check.open')) . '</a>')
                     );
                 }
             } catch (\Throwable $ex) {
@@ -157,6 +184,26 @@ class InitializeForm
                 'initialize_error' => exmtrans('install.error.initialize_error'),
             ]);
         }
+    }
+
+    /**
+     * The features with a pack the new site may turn on (the server may keep some off).
+     *
+     * @return array<string, string> the key => the question ("Use Sales (CRM / SFA)?")
+     */
+    public function featurePackOptions(): array
+    {
+        $options = [];
+        try {
+            foreach (FeaturePacks::keys() as $key) {
+                if (!Features::locked($key)) {
+                    $options[$key] = exmtrans('feature.pack_install_question', ['name' => Features::label($key)]);
+                }
+            }
+        } catch (\Throwable $ex) {
+            \Log::warning('[Exment] the features of the setup: ' . $ex->getMessage());
+        }
+        return $options;
     }
 
     // @phpstan-ignore-next-line

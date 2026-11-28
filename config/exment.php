@@ -83,16 +83,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Security check: the APP_KEY of the download zip
+    |--------------------------------------------------------------------------
+    |
+    | The zip of Exment writes here the SHA-256 of the APP_KEY in its .env. While APP_KEY is still
+    | that one (php artisan key:generate was not run), the security check says so.
+    */
+    'shipped_app_key_sha256' => env('EXMENT_SHIPPED_APP_KEY_SHA256'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Chart of a list view: max rows
     |--------------------------------------------------------------------------
     |
     | A chart of a list view draws one point per row. It reads at most this many
-    | rows (0 = no limit, the default: an update does not change what a chart
-    | draws). A site with large tables may set it, as 1000; a chart of a large
-    | table is better made with a summary view.
+    | rows and says so when there are more (ISS00169: 5000 by default, more points
+    | than a chart can show; before 7.2.6 every row was read and a large table ran
+    | out of memory or time). 0 = no limit. A chart of a large table is better made
+    | with a summary view.
     |
     */
-    'chart_list_max_rows' => env('EXMENT_CHART_LIST_MAX_ROWS', 0),
+    'chart_list_max_rows' => env('EXMENT_CHART_LIST_MAX_ROWS', 5000),
 
     /*
     |--------------------------------------------------------------------------
@@ -250,12 +261,25 @@ return [
     */
     'password_rule' => [
         // set regex rule
-        'rule' => '^[ -~]+$',
+        'rule' => env('EXMENT_PASSWORD_RULE', '^[ -~]+$'),
         // set min length
-        'min' => '8',
-        // set max length
-        'max' => '32',
+        'min' => env('EXMENT_PASSWORD_RULE_MIN', '8'),
+        // set max length (64: long pass phrases can be used)
+        'max' => env('EXMENT_PASSWORD_RULE_MAX', '64'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | password policy for a new site
+    |--------------------------------------------------------------------------
+    |
+    | true: a new site starts with the recommended password policy (Login
+    | settings): complex passwords, a change at the first login and no reuse
+    | of the last 5 passwords. Set when the site is initialized; a site that
+    | is there already is not changed. An administrator can change them later.
+    |
+    */
+    'password_policy_new_site' => env('EXMENT_PASSWORD_POLICY_NEW_SITE', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -366,6 +390,10 @@ return [
     */
     'login_2factor_valid_period' =>  env('EXMENT_LOGIN_2FACTOR_VALID_PERIOD', 10),
 
+    // the mails of the 2-step verification: the country and the region from the headers of the CDN in
+    // front of the site (CloudFront, Cloudflare). Only with a CDN that sets them: anyone could send them.
+    'login_location_headers' => env('EXMENT_LOGIN_LOCATION_HEADERS', false),
+
     /*
     |--------------------------------------------------------------------------
     | Login Provider
@@ -405,6 +433,39 @@ return [
     'backup_info' => [
         'mysql_dir' => env('EXMENT_MYSQL_BIN_DIR'),
         'def_file' => 'table_definition.sql',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | The runs of the backup and the restore (ISS02943)
+    |--------------------------------------------------------------------------
+    |
+    | use_queue: a backup of the screen goes to the queue when its worker runs (else it runs in
+    |   the request, as before). A restore always runs where it is asked.
+    | stale_minutes: a run without a heartbeat for this long has stopped ("stalled"): another may
+    |   start.
+    | keep_runs: the runs kept in the history (with their logs).
+    | log_max_bytes: the size of the log of a run; then only its warnings and errors.
+    | notify: the result told to the system administrators (the bell and a mail).
+    | job_timeout: the seconds a backup of the queue may take.
+    |
+    */
+    'backup' => [
+        'use_queue' => env('EXMENT_BACKUP_USE_QUEUE', true),
+        'stale_minutes' => env('EXMENT_BACKUP_STALE_MINUTES', 30),
+        'keep_runs' => env('EXMENT_BACKUP_KEEP_RUNS', 100),
+        'log_max_bytes' => env('EXMENT_BACKUP_LOG_MAX_BYTES', 1048576),
+        'notify' => env('EXMENT_BACKUP_NOTIFY', true),
+        'job_timeout' => env('EXMENT_BACKUP_JOB_TIMEOUT', 21600),
+        'save_interval' => 1.0,
+        // the backups made before a restore that are kept
+        'keep_safety' => env('EXMENT_BACKUP_KEEP_SAFETY', 3),
+        // a restore does not write again a file that is the same already (its size and its hash)
+        'skip_unchanged' => env('EXMENT_BACKUP_SKIP_UNCHANGED', true),
+        // the free space of the backup disk shown as low under this (or two of the largest backup)
+        'low_free_bytes' => env('EXMENT_BACKUP_LOW_FREE_BYTES', 1073741824),
+        // a backup is checked before it is restored (its sha256, every entry read)
+        'verify' => env('EXMENT_BACKUP_VERIFY', true),
     ],
 
     /*
@@ -687,6 +748,18 @@ return [
     |
     */
     'decay_minutes' => env('EXMENT_DECAY_MINUTES', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | IPv6 prefix of the rate limits
+    |--------------------------------------------------------------------------
+    |
+    | The rate limits and the login lockouts count an IPv6 address as its network of this
+    | prefix (a client has a /64 and can take a new address in it for every try). 128 counts
+    | each address.
+    |
+    */
+    'ipv6_limit_prefix' => env('EXMENT_IPV6_LIMIT_PREFIX', 64),
 
     /*
     |--------------------------------------------------------------------------
@@ -1109,6 +1182,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | The archive of the deleted data deleted for good (ISS00147)
+    |--------------------------------------------------------------------------
+    | exment:trash-purge deletes for good the deleted data older than the days of its table
+    | (the table setting), after writing it to deleted_archives and copying its files.
+    | keep_days: the days an archive is kept (0: kept forever).
+    | disk: the disk of the copied files (empty: the disk of the attachments), folder: the folder in it.
+    */
+    'deleted_archive_keep_days' => env('EXMENT_DELETED_ARCHIVE_KEEP_DAYS', 365),
+    'deleted_archive_disk' => env('EXMENT_DELETED_ARCHIVE_DISK'),
+    'deleted_archive_folder' => env('EXMENT_DELETED_ARCHIVE_FOLDER', 'archives/deleted'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Document upload max count one request
     |--------------------------------------------------------------------------
     |
@@ -1348,6 +1434,17 @@ return [
     'api_key_max_per_user' => env('EXMENT_API_KEY_MAX_PER_USER', 10),
 
     /*
+    | How often the use of a key (when, from where, how many times) is written on the key: at
+    | most once in this many seconds a key. The uses in between are counted in the cache and
+    | written with the next write; the pages of the keys show them already. 0 (default): every
+    | call, as always.
+    | Only for a cache in memory (Redis, Memcached) and many calls: with the cache in files it is
+    | not faster (measured), and the uses not written yet are lost when the cache is emptied
+    | (cache:clear, a deploy), so the count is then about, not exact.
+    */
+    'api_key_touch_seconds' => env('EXMENT_API_KEY_TOUCH_SECONDS', 0),
+
+    /*
     |--------------------------------------------------------------------------
     | MCP server (api/mcp)
     |--------------------------------------------------------------------------
@@ -1356,6 +1453,28 @@ return [
     */
     'mcp_max_rows' => env('EXMENT_MCP_MAX_ROWS', 50),
     'mcp_calls_per_minute' => env('EXMENT_MCP_CALLS_PER_MINUTE', 60),
+
+    /*
+    | The longest a search_data call reads records, in seconds: then it answers with what it has
+    | and next_cursor to read on. 0: no limit (the time of PHP only).
+    */
+    'mcp_search_seconds' => env('EXMENT_MCP_SEARCH_SECONDS', 0),
+
+    /*
+    | The Content-Type of the API checked strictly (ISS02915 #5): a POST, PUT or PATCH to api/* and
+    | api/mcp is application/json, or multipart/form-data on the paths below (below the prefix of
+    | the API); else 415 (code 114). Off by default.
+    */
+    'api_strict_content_type' => env('EXMENT_API_STRICT_CONTENT_TYPE', false),
+    'api_strict_content_type_multipart' => ['document/*'],
+
+    /*
+    | When the notifications of a saved record are made (ISS02906): queue (by the queue worker),
+    | after_response (after the answer is sent, in the same process) or sync (while the save waits,
+    | as before 7.3). Not set: queue when QUEUE_CONNECTION is not sync, else after_response in a
+    | request and sync in a command.
+    */
+    'notify_mode' => env('EXMENT_NOTIFY_MODE', 'auto'),
 
     /*
     |--------------------------------------------------------------------------
@@ -1479,6 +1598,17 @@ return [
     // (comma separated), e.g. "localhost,chat.internal"
     'notify_webhook_allow_hosts' => env('EXMENT_NOTIFY_WEBHOOK_ALLOW_HOSTS', ''),
 
+    // the seconds between the tries of a JSON webhook (ISS02912) when there is no queue worker
+    // (QUEUE_CONNECTION=sync); a worker waits 60 and 300 seconds (JsonWebhookJob::$backoff)
+    'notify_webhook_retry_seconds' => [1, 2],
+
+    // LINE WORKS API 2.0 (ISS00114, Services\LineWorks): the addresses (the test environment of
+    // a region may differ)
+    'lineworks' => [
+        'auth_url' => env('EXMENT_LINEWORKS_AUTH_URL', 'https://auth.worksmobile.com/oauth2/v2.0/token'),
+        'api_url' => env('EXMENT_LINEWORKS_API_URL', 'https://www.worksapis.com/v1.0'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | X-Frame-Options of the admin pages
@@ -1533,6 +1663,118 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Temporary raises of the API rate limit (ISS00442)
+    |--------------------------------------------------------------------------
+    | The page "API rate limit raises" (the feature api_rate_raise, admin settings → API):
+    | a system administrator lets a user or an API client make more requests per minute
+    | until a time, for an import or a move of data.
+    | api_max_rate_limit_ceiling: the most requests per minute a raise may give (a SaaS sets
+    |   it for its tenants). Empty: no ceiling (on premises).
+    | api_rate_raise_max_hours: the longest a raise may last, in hours (default 24).
+    */
+    'api_max_rate_limit_ceiling' => env('EXMENT_API_MAX_RATE_LIMIT_CEILING'),
+    'api_rate_raise_max_hours' => env('EXMENT_API_RATE_RAISE_MAX_HOURS', 24),
+
+    /*
+    |--------------------------------------------------------------------------
+    | The rate limit in points (ISS02885 #5, Services\ApiCost)
+    |--------------------------------------------------------------------------
+    | A heavy call counts more than a light one: a list of records 1 + 1 for every 50 rows,
+    | a search 1 more, a view list 2 + 1 for every 50 rows, children / parents 1 more each,
+    | total=0 1 less; MCP search_data 1 + 1 for every 50 rows of its limit, q 1 more. The
+    | limits per minute (api_max_rate_limit, its raises, mcp_calls_per_minute) are read as
+    | points.
+    | false (default): every call is 1, as before. true: in points. log: limited as before,
+    |   the points counted beside, and a client over the limit in points is logged.
+    */
+    'api_rate_cost' => env('EXMENT_API_RATE_COST', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | The keys of the encrypted columns (ISS00148, Services\Encryption\DataKeys)
+    |--------------------------------------------------------------------------
+    | "id:key" pairs, the key 32 bytes in base64, the first one encrypting:
+    |   DATA_ENCRYPTION_KEYS="k2:...,k1:..."   (php artisan exment:data-key generate)
+    | Not APP_KEY, and not named EXMENT_*: a backup keeps those, and a backup alone must not
+    | read the encrypted values. Keep a copy of the keys in a safe place: a value whose key is
+    | lost cannot be read again.
+    */
+    'data_encryption_keys' => env('DATA_ENCRYPTION_KEYS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Where the keys of the encrypted columns come from (ISS02929, Encryption\KeyProviders)
+    |--------------------------------------------------------------------------
+    | env (default): DATA_ENCRYPTION_KEYS above, as before.
+    | aws_kms: EXMENT_DATA_KEY_WRAPPED="k2:<base64 CiphertextBlob>,k1:..." (data keys wrapped by
+    |   the KMS key EXMENT_DATA_KEY_KMS_KEY_ID; exment:data-key generate makes one), opened with
+    |   kms:Decrypt by the role of the server; the encryption context has app, key_id and
+    |   EXMENT_DATA_KEY_CONTEXT as "site" (the tenant on SaaS). The AWS SDK: composer require
+    |   aws/aws-sdk-php.
+    | aws_secrets_manager: the secret EXMENT_DATA_KEY_SECRET_ID holds "k2:...,k1:..." (or
+    |   {"keys": "..."}).
+    | vault: EXMENT_DATA_KEY_WRAPPED="k2:vault:v1:...", opened with the Transit key
+    |   EXMENT_DATA_KEY_VAULT_KEY of EXMENT_DATA_KEY_VAULT_ADDR; the token DATA_KEY_VAULT_TOKEN, or
+    |   AppRole (EXMENT_DATA_KEY_VAULT_ROLE_ID, DATA_KEY_VAULT_SECRET_ID). The token and the secret
+    |   id are not named EXMENT_*, so a backup does not keep them.
+    | The keys read are kept in memory only (the request; APCu, encrypted with APP_KEY, for
+    | data_key_cache_seconds when APCu is there).
+    */
+    'data_key_provider' => env('EXMENT_DATA_KEY_PROVIDER', 'env'),
+    'data_key_wrapped' => env('EXMENT_DATA_KEY_WRAPPED', ''),
+    'data_key_context' => env('EXMENT_DATA_KEY_CONTEXT', ''),
+    'data_key_kms_key_id' => env('EXMENT_DATA_KEY_KMS_KEY_ID', ''),
+    'data_key_aws_region' => env('EXMENT_DATA_KEY_AWS_REGION', env('AWS_DEFAULT_REGION', '')),
+    'data_key_secret_id' => env('EXMENT_DATA_KEY_SECRET_ID', ''),
+    'data_key_vault_addr' => env('EXMENT_DATA_KEY_VAULT_ADDR', ''),
+    'data_key_vault_mount' => env('EXMENT_DATA_KEY_VAULT_MOUNT', 'transit'),
+    'data_key_vault_key' => env('EXMENT_DATA_KEY_VAULT_KEY', ''),
+    'data_key_vault_namespace' => env('EXMENT_DATA_KEY_VAULT_NAMESPACE', ''),
+    'data_key_vault_role_id' => env('EXMENT_DATA_KEY_VAULT_ROLE_ID', ''),
+    'data_key_vault_token' => env('DATA_KEY_VAULT_TOKEN', ''),
+    'data_key_vault_secret_id' => env('DATA_KEY_VAULT_SECRET_ID', ''),
+    'data_key_cache_seconds' => env('EXMENT_DATA_KEY_CACHE_SECONDS', 300),
+
+    // the seconds a value shown with the "show" button stays shown before it is masked again
+    'encrypted_reveal_seconds' => env('EXMENT_ENCRYPTED_REVEAL_SECONDS', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | The files of the application log (ISS02839)
+    |--------------------------------------------------------------------------
+    | The mode of a new file of the application log (octal): 0640, the owner writes, its group
+    | reads, nobody else. A server whose cron runs as another user than the web server and
+    | writes the same file needs 0660.
+    */
+    'log_file_permission' => env('EXMENT_LOG_FILE_PERMISSION', '0640'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | How the records of the logs are written (ISS02903)
+    |--------------------------------------------------------------------------
+    | The operation log, the logins and the last use of an API key, without making the response
+    | wait. "after_response" (the default): after the response is sent. "queue": by the queue
+    | (QUEUE_CONNECTION other than sync; without one, after_response). "sync": at once, as before.
+    | A record that cannot be written is kept in storage/logs/exment-log-fallback.log.
+    */
+    'log_write_mode' => env('EXMENT_LOG_WRITE_MODE', 'after_response'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | The database of the logs, their size (ISS02905)
+    |--------------------------------------------------------------------------
+    | log_db_connection: a connection of config/database.php for the log tables (login_logs,
+    | permission_change_logs, browser_logs, data_access_logs, data_access_daily), so that the logs
+    | do not fill the database of the data. Empty: the default connection. A site that has the
+    | tables already: php artisan exment:log-db --copy after setting it.
+    | log_size_warn_mb: a warning on the log management page and in the security check when all
+    | the logs (tables, files, archives) are larger. 0: no warning.
+    */
+    'log_db_connection' => env('EXMENT_LOG_DB_CONNECTION'),
+    'log_size_warn_mb' => env('EXMENT_LOG_SIZE_WARN_MB', 1024),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mask targets for the operation log
     |--------------------------------------------------------------------------
     |
@@ -1583,6 +1825,11 @@ return [
             // LINE Messaging API channel credentials (admin/system?advanced=1)
             'system_line_channel_token',
             'system_line_channel_secret',
+            // the address of the Teams workflow (ISS02863)
+            'system_teams_workflow_url',
+            'system_teams_workflow_url_new',
+            // the application of the mail with OAuth 2.0 (ISS02913)
+            'system_mail_oauth_client_secret',
             // Plugin DB connection password
             'custom_password',
             // Plugin CRUD page auth (key / id+password)
@@ -1597,6 +1844,8 @@ return [
          * which therefore must not go into "mask_columns".
          */
         'mask_columns_by_uri' => [
+            // the answer of Google when the mailbox is connected (ISS02913): the code is a credential
+            'mail_oauth_setting/*' => ['code', 'state'],
             // API client setting screens (admin/api_setting*). "id" IS the oauth
             // client_id and "secret" the client secret (posted by the edit form /
             // grid filter). "client_api_key" is the real api key, posted nested as
@@ -1657,6 +1906,20 @@ return [
         // how often the earthquake feed is watched, in minutes: 1, 5, 10 or 15 (default 5).
         // 5 is enough for a safety check after a quake, and lets "schedule:run" go every 5 minutes.
         'watch_interval' => env('EXMENT_SAFETY_CHECK_WATCH_INTERVAL', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scheduled jobs (ISS02832)
+    |--------------------------------------------------------------------------
+    | The page "Scheduled jobs" (the feature scheduled_jobs) keeps the runs of each job.
+    | keep_runs: how many of the last runs of each job are kept (default 20).
+    | alert_failures: a job whose last runs failed this many times in a row is shown red,
+    |   and the system administrators are told once (the bell and a mail) (default 3).
+    */
+    'scheduled_jobs' => [
+        'keep_runs' => env('EXMENT_SCHEDULED_JOBS_KEEP_RUNS', 20),
+        'alert_failures' => env('EXMENT_SCHEDULED_JOBS_ALERT_FAILURES', 3),
     ],
 
     /*
@@ -1738,4 +2001,16 @@ return [
     'file_server_audit_days' => env('EXMENT_FILE_SERVER_AUDIT_DAYS', 0),
     'file_server_notify' => env('EXMENT_FILE_SERVER_NOTIFY', true),
     'file_server_notify_mail' => env('EXMENT_FILE_SERVER_NOTIFY_MAIL', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | The web installer
+    |--------------------------------------------------------------------------
+    | The install runs in steps (install/step): each request works for about
+    | install_step_seconds (it ends the migration it is in), well under the
+    | timeout of a proxy (nginx: 60 seconds). install_poll_ms: how often the
+    | page asks for the progress while a step is working.
+    */
+    'install_step_seconds' => env('EXMENT_INSTALL_STEP_SECONDS', 15),
+    'install_poll_ms' => env('EXMENT_INSTALL_POLL_MS', 1500),
 ];

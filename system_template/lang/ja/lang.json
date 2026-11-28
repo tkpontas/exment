@@ -289,6 +289,17 @@
                 {
                     "column_name": "send_datetime",
                     "column_view_name": "送信日時"
+                },
+                {
+                    "column_name": "send_result",
+                    "column_view_name": "送信結果",
+                    "options": {
+                        "select_item_valtext": "sent,送信済み\nfailed,失敗"
+                    }
+                },
+                {
+                    "column_name": "send_error",
+                    "column_view_name": "送信エラー"
                 }
             ]
         },
@@ -501,11 +512,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "通知"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "表示プリセット"
         },
@@ -513,6 +519,11 @@
             "menu_type": "system",
             "menu_name": "template",
             "title": "テンプレート"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "trash",
+            "title": "ゴミ箱"
         },
         {
             "menu_type": "parent_node",
@@ -556,6 +567,16 @@
         },
         {
             "menu_type": "system",
+            "menu_name": "safety_check_setting",
+            "title": "安否確認設定"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "meili_setting",
+            "title": "全文検索設定"
+        },
+        {
+            "menu_type": "system",
             "menu_name": "feature",
             "title": "機能の管理"
         },
@@ -578,6 +599,21 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "セキュリティチェック"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "決まった時間の処理"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "sync",
+            "title": "データ同期"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "log_management",
+            "title": "ログの管理"
         },
         {
             "menu_type": "system",

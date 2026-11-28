@@ -298,6 +298,10 @@ class Permission
                 return true;
                 ///// only system permission
             case "system":
+            // the settings once on the detail page of the system settings (#2157)
+            case "safety_check_setting":
+            case "meili_setting":
+            case "mail_oauth_setting":
             case "backup":
             case "login_setting":
             case "database":
@@ -308,8 +312,17 @@ class Permission
             case "security_check":
             case "api_keys":
             case "maintenance":
+            case "scheduled_jobs":
+            case "api_rate_raises":
+            case "sync":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_key_exists('system', $this->permission_details);
+                }
+                return false;
+            // the log management: the system administrators, and Audit to read (ISS02839)
+            case "log_management":
+                if ($this->role_type == RoleType::SYSTEM) {
+                    return array_keys_exists([PermissionEnum::SYSTEM, PermissionEnum::AUDIT], $this->permission_details);
                 }
                 return false;
                 ///// each permissions
@@ -323,6 +336,9 @@ class Permission
                 // no break
             case "plugins":
                 return $this->validatePluginPermission($endpoint);
+            // the trash (ISS00334): who may see the deleted rows of a table at least; the page lists only those tables
+            case "trash":
+                return \Exceedone\Exment\Services\Trash::available();
             case "notify":
                 $user = \Exment::user();
                 return $user ? $user->hasPermissionContainsTable(PermissionEnum::CUSTOM_TABLE) : false;
@@ -365,6 +381,8 @@ class Permission
             case "relation":
             case "copy":
             case "operation":
+            // data maintenance of the table (#1829): the feature is checked by the middleware admin.feature
+            case "data_maintenance":
                 if ($this->role_type == RoleType::SYSTEM) {
                     return array_key_exists('custom_table', $this->permission_details);
                 }

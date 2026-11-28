@@ -222,6 +222,20 @@
   white-space: nowrap;
 }
 
+/* Separator between the values of a multi-value column drawn as shapes
+   (tag, pill, badge, dot, lvl, avatar - #2159). The shapes already tell the
+   values apart, so the word is not shown; it stays in the markup because the
+   grouping and the "filter in this page" read the text of the cell. The
+   empty box is the gap between two shapes. */
+.exm-cell-sep {
+  display: inline-block;
+  width: 4px;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+  vertical-align: middle;
+}
+
 .exm-cell-tag,
 .exm-cell-pill {
   display: inline-block;
@@ -1838,4 +1852,21 @@ body.exm-bulkbar-open .content-wrapper {
 
 .exm-vc-add {
   margin-bottom: 4px;
+}
+
+/* admin-core 2.0: the check boxes of the grid are native ones. iCheck drew an 18px box in the
+   middle of the cell; the same size and place for the native one. */
+input.grid-row-checkbox,
+input.grid-select-all {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.table td:has(> input.grid-row-checkbox),
+.table th:has(> input.grid-select-all),
+.table td:has(> .checkbox input.grid-row-checkbox),
+.table th:has(> .checkbox input.grid-select-all) {
+  vertical-align: middle;
 }

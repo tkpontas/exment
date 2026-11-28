@@ -39,6 +39,16 @@ class SystemController extends AdminControllerBase
     public const SESSION_KEY_RELOAD_PAGE = 'exment_system_reload_page';
 
     /**
+     * The sections of the detail page that have a page of their own now (#2157): the name
+     * of the section (as "?advanced=1&section=meili" or "?advanced=1#meili") => the page.
+     */
+    public const MOVED_SECTIONS = [
+        'safety_check' => 'safety_check_setting',
+        'meili' => 'meili_setting',
+        'meilisearch' => 'meili_setting',
+    ];
+
+    /**
      * What the page frame looks like: the skin and the screen design.
      *
      * @return array<int, mixed>
@@ -58,7 +68,7 @@ class SystemController extends AdminControllerBase
     /**
      * Index interface.
      *
-     * @return Content
+     * @return Content|\Illuminate\Http\RedirectResponse
      */
     public function index(Request $request, Content $content)
     {
@@ -71,6 +81,11 @@ class SystemController extends AdminControllerBase
         }
 
         if ($request->has('advanced')) {
+            // a link to a section that has a page of its own now (#2157)
+            $moved = array_get(static::MOVED_SECTIONS, strval($request->query('section')));
+            if (isset($moved)) {
+                return redirect(admin_url($moved));
+            }
             return $this->formAdvancedBox($request, $content);
         }
 
@@ -141,6 +156,13 @@ class SystemController extends AdminControllerBase
     {
         $this->AdminContent($content);
 
+        // an old link to a moved section ("#meili"): the page of its own (#2157)
+        $movedUrls = [];
+        foreach (static::MOVED_SECTIONS as $section => $uri) {
+            $movedUrls[$section] = admin_url($uri);
+        }
+        \Admin::script('(function () { var moved = ' . json_encode($movedUrls) . '; var hash = window.location.hash.replace(/^#/, ""); if (Object.prototype.hasOwnProperty.call(moved, hash)) { window.location.replace(moved[hash]); } })();');
+
         $form = $this->formAdvanced($request);
         $box = new Box(exmtrans('common.detail_setting'), $form);
 
@@ -199,6 +221,13 @@ class SystemController extends AdminControllerBase
             ->default(5)
             ->help(exmtrans("system.help.datalist_pager_count"));
 
+        // the default of how the left menu opens (ISS02958); a user's own choice wins
+        $form->select('menu_open', exmtrans("system.menu_open"))
+            ->options(\Exceedone\Exment\Services\MenuOpen::options())
+            ->disableClear()
+            ->default(\Exceedone\Exment\Services\MenuOpen::FLYOUT)
+            ->help(exmtrans("system.help.menu_open"));
+
         $form->select('default_date_format', exmtrans("system.default_date_format"))
             ->options(getTransArray(Define::SYSTEM_DATE_FORMAT, "system.date_format_options"))
             ->disableClear()
@@ -219,6 +248,10 @@ class SystemController extends AdminControllerBase
                 })->toArray();
             })
             ->help(exmtrans("system.help.grid_filter_disable_flg"));
+
+        $form->switchbool('grid_inline_edit_available', exmtrans("system.grid_inline_edit_available"))
+            ->default(1)
+            ->help(exmtrans("system.help.grid_inline_edit_available"));
 
         $form->select('system_values_pos', exmtrans("system.system_values_pos"))
             ->default(ShowPositionType::TOP)
@@ -339,32 +372,73 @@ class SystemController extends AdminControllerBase
         // use mail setting
         $this->setNotifyForm($form);
 
-        // full-text search setting
-        $form->exmheader(exmtrans('system.meili'))->hr();
-        $form->text('meili_host', exmtrans('system.meili_host'))->help(exmtrans('system.help.meili_host'));
-        $form->password('meili_key', exmtrans('system.meili_key'))->help(exmtrans('system.help.meili_key'));
-        $form->text('meili_index', exmtrans('system.meili_index'))->help(exmtrans('system.help.meili_index'));
-        $form->switchbool('meili_global_search', exmtrans('system.meili_global_search'))->help(exmtrans('system.help.meili_global_search'));
-        $form->switchbool('meili_realtime_sync', exmtrans('system.meili_realtime_sync'))->help(exmtrans('system.help.meili_realtime_sync'));
-        $form->number('meili_batch_size', exmtrans('system.meili_batch_size'))
-            ->min(1)
-            ->rules(['nullable', 'integer', 'min:1'])
-            ->help(exmtrans('system.help.meili_batch_size'));
-        $form->switchbool('meili_repair_enabled', exmtrans('system.meili_repair_enabled'))->help(exmtrans('system.help.meili_repair_enabled'));
-        $form->text('meili_repair_at', exmtrans('system.meili_repair_at'))
-            ->rules(['nullable', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9]$/'])
-            ->help(exmtrans('system.help.meili_repair_at'));
-        $form->select('meili_filter_mode', exmtrans('system.meili_filter_mode'))
-            ->options(['override' => exmtrans('system.meili_filter_mode_options.override'), 'manual' => exmtrans('system.meili_filter_mode_options.manual')])
-            ->default('override')
-            ->disableClear()
-            ->help(exmtrans('system.help.meili_filter_mode'));
+        // the safety check and the full-text search (Meilisearch) have pages of their own (#2157)
 
         $form->exmheader(exmtrans('system.ip_filter'))->hr();
         $form->descriptionHtml(exmtrans("system.help.ip_filter"));
 
         $form->textarea('web_ip_filters', exmtrans('system.web_ip_filters'))->rows(3);
         $form->textarea('api_ip_filters', exmtrans('system.api_ip_filters'))->rows(3);
+
+        // who the filter of the web pages does not refuse (ISS02915): the API keeps its own filter
+        foreach (['web_ip_filter_exempt_users' => SystemTableName::USER, 'web_ip_filter_exempt_organizations' => SystemTableName::ORGANIZATION] as $key => $tableName) {
+            if ($tableName === SystemTableName::ORGANIZATION && !boolval(System::organization_available())) {
+                continue;
+            }
+            $selected = System::{$key}();
+            $form->multipleSelect($key, exmtrans('system.' . $key))
+                ->help(exmtrans('system.help.' . $key))
+                ->ajax(CustomTable::getEloquent($tableName)->getOptionAjaxUrl())
+                ->options(function ($option) use ($tableName, $selected) {
+                    return CustomTable::getEloquent($tableName)->getSelectOptions([
+                        'selected_value' => $selected,
+                    ]);
+                })
+                ->validationOptions(function ($option) use ($tableName, $selected) {
+                    return CustomTable::getEloquent($tableName)->getSelectOptions([
+                        'selected_value' => $selected,
+                        'all' => true,
+                        'notAjax' => true,
+                    ]);
+                })
+                ->default($selected);
+        }
+        $form->multipleSelect('web_ip_filter_exempt_role_groups', exmtrans('system.web_ip_filter_exempt_role_groups'))
+            ->help(exmtrans('system.help.web_ip_filter_exempt_role_groups'))
+            ->options(function ($option) {
+                return \Exceedone\Exment\Model\RoleGroup::all()->pluck('role_group_view_name', 'id');
+            })
+            ->default(System::web_ip_filter_exempt_role_groups());
+
+        // who may use the API (ISS02915): nothing chosen, every user; the system administrators always
+        $form->exmheader(exmtrans('system.api_users'))->hr();
+        $form->descriptionHtml(exmtrans('system.help.api_users'));
+        foreach (['api_allowed_users' => SystemTableName::USER, 'api_allowed_organizations' => SystemTableName::ORGANIZATION] as $key => $tableName) {
+            if ($tableName === SystemTableName::ORGANIZATION && !boolval(System::organization_available())) {
+                continue;
+            }
+            $selected = System::{$key}();
+            $form->multipleSelect($key, exmtrans('system.' . $key))
+                ->ajax(CustomTable::getEloquent($tableName)->getOptionAjaxUrl())
+                ->options(function ($option) use ($tableName, $selected) {
+                    return CustomTable::getEloquent($tableName)->getSelectOptions([
+                        'selected_value' => $selected,
+                    ]);
+                })
+                ->validationOptions(function ($option) use ($tableName, $selected) {
+                    return CustomTable::getEloquent($tableName)->getSelectOptions([
+                        'selected_value' => $selected,
+                        'all' => true,
+                        'notAjax' => true,
+                    ]);
+                })
+                ->default($selected);
+        }
+        $form->multipleSelect('api_allowed_role_groups', exmtrans('system.api_allowed_role_groups'))
+            ->options(function ($option) {
+                return \Exceedone\Exment\Model\RoleGroup::all()->pluck('role_group_view_name', 'id');
+            })
+            ->default(System::api_allowed_role_groups());
 
         \Exceedone\Exment\Services\ScreenExtensions::call('system.advanced', $form);
 
@@ -529,6 +603,16 @@ class SystemController extends AdminControllerBase
         $form = $advanced ? $this->formAdvanced($request) : $this->formBasic($request);
         if (($response = $form->validateRedirect($request)) instanceof \Illuminate\Http\RedirectResponse) {
             return $response;
+        }
+        // the IP filters: IPv4 and IPv6, an address or a range (ISS02909). A wrong line would
+        // never match, and a filter of wrong lines only refuses everyone.
+        if ($advanced) {
+            foreach (['web_ip_filters', 'api_ip_filters'] as $key) {
+                $invalid = \Exceedone\Exment\Services\IpAddress::invalidRules(strval($request->get($key)));
+                if (count($invalid) > 0) {
+                    return back()->withInput()->withErrors([$key => exmtrans('maintenance.error.ip', ['ip' => implode(', ', $invalid)])]);
+                }
+            }
         }
 
         DB::beginTransaction();

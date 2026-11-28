@@ -10,6 +10,7 @@ use Exceedone\Exment\Model\Plugin;
 use Exceedone\Exment\Model\RoleGroup;
 use Exceedone\Exment\Model\RoleGroupPermission;
 use Exceedone\Exment\Services\DemoMode;
+use Exceedone\Exment\Services\FeaturePacks;
 use Exceedone\Exment\Services\Features;
 use Exceedone\Exment\Services\PluginDistribution\AdminNotices;
 use Exceedone\Exment\Services\PluginDistribution\BundledPlugins;
@@ -123,13 +124,14 @@ class FeatureController extends AdminControllerBase
         }
         try {
             $plugin = $action === 'rollback' ? BundledPlugins::rollback($uuid) : BundledPlugins::install($uuid);
-            admin_toastr(exmtrans($action === 'rollback' ? 'plugin_distribution.rolled_back' : 'plugin_distribution.installed', [
-                'name' => $plugin->plugin_view_name,
-                'version' => $plugin->version,
-            ]));
+            // as HTML: the name and the version escaped
+            admin_toastr(admin_html_message(exmtrans($action === 'rollback' ? 'plugin_distribution.rolled_back' : 'plugin_distribution.installed', [
+                'name' => esc_html($plugin->plugin_view_name),
+                'version' => esc_html($plugin->version),
+            ])));
         } catch (\Throwable $e) {
             \Log::warning('[Exment] the bundled plugin ' . $uuid . ': ' . $e->getMessage());
-            admin_toastr($e->getMessage(), 'error');
+            admin_toastr(admin_html_message(esc_html($e->getMessage())), 'error');
         }
         return redirect(admin_url('feature'));
     }
@@ -158,13 +160,13 @@ class FeatureController extends AdminControllerBase
         }
         try {
             $plugin = BundledPlugins::installUploaded(strval($zip->getRealPath()), strval($json->getRealPath()));
-            admin_toastr(exmtrans('plugin_distribution.installed', [
-                'name' => $plugin->plugin_view_name,
-                'version' => $plugin->version,
-            ]));
+            admin_toastr(admin_html_message(exmtrans('plugin_distribution.installed', [
+                'name' => esc_html($plugin->plugin_view_name),
+                'version' => esc_html($plugin->version),
+            ])));
         } catch (\Throwable $e) {
             \Log::warning('[Exment] an uploaded official plugin: ' . $e->getMessage());
-            admin_toastr($e->getMessage(), 'error');
+            admin_toastr(admin_html_message(esc_html($e->getMessage())), 'error');
         }
         return redirect(admin_url('feature'));
     }
@@ -211,6 +213,20 @@ class FeatureController extends AdminControllerBase
             ];
         }
 
+        // the features with a pack that are turned on now, or that are on with their pack not all
+        // there (an install that stopped on the way): they install it, below
+        // [key => true when it is turned on now]
+        $packsOn = [];
+        foreach (FeaturePacks::keys() as $key) {
+            if (!boolval($values[$key]['enabled'] ?? false)) {
+                continue;
+            }
+            $turnedOn = !Features::setting($key)['enabled'];
+            if ($turnedOn || FeaturePacks::incomplete($key)) {
+                $packsOn[$key] = $turnedOn;
+            }
+        }
+
         $pluginInput = (array)$request->input('plugins', []);
         DB::transaction(function () use (&$values, $pluginInput, $definitions) {
             foreach (Plugin::query()->get() as $plugin) {
@@ -237,6 +253,25 @@ class FeatureController extends AdminControllerBase
             }
         });
 
+        // the packs, after the settings are saved: they make tables (outside of a transaction)
+        foreach ($packsOn as $key => $turnedOn) {
+            try {
+                FeaturePacks::install($key);
+                // the link: HTML, with the text escaped (exment-admin-core shows the other messages as text)
+                admin_success(Features::label($key), admin_html_message(e(exmtrans('feature.pack_installed', ['name' => Features::label($key)]))
+                    . ' <a href="' . e(admin_url('role_group')) . '">' . e(exmtrans('feature.role_group_link')) . '</a>'));
+            } catch (\Throwable $e) {
+                \Log::error($e);
+                // turned on now: off again, the next "use" installs it again. Already on (its pack
+                // was not all there): it stays on for its users, the next save tries again
+                if ($turnedOn) {
+                    FeaturePacks::turnOff($key);
+                }
+                admin_toastr(exmtrans('feature.pack_failed', ['name' => esc_html(Features::label($key))]), 'error');
+                return redirect(admin_url('feature'));
+            }
+        }
+
         admin_toastr(exmtrans('common.message.success_execute'));
         return redirect(admin_url('feature'));
     }
@@ -259,14 +294,33 @@ class FeatureController extends AdminControllerBase
             'who' => $definition['who'],
             // who is not asked: for a plugin, those who may use the plugin; for Exment's own
             // (as Tuning), the system administrators (its page is an admin setting)
-            'who_text' => $definition['who'] ? null : exmtrans(isset($definition['plugin']) ? 'feature.who_plugin' : 'feature.who_system_admin'),
+            'who_text' => $definition['who'] ? null : exmtrans(isset($definition['plugin']) ? 'feature.who_plugin' : (isset($definition['pack']) ? 'feature.who_pack' : 'feature.who_system_admin')),
             'requires' => isset($requires) && Features::exists($requires) ? Features::label($requires) : null,
             'has_menu' => isset($definition['menu']),
             'menu_exists' => isset($definition['menu']) && $this->systemMenuExists(strval($definition['menu'])),
-            'note' => $key === Features::STUDIO ? exmtrans('feature.studio_note') : null,
+            'note' => $key === Features::STUDIO ? exmtrans('feature.studio_note') : (isset($definition['pack']) ? $this->packNote($key) : null),
             'manual_url' => Features::manualUrl($key),
+            // a feature that installs tables, menus... (FeaturePacks)
+            'pack' => isset($definition['pack']),
             'action' => Features::action($key),
         ];
+    }
+
+    /**
+     * The note of a feature that installs a pack, and what to do when it is on with its pack not
+     * all there (saving installs what is missing).
+     */
+    protected function packNote(string $key): string
+    {
+        $note = strval(exmtrans('feature.pack_note'));
+        try {
+            if (Features::setting($key)['enabled'] && FeaturePacks::incomplete($key)) {
+                $note .= ' ' . strval(exmtrans('feature.pack_incomplete'));
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('[Exment] the pack of ' . $key . ': ' . $e->getMessage());
+        }
+        return $note;
     }
 
     /**
@@ -344,7 +398,10 @@ class FeatureController extends AdminControllerBase
                 continue;
             }
             $permission->permissions = $want ? array_merge($list, [Permission::PLUGIN_ACCESS]) : array_values(array_diff($list, [Permission::PLUGIN_ACCESS]));
-            $permission->save();
+            // the history of the changes (ISS02840)
+            \Exceedone\Exment\Services\LogManagement\PermissionChanges::around($groupId, function () use ($permission) {
+                $permission->save();
+            });
         }
     }
 

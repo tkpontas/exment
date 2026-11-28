@@ -289,6 +289,17 @@
                 {
                     "column_name": "send_datetime",
                     "column_view_name": "Fecha de envío"
+                },
+                {
+                    "column_name": "send_result",
+                    "column_view_name": "Resultado del envío",
+                    "options": {
+                        "select_item_valtext": "sent,Enviado\nfailed,Fallido"
+                    }
+                },
+                {
+                    "column_name": "send_error",
+                    "column_view_name": "Error de envío"
                 }
             ]
         },
@@ -501,11 +512,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "Notificación"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "Estilos de celda predefinidos"
         },
@@ -513,6 +519,11 @@
             "menu_type": "system",
             "menu_name": "template",
             "title": "Plantilla"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "trash",
+            "title": "Papelera"
         },
         {
             "menu_type": "parent_node",
@@ -556,6 +567,16 @@
         },
         {
             "menu_type": "system",
+            "menu_name": "safety_check_setting",
+            "title": "Configuración de la confirmación de seguridad"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "meili_setting",
+            "title": "Configuración de la búsqueda de texto completo"
+        },
+        {
+            "menu_type": "system",
             "menu_name": "feature",
             "title": "Gestión de funciones"
         },
@@ -578,6 +599,21 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "Comprobación de seguridad"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "Tareas programadas"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "sync",
+            "title": "Sincronización de datos"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "log_management",
+            "title": "Gestión de registros"
         },
         {
             "menu_type": "system",

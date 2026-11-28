@@ -298,6 +298,12 @@ namespace Exment {
                     isMatch = (pathname == uri);
                 }else if(trimAny(admin_base_path(''), '/') == uri){
                     isMatch = (pathname == uri);
+                }else if(uri.indexOf('*') !== -1){
+                    // "*" is one part of the path, as an id (ex. workflow/*/design, #2156)
+                    const pattern = uri.split('/').map(function(part){
+                        return part === '*' ? '[^/]+' : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    }).join('/');
+                    isMatch = new RegExp('^' + pattern + '(/|$)').test(pathname);
                 }else{
                     isMatch  = pathname.indexOf(uri) === 0;
                 }
@@ -691,6 +697,10 @@ namespace Exment {
                 if ($(ev.target).closest('.exm-edit-pen,td.exm-editing').length > 0) {
                     return;
                 }
+                // the "show" button of an encrypted value (ISS00148) shows it in the list
+                if ($(ev.target).closest('.exm-encrypted-reveal').length > 0) {
+                    return;
+                }
                 if ($(ev.target).closest('.popover').length > 0) {
                     return;
                 }
@@ -741,7 +751,13 @@ namespace Exment {
                     if (clicks > 1) {
                         return;
                     }
-                    rowClickTimer = setTimeout(openRow, 250);
+                    rowClickTimer = setTimeout(function () {
+                        // A slower second click is still a dblclick for the browser (up to the double
+                        // click time of the OS): the inline editor (grid_tools.js) does not open on a
+                        // row that is already being opened (#2167).
+                        (<any>window).__exmRowOpenedAt = Date.now();
+                        openRow();
+                    }, 250);
                     return;
                 }
                 openRow();
@@ -1373,6 +1389,25 @@ namespace Exment {
         private static get DATE_INPUT_SELECTOR(): string {
             return '[data-add-date], input[data-column_type="date"]';
         }
+        private static get DATE_PICKER_ICONS(): any {
+            return {
+                time: 'fa fa-clock-o',
+                date: 'fa fa-calendar',
+                up: 'fa fa-chevron-up',
+                down: 'fa fa-chevron-down',
+                previous: 'fa fa-chevron-left',
+                next: 'fa fa-chevron-right',
+                today: 'fa fa-calendar-check-o',
+                clear: 'fa fa-trash',
+                close: 'fa fa-times'
+            };
+        }
+        /**
+         * Whether the iCheck plugin is loaded. admin-core 2.0 drops it; then checkboxes stay native.
+         */
+        public static hasICheck(): boolean {
+            return !!($ as any).fn && typeof ($ as any).fn.iCheck === 'function';
+        }
         /**
          * Element the datetimepicker is bound to: the .input-group.date wrapper when present, else the element itself.
          */
@@ -1409,8 +1444,10 @@ namespace Exment {
             if ($parent.css('position') === 'static') {
                 $parent.css('position', 'relative');
             }
+            // Font Awesome icons, the same set admin-core's Date field passes: the picker's default icons
+            // are glyphicons, and no glyphicon font is loaded, so its arrows were blank.
             CommonEvent.datePickerTarget($el)
-                .datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $parent })
+                .datetimepicker({ "useCurrent": false, "format": "YYYY-MM-DD", "locale": "ja", "allowInputToggle": true, "widgetParent": $parent, "icons": CommonEvent.DATE_PICKER_ICONS })
                 .addClass('added-datepicker');
             return CommonEvent.findDatePicker($el);
         }
@@ -1492,6 +1529,14 @@ namespace Exment {
          */
         private static addFieldEvent() {
             var SELECTOR = CommonEvent.DATE_INPUT_SELECTOR;
+
+            // admin-core 2.0: flatpickr. It puts its calendar on <body> and places it itself, so the
+            // positioning fixes of the old datetimepicker below are not needed.
+            if (typeof (window as any).flatpickr === 'function') {
+                CommonEvent.addFlatpickrs(SELECTOR);
+                CommonEvent.addCheckFields();
+                return;
+            }
 
             // Lazy init/show (installed once): covers pages where the datetimepicker plugin loads after the initial AddEvent().
             if (!(window as any).__exment_datepicker_lazy_init) {
@@ -1618,8 +1663,41 @@ namespace Exment {
                     CommonEvent.initDatePicker($elem);
                 });
             }
+            CommonEvent.addCheckFields();
+        }
+        /**
+         * The date inputs of Exment (DATE_INPUT_SELECTOR) with a flatpickr calendar, once an input,
+         * yyyy-mm-dd, in the language of the screen (<html lang>).
+         */
+        private static addFlatpickrs(selector: string) {
+            var fp: any = (window as any).flatpickr;
+            var l10ns: any = fp.l10ns || {};
+            var lang = String(document.documentElement.lang || '').toLowerCase().replace('_', '-');
+            var config: any = { dateFormat: 'Y-m-d', allowInput: true };
+            if (l10ns[lang]) {
+                config.locale = lang;
+            }
+            else if (l10ns[lang.split('-')[0]]) {
+                config.locale = lang.split('-')[0];
+            }
+            $(selector).each(function (index: number, elem: any) {
+                if (elem.tagName !== 'INPUT' || elem._flatpickr || !CommonEvent.isExmentDatePickerInput($(elem))) {
+                    return;
+                }
+                fp(elem, config);
+                $(elem).addClass('added-datepicker');
+            });
+        }
+        /**
+         * The check boxes added by Exment ([data-add-icheck]): native ones, iCheck only when a page
+         * still loads it.
+         */
+        private static addCheckFields() {
             $('[data-add-icheck]').not('.added-icheck').each(function (index: number, elem: Element) {
-                $(elem).iCheck({ checkboxClass: 'icheckbox_minimal-blue' });
+                // without iCheck the checkbox stays a native one
+                if (CommonEvent.hasICheck()) {
+                    $(elem).iCheck({ checkboxClass: 'icheckbox_minimal-blue' });
+                }
                 $(elem).addClass('added-icheck');
             });
         }

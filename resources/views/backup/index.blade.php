@@ -81,6 +81,15 @@
     <!-- /.box-body -->
 </div>
 
+<template id="backup-scope-template">
+    <p>{{exmtrans('common.message.execution_takes_time')}}</p>
+    <div style="text-align: left; display: inline-block;" role="radiogroup" aria-label="{{ exmtrans('backup.run.screen.scope') }}">
+        <label style="display: block; font-weight: normal;"><input type="radio" name="backup_scope" value="all" checked> {{ exmtrans('backup.run.screen.scopes.all') }}</label>
+        <label style="display: block; font-weight: normal;"><input type="radio" name="backup_scope" value="database"> {{ exmtrans('backup.run.screen.scopes.database') }}</label>
+        <label style="display: block; font-weight: normal;"><input type="radio" name="backup_scope" value="files"> {{ exmtrans('backup.run.screen.scopes.files') }}</label>
+    </div>
+</template>
+
 <script type="text/javascript">
     function deletefile(id) {
         Exment.CommonEvent.ShowSwal('{{admin_url("backup/delete")}}', {
@@ -117,15 +126,22 @@
             var id = selectedRows().join();
             deletefile(id);
         });
-        $('.grid-select-all').iCheck({checkboxClass:'icheckbox_minimal-blue'});
-        $('.grid-select-all').on('ifChanged', function(event) {
-            if (this.checked) {
-                $('.grid-row-checkbox').iCheck('check');
+        // iCheck triggers only its own ifChanged (no native change), so one event is listened to:
+        // ifChanged while iCheck is loaded, the native change once it is gone (admin-core 2.0)
+        var hasICheck = !!($.fn && $.fn.iCheck);
+        var checkEvent = hasICheck ? 'ifChanged' : 'change';
+        if (hasICheck) {
+            $('.grid-select-all').iCheck({checkboxClass:'icheckbox_minimal-blue'});
+            $('.grid-row-checkbox').iCheck({checkboxClass:'icheckbox_minimal-blue'});
+        }
+        $('.grid-select-all').on(checkEvent, function(event) {
+            if (hasICheck) {
+                $('.grid-row-checkbox').iCheck(this.checked ? 'check' : 'uncheck');
             } else {
-                $('.grid-row-checkbox').iCheck('uncheck');
+                $('.grid-row-checkbox').prop('checked', this.checked).trigger('change');
             }
         });
-        $('.grid-row-checkbox').iCheck({checkboxClass:'icheckbox_minimal-blue'}).on('ifChanged', function () {
+        $('.grid-row-checkbox').on(checkEvent, function () {
             if (this.checked) {
                 $(this).closest('tr').css('background-color', '#ffffd5');
             } else {
@@ -143,9 +159,44 @@
         $('.btn-backup').unbind('click').click(function() {
             Exment.CommonEvent.ShowSwal('{{admin_url("backup/save")}}', {
                 title: "{{exmtrans('backup.message.backup_confirm')}}",
-                text: "{{exmtrans('common.message.execution_takes_time')}}",
+                html: $('#backup-scope-template').html(),
                 confirm:"{{trans('admin.confirm')}}",
-                cancel:"{{trans('admin.cancel')}}"
+                cancel:"{{trans('admin.cancel')}}",
+                // the request runs the backup (or gives it to the queue): the progress is polled meanwhile (ISS02943)
+                postEvent: function (data) {
+                    data.scope = $('.swal2-container input[name="backup_scope"]:checked').val() || 'all';
+                    var $button = $('.btn-backup').prop('disabled', true);
+                    $.ajax({ type: 'POST', url: '{{admin_url("backup/save")}}', data: data })
+                        .done(function (response) {
+                            if (response && response.run && window.ExmentBackupProgress) {
+                                window.ExmentBackupProgress.poll(response.run);
+                            }
+                            if (response && response.result === true && response.queued) {
+                                toastr.info(response.message);
+                                return;
+                            }
+                            if (response && response.result === true) {
+                                toastr.success(response.message);
+                                if (window.ExmentBackupProgress) {
+                                    window.ExmentBackupProgress.reloadSoon();
+                                } else {
+                                    $.pjax.reload('#pjax-container');
+                                }
+                            } else if (response) {
+                                toastr.error(response.message || response.toastr);
+                            }
+                        })
+                        .fail(function (response) {
+                            Exment.CommonEvent.CallbackExmentAjax(response);
+                        })
+                        .always(function () {
+                            $button.prop('disabled', false);
+                        });
+                    if (window.ExmentBackupProgress) {
+                        setTimeout(function () { window.ExmentBackupProgress.poll(null); }, 800);
+                    }
+                    return Promise.resolve();
+                }
             });
         });
 

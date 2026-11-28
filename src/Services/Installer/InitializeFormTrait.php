@@ -9,8 +9,6 @@ use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\Define;
 use Exceedone\Exment\Model\System;
 use Exceedone\Exment\Services\DemoMode;
-use Exceedone\Exment\Services\SafetyCheck\SafetyCheckDefine;
-use Exceedone\Exment\Services\SafetyCheck\SafetyCheckSender;
 use Exceedone\Exment\Services\TemplateImportExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -223,42 +221,41 @@ trait InitializeFormTrait
         $form->display('system_line_webhook_url', exmtrans('system.system_line_webhook_url'))
             ->default(admin_url('line/webhook'));
 
-        $form->exmheader(exmtrans('system.safety_check'))->hr();
-        if (!\Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::SAFETY_CHECK)) {
-            $form->descriptionHtml('<span class="text-warning">' . esc_html(exmtrans('safety.feature_off')) . '</span> <a href="' . esc_html(admin_url('feature')) . '">' . esc_html(exmtrans('feature.open_feature')) . '</a>');
+        // the Teams workflow (ISS02863): the address is a secret. It is not put back on the page:
+        // a new one replaces it, an empty field keeps it
+        $form->exmheader(exmtrans('system.system_teams'))->hr();
+        $form->display('system_teams_workflow_state', exmtrans('system.system_teams_workflow_url'))
+            ->default(is_nullorempty(System::system_teams_workflow_url()) ? exmtrans('system.system_teams_workflow_unset') : exmtrans('system.system_teams_workflow_set'));
+        $form->password('system_teams_workflow_url_new', exmtrans('system.system_teams_workflow_url_new'))
+            ->default('')
+            ->help(exmtrans('system.system_teams_workflow_url_help', ['manual' => getManualUrl('notify_teams')]));
+        $form->switchbool('system_teams_workflow_url_clear', exmtrans('system.system_teams_workflow_url_clear'))
+            ->default(false);
+
+        // the LINE WORKS app (ISS00114), while its feature is used: the secret and the private key
+        // are not put back on the page (a new one replaces it, an empty field keeps it)
+        if (\Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::LINE_WORKS_NOTIFY)) {
+            $form->exmheader(exmtrans('system.system_lineworks'))->hr();
+            $form->descriptionHtml(exmtrans('system.system_lineworks_help', ['manual' => getManualUrl('notify_lineworks')]));
+            $form->text('system_lineworks_client_id', exmtrans('system.system_lineworks_client_id'));
+            foreach (['system_lineworks_client_secret', 'system_lineworks_private_key'] as $secret) {
+                $form->display($secret . '_state', exmtrans('system.' . $secret))
+                    ->default(is_nullorempty(System::{$secret}()) ? exmtrans('system.system_teams_workflow_unset') : exmtrans('system.system_teams_workflow_set'));
+                if ($secret === 'system_lineworks_private_key') {
+                    $form->textarea($secret . '_new', exmtrans('system.system_lineworks_new', ['name' => exmtrans('system.' . $secret)]))->rows(4)->default('');
+                } else {
+                    $form->password($secret . '_new', exmtrans('system.system_lineworks_new', ['name' => exmtrans('system.' . $secret)]))->default('');
+                }
+                $form->switchbool($secret . '_clear', exmtrans('system.system_lineworks_clear', ['name' => exmtrans('system.' . $secret)]))->default(false);
+            }
+            $form->text('system_lineworks_service_account', exmtrans('system.system_lineworks_service_account'));
+            $form->text('system_lineworks_bot_id', exmtrans('system.system_lineworks_bot_id'));
+            $form->select('system_lineworks_user_column', exmtrans('system.system_lineworks_user_column'))
+                ->help(exmtrans('system.help.system_lineworks_user_column'))
+                ->options($this->getUserOrgSlackColumns('user'));
         }
 
-        $form->switchbool('safety_check_auto_enabled', exmtrans('system.safety_check_auto_enabled'))
-            ->help(exmtrans('system.help.safety_check_auto_enabled'));
-
-        $form->select('safety_check_min_scale', exmtrans('system.safety_check_min_scale'))
-            ->help(exmtrans('system.help.safety_check_min_scale'))
-            ->options(SafetyCheckDefine::scaleOptions())
-            ->disableClear()
-            ->default(45);
-
-        $form->number('safety_check_cooldown_minutes', exmtrans('system.safety_check_cooldown_minutes'))
-            ->help(exmtrans('system.help.safety_check_cooldown_minutes'))
-            ->default(60)
-            ->min(1);
-        $form->number('safety_check_comment_window_minutes', exmtrans('system.safety_check_comment_window_minutes'))
-            ->help(exmtrans('system.help.safety_check_comment_window_minutes'))
-            ->default(60)
-            ->min(1);
-        $form->number('safety_check_max_bulletin_age_minutes', exmtrans('system.safety_check_max_bulletin_age_minutes'))
-            ->help(exmtrans('system.help.safety_check_max_bulletin_age_minutes'))
-            ->default(10)
-            ->min(1);
-        $form->number('safety_check_resend_throttle_minutes', exmtrans('system.safety_check_resend_throttle_minutes'))
-            ->help(exmtrans('system.help.safety_check_resend_throttle_minutes'))
-            ->default(5)
-            ->min(0);
-        $form->number('safety_check_answer_url_expire_days', exmtrans('system.safety_check_answer_url_expire_days'))
-            ->help(exmtrans('system.help.safety_check_answer_url_expire_days'))
-            ->default(7)
-            ->required()
-            ->min(0)
-            ->max(SafetyCheckSender::ANSWER_URL_MAX_EXPIRE_DAYS);
+        // the safety check has a page of its own (Controllers\SafetyCheckSettingController, #2157)
     }
 
 
@@ -295,6 +292,36 @@ trait InitializeFormTrait
         // stored one.
         if (array_key_exists('ui_design', $inputs) && !in_array($inputs['ui_design'], Define::SYSTEM_UI_DESIGN, true)) {
             array_forget($inputs, 'ui_design');
+        }
+
+        // the address of the Teams workflow is never on the page: a new one, or cleared, or kept
+        if (array_key_exists('system_teams_workflow_url', $inputs) || $request->has('system_teams_workflow_url_new')) {
+            array_forget($inputs, 'system_teams_workflow_url');
+            $newUrl = trim(strval($request->input('system_teams_workflow_url_new')));
+            if ($newUrl !== '') {
+                if (!preg_match('#\Ahttps://#i', $newUrl) || !\Exceedone\Exment\Services\WebhookUrlGuard::isAllowed($newUrl)) {
+                    return back()->withInput(array_except(get_flash_input(), ['system_teams_workflow_url_new']))->withErrors(['system_teams_workflow_url_new' => exmtrans('notify.message.webhook_url_not_allowed')]);
+                }
+                $inputs['system_teams_workflow_url'] = $newUrl;
+            } elseif (boolval($request->input('system_teams_workflow_url_clear'))) {
+                $inputs['system_teams_workflow_url'] = null;
+            }
+        }
+
+        // the secrets of the LINE WORKS app are never on the page: a new one, or cleared, or kept
+        foreach (['system_lineworks_client_secret', 'system_lineworks_private_key'] as $secret) {
+            if (array_key_exists($secret, $inputs) || $request->has($secret . '_new')) {
+                array_forget($inputs, $secret);
+                $new = trim(strval($request->input($secret . '_new')));
+                if ($new !== '') {
+                    if ($secret === 'system_lineworks_private_key' && openssl_pkey_get_private($new) === false) {
+                        return back()->withInput(array_except(get_flash_input(), [$secret . '_new']))->withErrors([$secret . '_new' => exmtrans('system.system_lineworks_private_key_invalid')]);
+                    }
+                    $inputs[$secret] = $new;
+                } elseif (boolval($request->input($secret . '_clear'))) {
+                    $inputs[$secret] = null;
+                }
+            }
         }
 
         // demo mode: the mail, LINE, search server, IP filter, reCAPTCHA and API settings are kept

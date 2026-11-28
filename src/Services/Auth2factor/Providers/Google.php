@@ -117,14 +117,14 @@ class Google
             $loginuser->email,
             $key
         );
-        $qrSrc = base64_encode(\QrCode::format('png')->size(200)->generate($qrUrl));
+        $qrSrc = base64_encode(\Exceedone\Exment\Facades\QrCodeFacade::format('png')->size(200)->generate($qrUrl));
 
         // android and iphone url
         $urlAndroid = 'https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2';
         $urlIphone = 'https://apps.apple.com/jp/app/google-authenticator/id388497605';
 
-        $qrSrcAndroid = base64_encode(\QrCode::format('png')->size(100)->generate($urlAndroid));
-        $qrSrcIphone = base64_encode(\QrCode::format('png')->size(100)->generate($urlIphone));
+        $qrSrcAndroid = base64_encode(\Exceedone\Exment\Facades\QrCodeFacade::format('png')->size(100)->generate($urlAndroid));
+        $qrSrcIphone = base64_encode(\Exceedone\Exment\Facades\QrCodeFacade::format('png')->size(100)->generate($urlIphone));
 
         return view('exment::auth.2factor.2factor-google-register', $this->getLoginPageData([
             'qrSrc' => $qrSrc,
@@ -164,6 +164,7 @@ class Google
         // validation google 2fa
         if (!$g2fa->verifyKey($key, $verify_code, 5)) {
             $this->incrementLoginAttempts($request);
+            \Exceedone\Exment\Services\LogManagement\LoginRecorder::twoFactorFailed($loginuser);
 
             return back()->withInput()->withErrors([
                 'verify_code' => exmtrans('2factor.message.verify_failed')
@@ -207,7 +208,7 @@ class Google
     protected function throttleKey(\Illuminate\Http\Request $request): string
     {
         $loginuser = \Admin::user();
-        return '2factor|' . ($loginuser ? $loginuser->id : $request->ip());
+        return '2factor|' . ($loginuser ? $loginuser->id : \Exceedone\Exment\Services\IpAddress::limiterKey($request->ip()));
     }
 
     /**

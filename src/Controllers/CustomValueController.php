@@ -10,6 +10,7 @@ use ExmentAdminCore\Admin\Layout\Row;
 use ExmentAdminCore\Admin\Widgets\Box;
 use ExmentAdminCore\Admin\Grid;
 use ExmentAdminCore\Admin\Grid\Exporter;
+use Exceedone\Exment\Services\BackButton;
 use Exceedone\Exment\Enums\ColumnType;
 use Exceedone\Exment\Enums\CustomOperationType;
 use Exceedone\Exment\Enums\ErrorCode;
@@ -49,7 +50,7 @@ use Exceedone\Exment\Services\TableService;
 use Exceedone\Exment\Services\Workflow\WorkflowBulkService;
 use Exceedone\Exment\Enums\WorkflowCommentType;
 use Carbon\Carbon;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Exceedone\Exment\Facades\QrCodeFacade as QrCode;
 use Elibyy\TCPDF\Facades\TCPDF;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
@@ -215,6 +216,17 @@ class CustomValueController extends AdminControllerTableBase
             }
         }
 
+        // who listed or exported the table (ISS02905): one row a list, not one a record shown
+        if (!$modalframe) {
+            \Exceedone\Exment\Services\LogManagement\DataAccessLogs::listed(
+                $this->custom_table,
+                isset($this->custom_view) ? intval($this->custom_view->id) : null,
+                !is_nullorempty($request->get(Exporter::$queryName)) && !GridBase::isImportTemplateRequest($request)
+                    ? \Exceedone\Exment\Model\DataAccessLog::KIND_EXPORT
+                    : \Exceedone\Exment\Model\DataAccessLog::KIND_LIST
+            );
+        }
+
         if (!$modalframe || $modal) {
             Plugin::pluginExecuteEvent(PluginEventType::LOADING, $this->custom_table, [
                 'is_modal' => $modal,
@@ -271,6 +283,9 @@ class CustomValueController extends AdminControllerTableBase
             ]);
         } else {
             $callback = null;
+            // the view the user is on: a free word search shows the "all data" view for it,
+            // and does so again when the list is opened with the same query
+            $state_view = $this->custom_view;
             if ($request->has('query')) {
                 if (!boolval(config('exment.search_keep_default_view', false)) ||
                     !($this->custom_view->view_kind_type == ViewKindType::DEFAULT || $this->custom_view->view_kind_type == ViewKindType::ALLDATA)) {
@@ -314,6 +329,12 @@ class CustomValueController extends AdminControllerTableBase
                 return $content;
             } elseif ($modalframe) {
                 return $grid_item->renderModalFrame();
+            }
+
+            // remember the list as it is shown (view, filter, sort, page, ...): "back to the
+            // list" and the redirect after a save come back to it (ISS00363)
+            if (is_nullorempty($request->get(Exporter::$queryName))) {
+                $this->custom_table->saveGridState($state_view);
             }
 
             $row = new Row($grid);
@@ -372,7 +393,7 @@ class CustomValueController extends AdminControllerTableBase
             })->replicate($model);
             admin_info(
                 exmtrans('custom_copy.copy_from.button'),
-                exmtrans('custom_copy.copy_from.message', esc_html($copy->from_custom_table->table_view_name), esc_html($from_custom_value->getLabel()))
+                admin_html_message(exmtrans('custom_copy.copy_from.message', esc_html($copy->from_custom_table->table_view_name), esc_html($from_custom_value->getLabel())))
             );
         } elseif (!is_null($copy_id = $request->get('copy_id'))) {
             // ignore file and autonumber from target model
@@ -403,6 +424,7 @@ class CustomValueController extends AdminControllerTableBase
             static::DATANAME_CUSTOM_VIEW_NAME => $this->custom_view->view_view_name,
         ]);
         $content->row($row);
+        $this->appendBackToListButton();
 
         Plugin::pluginExecuteEvent(PluginEventType::LOADED, $this->custom_table, [
             'page_type' => PluginPageType::CREATE
@@ -808,26 +830,15 @@ class CustomValueController extends AdminControllerTableBase
     }
 
     /**
-     * A "back to the list" button at the left of the page title of the data show and edit pages,
-     * where it is easy to reach.
-     * It goes where the small "list" button of the box goes (the table's list).
-     * Added by script: the page title is made by the admin layout, which has no place for buttons.
+     * A "back to the list" button at the left of the page title of the data show, create and edit
+     * pages, where it is easy to reach. It goes to the list as the user last saw it (the view,
+     * the filter, the sort and the page: CustomTable::getGridUrl(true), ISS00363).
+     * The button of the other pages is the same (BackButton, added by the Bootstrap middleware),
+     * which leaves these pages to this one.
      */
     protected function appendBackToListButton(): void
     {
-        $url = json_encode($this->custom_table->getGridUrl(true));
-        $label = json_encode(exmtrans('custom_value.back_to_list'));
-        \Admin::script(<<<EOT
-(function () {
-    var h1 = $('#pjax-container .content-header > h1').first();
-    if (!h1.length || h1.find('.exm-back-to-list').length) {
-        return;
-    }
-    var a = $('<a class="btn exm-back-to-list"><i class="fa fa-arrow-left"></i> </a>').attr('href', {$url});
-    a.append(document.createTextNode({$label}));
-    h1.addClass('exm-has-back-to-list').prepend(a);
-})();
-EOT);
+        BackButton::append($this->custom_table->getGridUrl(true), exmtrans('custom_value.back_to_list'));
     }
 
     /**
@@ -846,6 +857,9 @@ EOT);
         if (($response = $this->firstFlow($request, CustomValuePageType::SHOW, $id)) instanceof Response) {
             return $response;
         }
+
+        // who read it (ISS02905)
+        \Exceedone\Exment\Services\LogManagement\DataAccessLogs::read($this->custom_table, $id);
 
         $custom_value = $this->custom_table->getValueModel($id);
 
@@ -875,6 +889,13 @@ EOT);
                 }
                 $show_item->setOptionBoxes($row);
             });
+            // who read and who changed it, for the users with Audit (ISS02905)
+            $box = AuditReportController::recordAccessBox($this->custom_table, intval($id));
+            if (isset($box)) {
+                $content->row(function ($row) use ($box) {
+                    $row->column(12, $box);
+                });
+            }
             $this->appendBackToListButton();
         }
 
@@ -1172,8 +1193,10 @@ EOT);
 
         \Exment::setTimeLimitLong();
 
-        // The button of the record's page is not shown when the form does not
-        // allow editing from display, the bulk update of the list is.
+        // The button of the record's page runs as it is shown
+        // (CustomOperation::enableButton): the table's "Disable on screen" of
+        // editing does not stop it (#2171), the permission to edit the record,
+        // the workflow lock and the operation's conditions do.
         $response = $operation->execute($this->custom_table, $ids, $request->all(), !is_nullorempty($id));
 
         if ($response === true) {
@@ -1282,6 +1305,20 @@ EOT);
             $grid_item->setEmbedRelation($request->get('embed_ptype'), $request->get('embed_pid'));
         }
 
+        // The filters on screen. A board read per column holds the first
+        // slice of each column only, so the filters are run here, on every
+        // read below - the cards, the next slice, the figures (#2185).
+        $state = $request->get('state');
+        if (is_string($state) && $state !== '') {
+            $decoded = json_decode($state, true);
+            if (is_array($decoded)) {
+                $grid_item->setBoardState($decoded);
+            }
+        }
+        if ($request->get('reload')) {
+            return response()->json($grid_item->filteredBoard());
+        }
+
         // the board asks for its figures again after it has written a record,
         // so the totals it shows describe the table as it is now
         if ($request->get('stats')) {
@@ -1351,6 +1388,12 @@ EOT);
             'suuid' => strval($view->suuid),
             'url' => $this->custom_table->getGridUrl(true, ['view' => $view->suuid]),
             'name' => strval($view->view_view_name),
+            'view_type' => intval($view->view_type),
+            // what was made: a user view, or a system view where user views are not used (#2151)
+            'message' => exmtrans(
+                intval($view->view_type) === \Exceedone\Exment\Enums\ViewType::USER ? 'custom_view.message.kanban_view_saved' : 'custom_view.message.kanban_view_saved_system',
+                strval($view->view_view_name)
+            ),
         ]);
     }
 

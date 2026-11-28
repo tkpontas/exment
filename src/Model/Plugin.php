@@ -171,20 +171,39 @@ class Plugin extends ModelBase
             return [];
         }
 
+        $table_name = CustomTable::getEloquent($custom_table)->table_name ?? null;
+
+        // the same in a request (a notification to many users asked once a user, ISS02906):
+        // by the table, the filter and the login user; again after a plugin is saved
+        // (one entry holding all of them, so that clearRequestSession() of it empties them)
+        $hash = implode(':', [$table_name, $filterAccessible ? 1 : 0, \Exment::getUserId() ?? '']);
+        $kept = System::requestSession(static::PLUGINS_BY_TABLE_KEY);
+        $kept = is_array($kept) ? $kept : [];
+        if (array_key_exists($hash, $kept)) {
+            return $kept[$hash];
+        }
+
         $func = $filterAccessible ? 'getAccessableByPluginTypes' : 'getByPluginTypes';
-        return static::{$func}(PluginType::PLUGIN_TYPE_CUSTOM_TABLE())->filter(function ($plugin) use ($custom_table) {
+        $plugins = static::{$func}(PluginType::PLUGIN_TYPE_CUSTOM_TABLE())->filter(function ($plugin) use ($table_name) {
             $target_tables = array_get($plugin, 'options.target_tables', []);
             if (is_nullorempty($target_tables)) {
                 return false;
             }
 
-            if (!in_array(CustomTable::getEloquent($custom_table)->table_name, $target_tables)) {
+            if (!in_array($table_name, $target_tables)) {
                 return false;
             }
 
             return true;
         });
+
+        $kept[$hash] = $plugins;
+        System::setRequestSession(static::PLUGINS_BY_TABLE_KEY, $kept);
+        return $plugins;
     }
+
+    /** the request session of getPluginsByTable() */
+    protected const PLUGINS_BY_TABLE_KEY = 'plugins_by_table';
 
     /**
      * Get Batches filtering hour
@@ -487,7 +506,7 @@ class Plugin extends ModelBase
      */
 
     // @phpstan-ignore-next-line
-    protected function initPluginDisk(string $path = null, ?PluginDiskService $diskService = null, array $options = [])
+    protected function initPluginDisk(?string $path = null, ?PluginDiskService $diskService = null, array $options = [])
     {
         $options = array_merge([
             'sync' => false,
@@ -567,7 +586,7 @@ class Plugin extends ModelBase
                     }
                     // if cannot call class, set error
                     else {
-                        admin_error(exmtrans('common.error'), $plugin->getCannotReadMessage());
+                        admin_error(exmtrans('common.error'), admin_html_message($plugin->getCannotReadMessage()));
                     }
                 }
             }
@@ -609,7 +628,7 @@ class Plugin extends ModelBase
                         // call PluginType::BUTTON as throw_ex is false
                         $class = $plugin->getClass(PluginType::DOCUMENT, $options);
                         if (!isset($class)) {
-                            admin_error(exmtrans('common.error'), $plugin->getCannotReadMessage());
+                            admin_error(exmtrans('common.error'), admin_html_message($plugin->getCannotReadMessage()));
                             break;
                         }
 
@@ -629,7 +648,7 @@ class Plugin extends ModelBase
                         $class = $plugin->getClass(PluginType::BUTTON, $options);
                         $class = isset($class) ? $class : $plugin->getClass(PluginType::TRIGGER, $options);
                         if (!isset($class)) {
-                            admin_error(exmtrans('common.error'), $plugin->getCannotReadMessage());
+                            admin_error(exmtrans('common.error'), admin_html_message($plugin->getCannotReadMessage()));
                             break;
                         }
 
@@ -828,7 +847,8 @@ class Plugin extends ModelBase
                     }
                 }
             } catch (\Throwable $e) {
-                \Log::error('Plugin load failed, skipping plugin [' . $plugin->plugin_name . ']: ' . $e->getMessage());
+                // asked on every page: logged once, not each time
+                \Exceedone\Exment\Services\Plugin\PluginBootGuard::report($plugin, 'plugins loaded', $e);
                 return null;
             }
         })->filter();
@@ -957,8 +977,9 @@ class Plugin extends ModelBase
     // @phpstan-ignore-next-line
     public function getCannotReadMessage()
     {
+        // the alerts and the dashboard box print it as html: the name is text
         return exmtrans('plugin.error.cannot_read', [
-            'plugin_view_name' => $this->plugin_view_name
+            'plugin_view_name' => esc_html($this->plugin_view_name)
         ]);
     }
 
@@ -1031,9 +1052,11 @@ class Plugin extends ModelBase
         // what the plugins registered as features is made again (the routes cached)
         static::saved(function ($model) {
             \Exceedone\Exment\Services\Features::forgetPluginsCache();
+            System::clearRequestSession(static::PLUGINS_BY_TABLE_KEY);
         });
         static::deleted(function ($model) {
             \Exceedone\Exment\Services\Features::forgetPluginsCache();
+            System::clearRequestSession(static::PLUGINS_BY_TABLE_KEY);
         });
     }
 }

@@ -70,6 +70,23 @@
                     <span class="help-block text-danger">{{ $message }}</span>
                     @enderror
                 </div>
+                {{-- the number column the rows are kept in order by (#1595) --}}
+                @php
+                    $sortColumnId = "custom_form_block_{$custom_form_block['id']}__options__sort_column_";
+                    $sortColumn = strval(\Illuminate\Support\Arr::get($custom_form_block, 'sort_column'));
+                @endphp
+                <div class="form-group mb-3 d-flex align-items-center">
+                    <label for="{{ $sortColumnId }}" class="control-label" style="padding-right:15px;">{{ exmtrans('custom_form.sort_column') }}</label>
+                    <select name="{{ $custom_form_block['header_name'] }}[options][sort_column]" id="{{ $sortColumnId }}" class="form-control input-sm" style="width:260px;">
+                        <option value=""></option>
+                        @foreach (\Illuminate\Support\Arr::get($custom_form_block, 'sort_columns', []) as $sortName => $sortLabel)
+                        <option value="{{ $sortName }}" {{ $sortColumn === strval($sortName) ? 'selected' : '' }}>{{ $sortLabel }}</option>
+                        @endforeach
+                    </select>
+                    <i class="fa fa-info-circle ms-2"
+                       data-help-text="{{exmtrans('custom_form.help.sort_column')}}"
+                       data-help-title="{{exmtrans('custom_form.sort_column')}}"></i>
+                </div>
                 @endif
             </div>
             <div class="form-inline col-12 pt-3">
@@ -78,6 +95,13 @@
                         <label class="control-label" style="padding-right:15px;">{{ exmtrans('custom_form.form_block_name') }}</label>
                         <input type="text" name="{{ $custom_form_block['header_name'] }}[form_block_view_name]" value="{{ $custom_form_block['form_block_view_name'] }}" class="form-control" style="width:400px;" />
                     </div>
+                    {{-- the name in the other languages (ISS02859) --}}
+                    @foreach (\Exceedone\Exment\Services\NameLocales::locales() as $nameLocale)
+                    <div class="form-group d-flex align-items-center">
+                        <input type="text" name="{{ $custom_form_block['header_name'] }}[name_locales][{{ $nameLocale }}]" value="{{ array_get($custom_form_block, 'name_locales.' . $nameLocale) }}" class="form-control input-sm" style="width:160px;" maxlength="256"
+                            placeholder="{{ \Exceedone\Exment\Services\NameLocales::localeName($nameLocale) }}" title="{{ exmtrans('name_locales.name_in', \Exceedone\Exment\Services\NameLocales::localeName($nameLocale)) }}" />
+                    </div>
+                    @endforeach
                     {{-- select hasmany or hasmanytable --}}
                     @if($custom_form_block['form_block_type'] != '0')
                     <div class="form-group d-flex align-items-center">

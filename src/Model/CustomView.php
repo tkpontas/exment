@@ -41,11 +41,29 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     use Traits\TemplateTrait;
     use Traits\TemplateColumnRefTrait;
     use Traits\DatabaseJsonOptionTrait;
+    use Traits\NameLocalesTrait;
+
+    /** the names in the other languages (ISS02859): read by the API, written by the form */
+    protected $appends = ['name_locales'];
 
     //protected $appends = ['view_calendar_target', 'pager_count'];
     //protected $appends = ['pager_count', 'condition_join'];
     protected $guarded = ['id', 'suuid'];
     protected $casts = ['options' => 'json', 'custom_options' => 'json'];
+
+    /**
+     * The name in the language of the user, when one is given for it (ISS02859): the
+     * stored name otherwise, and always on the pages and in the code that edit or export it
+     * (NameLocales).
+     *
+     * @param mixed $value the stored name
+     * @return mixed
+     */
+    public function getViewViewNameAttribute($value)
+    {
+        $options = $this->getAttributeValue('options');
+        return \Exceedone\Exment\Services\NameLocales::pick(is_array($options) ? $options : null, $value);
+    }
     //protected $with = ['custom_table', 'custom_view_columns'];
 
 
@@ -62,7 +80,7 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
 
     // @phpstan-ignore-next-line
     public static $templateItems = [
-        'excepts' => ['custom_table', 'target_view_name', 'view_calendar_target', 'pager_count'],
+        'excepts' => ['custom_table', 'target_view_name', 'view_calendar_target', 'pager_count', 'name_locales'],
         'uniqueKeys' => ['suuid'],
         'langs' => [
             'keys' => ['suuid'],
@@ -471,7 +489,8 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
 
         if ($this->view_kind_type == ViewKindType::AGGREGATE) {
             $query = $options['query'] ?? $this->custom_table->getValueQuery();
-            return $this->getQuery($query, $options)->paginate($options['maxCount']);
+            $query = $this->getQuery($query, $options);
+            return boolval($options['simplePaginate'] ?? false) ? $query->simplePaginate($options['maxCount']) : $query->paginate($options['maxCount']);
         }
 
         // search all data using index --------------------------------------------------
@@ -524,32 +543,39 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
         // get table bodies
         $bodies = [];
         if (isset($datalist)) {
+            // What each column sets on its item is the same for every row: read once (the
+            // options of a view column are decoded on every read), set on every cell as before.
+            $valueType = ValueType::getEnum($options['valueType']);
+            $cellColumns = [];
+            foreach ($view_column_items as $view_column_item) {
+                $column = array_get($view_column_item, 'item');
+                $cellOptions = [];
+                if ($this->view_kind_type == ViewKindType::AGGREGATE) {
+                    $summary_condition = array_get($column, 'view_summary_condition');
+                    $cellOptions[] = [
+                        'summary' => true,
+                        'summary_index' => array_get($view_column_item, 'index'),
+                        'summary_condition' => $summary_condition,
+                        'group_condition' => array_get($column, 'view_group_condition'),
+                        'disable_currency_symbol' => ($summary_condition == SummaryCondition::COUNT),
+                    ];
+                }
+                $cellOptions[] = [
+                    'view_pivot_column' => $column->view_pivot_column_id ?? null,
+                    'view_pivot_table' => $column->view_pivot_table_id ?? null,
+                    'grid_column' => true,
+                    'grid_preset' => $column->getOption('grid_preset'),
+                ];
+                $cellColumns[] = [$column->column_item, $cellOptions];
+            }
+
             foreach ($datalist as $data) {
                 $body_items = [];
-                foreach ($view_column_items as $view_column_item) {
-                    $column = array_get($view_column_item, 'item');
-                    $item = $column->column_item;
-                    if ($this->view_kind_type == ViewKindType::AGGREGATE) {
-                        $index = array_get($view_column_item, 'index');
-                        $summary_condition = array_get($column, 'view_summary_condition');
-                        $item->options([
-                            'summary' => true,
-                            'summary_index' => $index,
-                            'summary_condition' => $summary_condition,
-                            'group_condition' => array_get($column, 'view_group_condition'),
-                            'disable_currency_symbol' => ($summary_condition == SummaryCondition::COUNT),
-                        ]);
+                foreach ($cellColumns as [$item, $cellOptions]) {
+                    foreach ($cellOptions as $cellOption) {
+                        $item->options($cellOption);
                     }
-
-                    $item->options([
-                        'view_pivot_column' => $column->view_pivot_column_id ?? null,
-                        'view_pivot_table' => $column->view_pivot_table_id ?? null,
-                        'grid_column' => true,
-                        'grid_preset' => $column->getOption('grid_preset'),
-                    ]);
-
-                    $valueType = ValueType::getEnum($options['valueType']);
-                    $body_items[] = $valueType->getCustomValue($item, $data);
+                    $body_items[] = isset($valueType) ? $valueType->getCustomValue($item, $data) : null;
                 }
 
                 $link = '';
@@ -2005,6 +2031,28 @@ class CustomView extends ModelBase implements Interfaces\TemplateImporterInterfa
     public function setHeaderAlignAttribute($val)
     {
         $this->setOption('header_align', $val);
+
+        return $this;
+    }
+
+
+    /**
+     * Whether the data list of this view allows inline edit (#2163). A view
+     * saved before the setting existed has no value: on, as before.
+     *
+     * @return bool
+     */
+    public function getInlineEditEnabledAttribute()
+    {
+        $val = $this->getOption('inline_edit_enabled');
+        return is_null($val) || boolval($val);
+    }
+
+
+    // @phpstan-ignore-next-line
+    public function setInlineEditEnabledAttribute($val)
+    {
+        $this->setOption('inline_edit_enabled', $val);
 
         return $this;
     }

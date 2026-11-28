@@ -11,6 +11,13 @@ class NotifyAction extends EnumBase
     public const SLACK = "3";
     public const MICROSOFT_TEAMS = "4";
     public const LINE = "5";
+    // a person's Teams chat, through a Teams workflow (ISS02863)
+    public const TEAMS_PERSONAL = "6";
+    // the record as JSON to any URL, signed (ISS02912)
+    public const WEBHOOK = "7";
+    // LINE WORKS (ISS00114): the bot of the app to a channel, or to each person
+    public const LINE_WORKS = "8";
+    public const LINE_WORKS_PERSONAL = "9";
 
     /**
      * Whether this action is chat message.
@@ -26,7 +33,8 @@ class NotifyAction extends EnumBase
         }
         $notify_action = is_array($action_setting) ? array_get($action_setting, 'notify_action') : $action_setting;
 
-        if (in_array($notify_action, [static::SLACK, static::MICROSOFT_TEAMS])) {
+        // a webhook is sent once to its URL, as a chat message is (not to each user)
+        if (in_array($notify_action, [static::SLACK, static::MICROSOFT_TEAMS, static::WEBHOOK, static::LINE_WORKS])) {
             return true;
         }
 
@@ -48,7 +56,7 @@ class NotifyAction extends EnumBase
         }
         $notify_action = is_array($action_setting) ? array_get($action_setting, 'notify_action') : $action_setting;
 
-        if (in_array($notify_action, [static::EMAIL, static::SHOW_PAGE, static::LINE])) {
+        if (in_array($notify_action, [static::EMAIL, static::SHOW_PAGE, static::LINE, static::TEAMS_PERSONAL, static::LINE_WORKS_PERSONAL])) {
             return true;
         }
         return false;
@@ -81,15 +89,38 @@ class NotifyAction extends EnumBase
                 ];
 
             case static::MICROSOFT_TEAMS:
+            case static::LINE_WORKS:
                 return [
                 ];
 
             case static::LINE:
+            case static::TEAMS_PERSONAL:
+            case static::LINE_WORKS_PERSONAL:
                 return [
                     'get_user' => true,
                 ];
         }
 
         return [];
+    }
+
+    /**
+     * The choices of the notify action: Teams (personal) only while its feature is used.
+     *
+     * @return array<string, string>
+     */
+    public static function selectOptions(): array
+    {
+        $options = static::transKeyArray('notify.notify_action_options');
+        if (!\Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::TEAMS_NOTIFY)) {
+            unset($options[static::TEAMS_PERSONAL]);
+        }
+        if (!\Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::WEBHOOK_NOTIFY)) {
+            unset($options[static::WEBHOOK]);
+        }
+        if (!\Exceedone\Exment\Services\Features::enabled(\Exceedone\Exment\Services\Features::LINE_WORKS_NOTIFY)) {
+            unset($options[static::LINE_WORKS], $options[static::LINE_WORKS_PERSONAL]);
+        }
+        return $options;
     }
 }
