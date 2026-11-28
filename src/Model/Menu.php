@@ -6,6 +6,7 @@ use Exceedone\Exment\Database\Query\Grammars\SqlServerGrammar;
 use Exceedone\Exment\Enums\DatabaseDataType;
 use Exceedone\Exment\Enums\MenuType;
 use Exceedone\Exment\Enums\TemplateImportResult;
+use Exceedone\Exment\Services\MenuTitle;
 use Exceedone\Exment\Services\MenuVisibility;
 use ExmentAdminCore\Admin\Auth\Database\Menu as AdminMenu;
 use Illuminate\Support\Facades\DB;
@@ -326,7 +327,11 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
         $rows = MenuVisibility::rows(function () {
             return $this->getAllNodesFromDatabase();
         });
-        return MenuVisibility::nodes($rows, $this->withHidden);
+        $nodes = MenuVisibility::nodes($rows, $this->withHidden);
+        // the titles of the menus Exment made, in the language of the user (the rows are the same
+        // for every user, and may come from the cache). Not for the export of a template and the
+        // import, which need the stored texts.
+        return $this->withHidden ? $nodes : MenuTitle::localizeRows($nodes);
     }
 
     /**
@@ -365,7 +370,9 @@ class Menu extends AdminMenu implements Interfaces\TemplateImporterInterface
                 $join->whereRaw("m.menu_target = " . $pluginQuery);
             })
             ->orderByRaw("CASE WHEN m.$orderColumn = 0 THEN 1 ELSE 0 END")
-            ->orderByRaw("m.$orderColumn");
+            ->orderByRaw("m.$orderColumn")
+            // the same order: as they were made (the database may answer the ties in any order)
+            ->orderBy('m.id');
 
             //->map(function ($item, $key) {
             //    return (array) $item;

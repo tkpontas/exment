@@ -501,11 +501,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "Thông báo"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "Mẫu định dạng ô"
         },
@@ -578,6 +573,11 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "Kiểm tra bảo mật"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "Tác vụ theo lịch"
         },
         {
             "menu_type": "system",

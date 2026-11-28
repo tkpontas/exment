@@ -501,11 +501,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "알림"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "셀 스타일 프리셋"
         },
@@ -578,6 +573,11 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "보안 점검"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "예약 작업"
         },
         {
             "menu_type": "system",

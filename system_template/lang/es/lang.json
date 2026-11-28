@@ -501,11 +501,6 @@
         },
         {
             "menu_type": "system",
-            "menu_name": "notify",
-            "title": "Notificación"
-        },
-        {
-            "menu_type": "system",
             "menu_name": "cell_style_preset",
             "title": "Estilos de celda predefinidos"
         },
@@ -578,6 +573,11 @@
             "menu_type": "system",
             "menu_name": "security_check",
             "title": "Comprobación de seguridad"
+        },
+        {
+            "menu_type": "system",
+            "menu_name": "scheduled_jobs",
+            "title": "Tareas programadas"
         },
         {
             "menu_type": "system",
